@@ -19,6 +19,7 @@
 - Trabaja en **iteraciones pequeñas**; si el código es largo, divídelo en pasos.
 - Prefiere explicaciones claras, técnicamente precisas y con **nombre de los patrones/conceptos** (junction table, YAGNI, single source of truth…). Claras sin alargarse: prioriza que se entienda sobre ser exhaustivo.
 - Si el usuario pide "revisa, no reescribas", actúa solo como revisor.
+- **Git: los commits los hace siempre el usuario.** No hagas `git commit` ni `git push` ni abras PRs. Puedes preparar los cambios y proponer un mensaje de commit (Conventional Commits) para que él lo ejecute.
 
 ## 2. Contexto del usuario
 
@@ -68,6 +69,10 @@ Se descartó React Native/Expo (dependería del ordenador sin pagar los 99 $/añ
 - **No existe** un booleano `everythingPacked`: se **deriva en código**.
 - `createdAt`/`updatedAt` en todas las tablas (barato ahora, útil para resolver conflictos después).
 - Duplicar una maleta = **clonar filas** (Opción A), elegido sobre herencia por plantilla/delta por simplicidad del MVP.
+- **Arquitectura del frontend: por features + repositorios.** `src/app/` (App, router, providers), `src/features/<feature>/{domain,data,ui}` y `src/shared/{db,lib,ui}`. La UI nunca habla con Dexie directamente: lo hace a través de repositorios (repository pattern), para poder cambiar a una API en la fase 2.
+- **Las restricciones del modelo (CHECK, FK) se validan en código** en la capa `domain`, porque IndexedDB no las impone.
+- **Fuente de verdad de los datos: Dexie** (`useLiveQuery`). Zustand se usa solo para estado de UI, no para duplicar datos de dominio.
+- **Testing: Vitest + Testing Library**, con `fake-indexeddb` para probar la capa de datos.
 
 ## 7. Principios
 
@@ -86,9 +91,7 @@ Se descartó React Native/Expo (dependería del ordenador sin pagar los 99 $/añ
 
 ## 9. Pendiente de decidir (pregunta antes de asumir)
 
-- Arquitectura interna del frontend (la define el usuario). Su ubicación en `frontend/` ya está decidida.
 - Si habrá perfiles locales (¿una persona por dispositivo o dispositivo compartido?).
-- Framework de testing del frontend y estrategia de tests.
 - Plataforma de despliegue final (Vercel vs Netlify).
 
 ## 10. Estado actual
@@ -99,7 +102,8 @@ Se descartó React Native/Expo (dependería del ordenador sin pagar los 99 $/añ
 - El commit inicial ya existe; las ramas `main`, `develop` y `chore/setup-frontend` están creadas. La rama de trabajo sigue `origin/chore/setup-frontend`.
 - ESLint y Prettier configurados. Comandos disponibles en `frontend/`: `dev`, `build`, `lint`, `format`, `format:check` y `preview`.
 - TypeScript se mantiene en la línea 6.0 por compatibilidad con `typescript-eslint`; la plantilla original incluía TypeScript 7 y Oxlint.
-- Verificados ESLint, compilación y arranque de Vite. Pendiente: revisar y guardar el scaffolding y abrir una PR hacia `develop`.
+- Verificados ESLint, compilación y arranque de Vite. Boilerplate de demo de Vite eliminado. Pendiente: PR de `chore/setup-frontend` hacia `develop`.
+- Roadmap del MVP (una rama/PR por iteración): 0) cerrar setup · 1) capa de datos (tipos, Dexie, UUID de dispositivo, tests) · 2) CRUD de viajes · 3) maletas · 4) ítems y cantidades · 5) duplicar maleta · 6) PWA/offline · 7) CI y despliegue.
 - `npm audit` detecta 10 avisos moderados procedentes de `minimatch`, dependencia transitiva de las herramientas de lint. Pendiente de actualización compatible; no se ha aplicado `audit fix --force`.
-- PWA, Dexie, Zustand, arquitectura interna y estrategia de tests siguen pendientes. El MVP no necesita `venv` porque no incluye backend Python.
+- PWA, Dexie, Zustand y Vitest aún sin instalar. El MVP no necesita `venv` porque no incluye backend Python.
 - Actualiza esta sección conforme avance el proyecto.

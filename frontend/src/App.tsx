@@ -1,39 +1,11 @@
-import { useState } from 'react'
-import './App.css'
-
+// Carcasa mínima de la aplicación. En siguientes iteraciones aquí vivirán
+// el router y los providers; las pantallas irán en src/features/*.
 function App() {
-  const [count, setCount] = useState(0)
-  const [travel, setTravel] = useState('')
-
   return (
-    <>
-      <section id="center">
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-
-        <label htmlFor="travel-name">Nombre del viaje</label>
-        <textarea
-          id="travel-name"
-          className="text"
-          value={travel}
-          // El evento proporciona el valor actual del campo que estamos editando.
-          onChange={(event) => setTravel(event.currentTarget.value)}
-        />
-
-        <button
-          type="button"
-          className="addTravel"
-          onClick={() => console.log(travel)}
-        >
-          Mostrar viaje en consola
-        </button>
-      </section>
-    </>
+    <main className="app">
+      <h1>LugGAge</h1>
+      <p>Tus listas de equipaje, también sin conexión.</p>
+    </main>
   )
 }
 
