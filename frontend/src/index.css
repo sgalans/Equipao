@@ -1,0 +1,47 @@
+/*
+ * Estilos globales mínimos. Las variables CSS (custom properties) centralizan
+ * colores y tipografía: cambiar el tema = tocar un solo sitio.
+ */
+:root {
+  --text: #1f1d24;
+  --text-muted: #6b6375;
+  --bg: #ffffff;
+  --border: #e5e4e7;
+  --accent: #2f6fde;
+
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  font: 16px/1.5 var(--sans);
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Modo oscuro automático según la preferencia del sistema operativo. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #f3f2f5;
+    --text-muted: #a9a3b3;
+    --bg: #16151a;
+    --border: #2e2c35;
+    --accent: #6c9cff;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+/* Mobile-first: ancho completo en el móvil, columna centrada en pantallas grandes. */
+.app {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1rem;
+}

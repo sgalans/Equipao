@@ -1,0 +1,10 @@
+# Normaliza los finales de línea a LF en el repositorio y en la copia de trabajo,
+# independientemente de la configuración de Git de cada máquina (Windows usa CRLF).
+# Así coincide con Prettier (endOfLine: "lf") y se evitan diffs "fantasma".
+* text=auto eol=lf
+
+# Binarios: nunca tocar sus bytes.
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
