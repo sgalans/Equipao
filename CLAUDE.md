@@ -72,7 +72,7 @@ Se descartó React Native/Expo (dependería del ordenador sin pagar los 99 $/añ
 - **Arquitectura del frontend: por features + repositorios.** `src/app/` (App, router, providers), `src/features/<feature>/{domain,data,ui}` y `src/shared/{db,lib,ui}`. La UI nunca habla con Dexie directamente: lo hace a través de repositorios (repository pattern), para poder cambiar a una API en la fase 2.
 - **Las restricciones del modelo (CHECK, FK) se validan en código** en la capa `domain`, porque IndexedDB no las impone.
 - **Fuente de verdad de los datos: Dexie** (`useLiveQuery`). Zustand se usa solo para estado de UI, no para duplicar datos de dominio.
-- **Testing: Vitest + Testing Library**, con `fake-indexeddb` para probar la capa de datos. Vitest no comprueba tipos: ejecutar también `npm run typecheck`.
+- **Testing: Vitest + Testing Library**, con `fake-indexeddb` para probar la capa de datos. Vitest no comprueba tipos: ejecutar también `npm run typecheck`. Dos proyectos de Vitest: `*.test.ts` corre en `node` (rápido) y `*.test.tsx` en `jsdom` (componentes).
 - **Validación con Zod**: el esquema es la fuente de verdad y los tipos se infieren con `z.infer`. Cada entidad tiene `XSchema` (persistida) y `NewXSchema` (input sin id ni timestamps).
 - **IDs: UUID v7** con la librería `uuid` (ordenables y sin depender de `crypto.randomUUID`, que solo existe en HTTPS/localhost).
 - **Fechas**: `startDate`/`endDate` como `'YYYY-MM-DD'`; `createdAt`/`updatedAt` como ISO 8601 UTC (`toISOString()`).
@@ -99,14 +99,14 @@ Se descartó React Native/Expo (dependería del ordenador sin pagar los 99 $/añ
 
 ## 10. Estado actual
 
-- Fase: scaffolding de React + TypeScript + Vite creado en `frontend/`, en la rama `chore/setup-frontend`.
+- Fase: **iteración 1 (capa de datos)** en la rama `basic/data-layer`. Hechos: tooling de tests y esquemas Zod del dominio. Siguiente: alias `@/`, esquema de Dexie (índice único `[luggageId+itemId]`: un ítem no se repite en una maleta) y UUID de dispositivo; después, repositorios.
+- Setup (iteración 0) mergeado en `develop` (PR #1).
 - Entorno instalado y verificado: Git 2.55.0, nvm-windows 2.0.1, Node.js 26.13.1 LTS y npm 11.20.0. Versión de Node registrada en `.nvmrc`.
 - Identidad de Git configurada para este repositorio. Remoto `origin`: https://github.com/sgalans/LugGAge.git.
-- El commit inicial ya existe; las ramas `main`, `develop` y `chore/setup-frontend` están creadas. La rama de trabajo sigue `origin/chore/setup-frontend`.
-- ESLint y Prettier configurados. Comandos disponibles en `frontend/`: `dev`, `build`, `lint`, `format`, `format:check` y `preview`.
+- Ramas: `main`, `develop` y una rama por iteración que sale de `develop`.
+- ESLint y Prettier configurados. Comandos disponibles en `frontend/`: `dev`, `build`, `lint`, `format`, `format:check`, `preview`, `test` (watch), `test:run` y `typecheck`.
 - TypeScript se mantiene en la línea 6.0 por compatibilidad con `typescript-eslint`; la plantilla original incluía TypeScript 7 y Oxlint.
-- Verificados ESLint, compilación y arranque de Vite. Boilerplate de demo de Vite eliminado. Pendiente: PR de `chore/setup-frontend` hacia `develop`.
 - Roadmap del MVP (una rama/PR por iteración): 0) cerrar setup · 1) capa de datos (tipos, Dexie, UUID de dispositivo, tests) · 2) CRUD de viajes · 3) maletas · 4) ítems y cantidades · 5) duplicar maleta · 6) PWA/offline · 7) CI y despliegue.
-- `npm audit` detecta 10 avisos moderados procedentes de `minimatch`, dependencia transitiva de las herramientas de lint. Pendiente de actualización compatible; no se ha aplicado `audit fix --force`.
-- PWA, Dexie, Zustand y Vitest aún sin instalar. El MVP no necesita `venv` porque no incluye backend Python.
+- `npm audit` detecta 9 avisos moderados procedentes de `minimatch`, dependencia transitiva de las herramientas de lint. Pendiente de actualización compatible; no se ha aplicado `audit fix --force`.
+- Instalados: Dexie, Zod, uuid, Vitest, Testing Library y fake-indexeddb. Pendientes: PWA y Zustand. El MVP no necesita `venv` porque no incluye backend Python.
 - Actualiza esta sección conforme avance el proyecto.

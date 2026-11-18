@@ -8,11 +8,32 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   plugins: [react()],
   test: {
-    // jsdom simula un navegador (DOM, window…) dentro de Node.
-    environment: 'jsdom',
-    // Se ejecuta antes de cada fichero de test (matchers, IndexedDB falsa…).
-    setupFiles: ['./src/test/setup.ts'],
+    // Dos "proyectos" de test con distinto entorno. Arrancar jsdom (navegador
+    // simulado) es lo más caro de cada fichero de test, así que solo lo pagan
+    // los tests que de verdad renderizan componentes.
     // Sin `globals`: importamos describe/it/expect explícitamente en cada test.
-    // Es más explícito y no contamina los tipos globales.
+    projects: [
+      {
+        // `extends: true` hereda la config de arriba (plugins, alias…).
+        extends: true,
+        test: {
+          name: 'unit',
+          // Lógica pura: dominio, repositorios, utilidades. Node puro, rápido.
+          include: ['src/**/*.test.ts'],
+          environment: 'node',
+          setupFiles: ['./src/test/setup.unit.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'dom',
+          // Componentes React: necesitan DOM.
+          include: ['src/**/*.test.tsx'],
+          environment: 'jsdom',
+          setupFiles: ['./src/test/setup.unit.ts', './src/test/setup.dom.ts'],
+        },
+      },
+    ],
   },
 })

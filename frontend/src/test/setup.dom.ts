@@ -1,8 +1,7 @@
+// Setup solo para tests de componentes (proyecto 'dom', entorno jsdom).
+
 // Añade matchers de DOM a `expect` (toBeInTheDocument, toHaveTextContent…).
 import '@testing-library/jest-dom/vitest'
-// Sustituye IndexedDB por una implementación en memoria: los tests de la capa
-// de datos corren en Node, sin navegador, y cada ejecución empieza limpia.
-import 'fake-indexeddb/auto'
 import { cleanup } from '@testing-library/react'
 import { afterEach } from 'vitest'
 
