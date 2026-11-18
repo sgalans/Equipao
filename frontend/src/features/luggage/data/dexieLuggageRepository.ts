@@ -3,34 +3,36 @@ import type { AppDb } from '@/shared/db/db'
 import { EntityNotFoundError } from '@/shared/domain/errors'
 import { LuggageSchema, NewLuggageSchema } from '../domain/luggage'
 import type { LuggageRepository } from '../domain/luggageRepository'
-import { deleteLuggagesCascade } from './cascade'
 
+/**
+ * Adapter: implementación de LuggageRepository sobre Dexie.
+ *
+ * Patrón factory: la función recibe sus dependencias (la base de datos) y
+ * devuelve un objeto que cumple la interfaz. Es inyección de dependencias sin
+ * framework: la app le pasa `db` y los tests una base de datos aislada.
+ */
 export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
   return {
-    listByTrip(tripId) {
-      // sortBy ordena en memoria: perfecto para las pocas maletas de un viaje.
-      return db.luggages.where('tripId').equals(tripId).sortBy('createdAt')
+    list() {
+      // Índice createdAt + reverse(): la maleta recién creada sale arriba,
+      // justo debajo del campo donde se acaba de escribir su nombre.
+      return db.luggages.orderBy('createdAt').reverse().toArray()
     },
 
     getById(id) {
       return db.luggages.get(id)
     },
 
-    create(input) {
-      const data = NewLuggageSchema.parse(input)
-      // La comprobación de la FK y el insert van en la misma transacción:
-      // así nadie puede borrar el viaje entre la comprobación y el add.
-      return db.transaction('rw', [db.luggages, db.trips], async () => {
-        if (!(await db.trips.get(data.tripId))) {
-          throw new EntityNotFoundError('Trip', data.tripId)
-        }
-        const luggage = { ...newEntityBase(), ...data }
-        await db.luggages.add(luggage)
-        return luggage
-      })
+    async create(input) {
+      // parse() valida (lanza ZodError) y normaliza (recorta el nombre).
+      const luggage = { ...newEntityBase(), ...NewLuggageSchema.parse(input) }
+      await db.luggages.add(luggage)
+      return luggage
     },
 
     update(id, changes) {
+      // Leer + escribir en una transacción: nadie puede modificar la maleta
+      // entre que la leemos y la guardamos.
       return db.transaction('rw', db.luggages, async () => {
         const current = await db.luggages.get(id)
         if (!current) throw new EntityNotFoundError('Luggage', id)
@@ -47,8 +49,16 @@ export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
     },
 
     remove(id) {
-      return db.transaction('rw', [db.luggages, db.itemQuantities], () =>
-        deleteLuggagesCascade(db, [id]),
+      // ON DELETE CASCADE a mano (IndexedDB no tiene claves foráneas): hijos
+      // primero y luego el padre, todo en una transacción para que nunca
+      // queden ItemQuantity huérfanas si algo falla a medias.
+      return db.transaction(
+        'rw',
+        [db.luggages, db.itemQuantities],
+        async () => {
+          await db.itemQuantities.where('luggageId').equals(id).delete()
+          await db.luggages.delete(id)
+        },
       )
     },
   }

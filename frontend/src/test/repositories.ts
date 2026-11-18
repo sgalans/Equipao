@@ -2,7 +2,6 @@ import { onTestFinished, vi } from 'vitest'
 import { createDexieItemRepository } from '@/features/items/data/dexieItemRepository'
 import { createDexieItemQuantityRepository } from '@/features/luggage/data/dexieItemQuantityRepository'
 import { createDexieLuggageRepository } from '@/features/luggage/data/dexieLuggageRepository'
-import { createDexieTripRepository } from '@/features/trips/data/dexieTripRepository'
 import { createTestDb } from './db'
 
 /**
@@ -14,7 +13,6 @@ export function createTestRepositories() {
   const db = createTestDb()
   return {
     db,
-    trips: createDexieTripRepository(db),
     luggages: createDexieLuggageRepository(db),
     quantities: createDexieItemQuantityRepository(db),
     items: createDexieItemRepository(db),

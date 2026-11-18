@@ -1,78 +1,106 @@
-import { describe, expect, it } from 'vitest'
+import { version } from 'uuid'
+import { describe, expect, it, vi } from 'vitest'
+import { ZodError } from 'zod'
 import { EntityNotFoundError } from '@/shared/domain/errors'
-import { createTestRepositories } from '@/test/repositories'
+import { createTestRepositories, freezeTime } from '@/test/repositories'
 
 const MISSING_ID = '0190a0a0-0000-7000-8000-000000000000'
 
-/** Repositorios + un viaje ya creado, que casi todos los tests necesitan. */
-async function setup() {
-  const repos = createTestRepositories()
-  const trip = await repos.trips.create({
-    name: 'Japón',
-    startDate: '2027-04-01',
-    endDate: '2027-04-15',
-  })
-  return { ...repos, trip }
-}
-
 describe('DexieLuggageRepository', () => {
-  it('crea maletas y las lista por viaje en orden de creación', async () => {
-    const { luggages, trip } = await setup()
-    await luggages.create({ tripId: trip.id, name: 'Grande' })
-    await luggages.create({ tripId: trip.id, name: 'Mochila' })
+  describe('create', () => {
+    it('asigna id UUID v7 y timestamps, y normaliza el nombre', async () => {
+      freezeTime('2026-11-18T10:00:00.000Z')
+      const { luggages } = createTestRepositories()
 
-    const names = (await luggages.listByTrip(trip.id)).map((l) => l.name)
+      const luggage = await luggages.create({ name: '  Mochila Japón ' })
 
-    expect(names).toEqual(['Grande', 'Mochila'])
-  })
-
-  it('FOREIGN KEY: no crea una maleta para un viaje inexistente', async () => {
-    const { luggages, db } = await setup()
-
-    await expect(
-      luggages.create({ tripId: MISSING_ID, name: 'Huérfana' }),
-    ).rejects.toMatchObject({ name: 'EntityNotFoundError', entity: 'Trip' })
-    expect(await db.luggages.count()).toBe(0)
-  })
-
-  it('update solo cambia el nombre', async () => {
-    const { luggages, trip } = await setup()
-    const luggage = await luggages.create({ tripId: trip.id, name: 'Grande' })
-
-    const updated = await luggages.update(luggage.id, { name: 'Maleta roja' })
-
-    expect(updated).toMatchObject({ name: 'Maleta roja', tripId: trip.id })
-  })
-
-  it('update lanza EntityNotFoundError si la maleta no existe', async () => {
-    const { luggages } = await setup()
-
-    await expect(
-      luggages.update(MISSING_ID, { name: 'X' }),
-    ).rejects.toBeInstanceOf(EntityNotFoundError)
-  })
-
-  it('remove borra la maleta y su contenido (CASCADE), no el de otras', async () => {
-    const { luggages, quantities, items, trip, db } = await setup()
-    const socks = await items.create({ name: 'Calcetines', color: '#3366ff' })
-    const big = await luggages.create({ tripId: trip.id, name: 'Grande' })
-    const bag = await luggages.create({ tripId: trip.id, name: 'Mochila' })
-    await quantities.add({
-      luggageId: big.id,
-      itemId: socks.id,
-      num: 5,
-      nAlreadyPacked: 0,
-    })
-    const kept = await quantities.add({
-      luggageId: bag.id,
-      itemId: socks.id,
-      num: 1,
-      nAlreadyPacked: 0,
+      expect(version(luggage.id)).toBe(7)
+      expect(luggage).toMatchObject({
+        name: 'Mochila Japón',
+        createdAt: '2026-11-18T10:00:00.000Z',
+        updatedAt: '2026-11-18T10:00:00.000Z',
+      })
+      expect(await luggages.getById(luggage.id)).toEqual(luggage)
     })
 
-    await luggages.remove(big.id)
+    it('rechaza un nombre vacío y no guarda nada', async () => {
+      const { luggages } = createTestRepositories()
 
-    expect(await luggages.getById(big.id)).toBeUndefined()
-    expect(await db.itemQuantities.toArray()).toEqual([kept])
+      await expect(luggages.create({ name: '  ' })).rejects.toBeInstanceOf(
+        ZodError,
+      )
+      expect(await luggages.list()).toEqual([])
+    })
+  })
+
+  it('list devuelve las maletas más recientes primero', async () => {
+    freezeTime('2026-11-18T10:00:00.000Z')
+    const { luggages } = createTestRepositories()
+    await luggages.create({ name: 'Primera' })
+    vi.setSystemTime(new Date('2026-11-19T10:00:00.000Z'))
+    await luggages.create({ name: 'Segunda' })
+
+    const names = (await luggages.list()).map((l) => l.name)
+
+    expect(names).toEqual(['Segunda', 'Primera'])
+  })
+
+  describe('update', () => {
+    it('renombra y actualiza updatedAt, pero no id ni createdAt', async () => {
+      freezeTime('2026-11-18T10:00:00.000Z')
+      const { luggages } = createTestRepositories()
+      const luggage = await luggages.create({ name: 'Grande' })
+
+      vi.setSystemTime(new Date('2026-11-19T08:30:00.000Z'))
+      const updated = await luggages.update(luggage.id, { name: 'Maleta roja' })
+
+      expect(updated).toEqual({
+        ...luggage,
+        name: 'Maleta roja',
+        updatedAt: '2026-11-19T08:30:00.000Z',
+      })
+    })
+
+    it('lanza EntityNotFoundError si la maleta no existe', async () => {
+      const { luggages } = createTestRepositories()
+
+      await expect(
+        luggages.update(MISSING_ID, { name: 'X' }),
+      ).rejects.toBeInstanceOf(EntityNotFoundError)
+    })
+  })
+
+  describe('remove (ON DELETE CASCADE)', () => {
+    it('borra la maleta y su contenido; respeta otras maletas y el catálogo', async () => {
+      const { db, luggages, quantities, items } = createTestRepositories()
+      const socks = await items.create({ name: 'Calcetines' })
+      const big = await luggages.create({ name: 'Grande' })
+      const bag = await luggages.create({ name: 'Mochila' })
+      await quantities.add({
+        luggageId: big.id,
+        itemId: socks.id,
+        num: 5,
+        nAlreadyPacked: 0,
+      })
+      const kept = await quantities.add({
+        luggageId: bag.id,
+        itemId: socks.id,
+        num: 1,
+        nAlreadyPacked: 0,
+      })
+
+      await luggages.remove(big.id)
+
+      expect(await luggages.getById(big.id)).toBeUndefined()
+      expect(await db.itemQuantities.toArray()).toEqual([kept])
+      // El catálogo no forma parte de la cascada.
+      expect(await items.getById(socks.id)).toEqual(socks)
+    })
+
+    it('es idempotente: borrar una maleta inexistente no falla', async () => {
+      const { luggages } = createTestRepositories()
+
+      await expect(luggages.remove(MISSING_ID)).resolves.toBeUndefined()
+    })
   })
 })

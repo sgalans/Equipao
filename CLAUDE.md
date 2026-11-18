@@ -30,7 +30,7 @@
 
 ## 3. El producto
 
-App para crear **listas de equipaje/maleta para viajes**. Debe funcionar **offline** y ser accesible desde navegador (Chrome/Safari) e instalable en el móvil como **PWA**.
+App para preparar **maletas**: listas de equipaje donde se marca lo que ya está guardado. **Dispositivo principal: iPhone con Safari (y como PWA instalada en la pantalla de inicio).** Se diseña para el dedo y el teclado en pantalla de iOS, no para ratón ni teclado físico: zonas táctiles de 44 px o más, inputs de 16 px o más (si no, iOS hace zoom), botones visibles para toda acción (Enter es un atajo, no la única vía) y verificar en el iPhone real lo que dependa del teclado o del foco. Prioridad de producto: **lo más simple de usar posible, con el mínimo de clics** (crear en línea en vez de pantallas aparte, un toque para empaquetar…). Debe funcionar **offline** y ser accesible desde navegador (Chrome/Safari) e instalable en el móvil como **PWA**.
 
 Se descartó React Native/Expo (dependería del ordenador sin pagar los 99 $/año de Apple Developer) y Flutter (fricción con iOS sin Mac).
 
@@ -56,15 +56,23 @@ Se descartó React Native/Expo (dependería del ordenador sin pagar los 99 $/añ
 
 ## 5. Modelo de datos (diseñado y acordado)
 
-- `Trip`: id (uuid), name, startDate, endDate, createdAt, updatedAt
-- `Luggage`: id (uuid), tripId → Trip, name, createdAt, updatedAt
-- `Item`: id (uuid), name, color, createdAt, updatedAt
-- `ItemQuantity` (tabla intermedia / junction table): id (uuid), luggageId → Luggage, itemId → Item, num, nAlreadyPacked, createdAt, updatedAt
+Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
+
+- `Luggage` (maleta, entidad principal): id (uuid), name, createdAt, updatedAt
+- `Compartment` (compartimento, **iteración 5**): id (uuid), luggageId → Luggage, name, createdAt, updatedAt. Un solo nivel (no se anidan).
+- `Item` (catálogo global): id (uuid), name, createdAt, updatedAt
+- `ItemQuantity` (junction table): id (uuid), luggageId → Luggage, compartmentId? → Compartment (null = suelto; iteración 5), itemId → Item, num, nAlreadyPacked, createdAt, updatedAt
+- **Eliminados**: `Trip` (tras la iteración 2: añadía navegación sin aportar al caso de uso) y `Item.color` (YAGNI). Sin fechas en la maleta por ahora.
+
+### Vocabulario de la interfaz (lenguaje ubicuo)
+
+- **Maleta** = `Luggage`. **Compartimento** = `Compartment`. Texto de ayuda acordado: *"Un compartimento es un subgrupo de objetos dentro de tu maleta: el neceser, la mochila de mano, el maletín del portátil… Un espacio donde agrupar los objetos que van juntos."*
+- `Item` en la interfaz: **"artículo"** (propuesto por Claude, pendiente de confirmar por el usuario; descartados "ítem" y "objeto"). Además, preferir microcopy que no necesite el sustantivo ("Añadir a la maleta…", "3 de 12 guardados").
 
 ## 6. Decisiones cerradas
 
 - **UUID como clave primaria en todo** (habilita sincronización futura sin coordinación de servidor).
-- `ItemQuantity` como junction table que guarda las claves foráneas.
+- `ItemQuantity` como junction table que guarda las claves foráneas. Un ítem ocupa **un solo sitio por maleta** (`UNIQUE (luggageId, itemId)`): en un compartimento o suelto.
 - Restricción `CHECK (nAlreadyPacked <= num)`.
 - **No existe** un booleano `everythingPacked`: se **deriva en código**.
 - `createdAt`/`updatedAt` en todas las tablas (barato ahora, útil para resolver conflictos después).
@@ -75,11 +83,11 @@ Se descartó React Native/Expo (dependería del ordenador sin pagar los 99 $/añ
 - **Testing: Vitest + Testing Library**, con `fake-indexeddb` para probar la capa de datos. Vitest no comprueba tipos: ejecutar también `npm run typecheck`. Dos proyectos de Vitest: `*.test.ts` corre en `node` (rápido) y `*.test.tsx` en `jsdom` (componentes).
 - **Validación con Zod**: el esquema es la fuente de verdad y los tipos se infieren con `z.infer`. Cada entidad tiene `XSchema` (persistida) y `NewXSchema` (input sin id ni timestamps).
 - **IDs: UUID v7** con la librería `uuid` (ordenables y sin depender de `crypto.randomUUID`, que solo existe en HTTPS/localhost).
-- **Fechas**: `startDate`/`endDate` como `'YYYY-MM-DD'`; `createdAt`/`updatedAt` como ISO 8601 UTC (`toISOString()`).
+- **Timestamps**: `createdAt`/`updatedAt` como ISO 8601 UTC (`toISOString()`). Si en el futuro hay fechas de calendario, guardarlas como `'YYYY-MM-DD'` y formatear en UTC (evita el bug de zona horaria).
 - **Repositorios: ports & adapters.** La interfaz (`XRepository`) vive en `features/<f>/domain/` y la implementación (`createDexieXRepository(db)`, patrón factory + inyección de dependencias) en `features/<f>/data/`. Los repositorios validan con Zod, rellenan id/timestamps y traducen errores técnicos a errores de dominio (`src/shared/domain/errors.ts`).
-- **Integridad referencial** (en Architecture.md): borrar Trip → CASCADE (maletas y su contenido); borrar Luggage → CASCADE (su contenido); borrar Item en uso → RESTRICT (`InUseError`); `UNIQUE (luggageId, itemId)` → `DuplicateError`. Al crear se comprueba que las FK existen (`EntityNotFoundError`). Los borrados son idempotentes.
+- **Integridad referencial** (en Architecture.md): borrar Luggage → CASCADE (su contenido; en la iteración 5 también sus compartimentos); borrar Item en uso → RESTRICT (`InUseError`); `UNIQUE (luggageId, itemId)` → `DuplicateError`. Al crear se comprueba que las FK existen (`EntityNotFoundError`). Los borrados son idempotentes.
 - **Nombres de errores propios**: nunca coinciden con los de DOMException/IndexedDB (p. ej. `NotFoundError`), porque Dexie los convierte en sus propios errores al salir de una transacción.
-- **UI (iteración 2)**: React Router (rutas en `src/app/routes.ts`, layout `AppLayout`), React Hook Form + `zodResolver` con los esquemas Zod existentes, CSS Modules (`X.module.css` junto al componente) y variables CSS globales en `index.css`.
+- **UI**: React Router (rutas en `src/app/routes.ts`, layout `AppLayout`), React Hook Form + `zodResolver` con los esquemas Zod existentes, CSS Modules (`X.module.css` junto al componente) y variables CSS globales en `index.css`.
 - **Inyección de repositorios en la UI con React Context**: `RepositoriesContext` y `useRepositories()` en `src/shared/di/` (solo conocen las interfaces); la composition root (`src/app/compositionRoot.ts`) es el único sitio que crea implementaciones concretas. Lecturas reactivas con `useLiveQuery(() => repo.list(), [repo])`.
 - **Tests de UI**: `renderApp(path, repositories)` (`src/test/render.tsx`) monta las rutas reales con `createMemoryRouter` y una base de datos aislada. jsdom no implementa `<dialog>.showModal()`: hay un stub en `src/test/setup.dom.ts`; dentro de un diálogo, buscar con `within(dialog)` (Testing Library no modela `inert`).
 
@@ -105,7 +113,11 @@ Se descartó React Native/Expo (dependería del ordenador sin pagar los 99 $/añ
 
 ## 10. Estado actual
 
-- Fase: **iteración 2 (CRUD de viajes) terminada** en la rama `feature/crud-trip`, pendiente de PR a `develop`: lista (`/`), crear (`/trips/new`), editar (`/trips/:tripId/edit`) con botón de icono (papelera) en la cabecera para borrar (`ConfirmDialog` sobre `<dialog>` nativo; el mensaje aclara que el catálogo de ítems no se borra) y ruta 404. 88 tests. El bundle supera 500 kB (157 kB gzip): revisar con code splitting en la iteración 6. Para el despliegue (iteración 7) hará falta un rewrite de todas las rutas a `index.html`.
+- Fase: **iteración 3 (refactor: la maleta como entidad principal)** en la rama `refactor/luggage-first`. Pasos: 1) documentación + capa de datos sin `Trip` ni color ✅ · 2) UI de maletas ✅: crear en línea en el inicio (`CreateLuggageForm`, Enter o "+"), detalle en `/luggages/:luggageId` con título editable en el sitio (`EditableTitle`: Enter/blur guarda, Escape cancela) y papelera roja con confirmación.
+- Iteración 2 (CRUD de viajes) mergeada en `develop` (PR #3); después se decidió eliminar los viajes. Se reutilizan sus piezas: router, DI por Context, `FormField`, `ConfirmDialog`, estilos y `renderApp`.
+- Pendientes técnicos: el bundle supera 500 kB (157 kB gzip) → code splitting en la iteración de PWA; en el despliegue hará falta un rewrite de todas las rutas a `index.html`.
+- Backlog: "Deshacer" al borrar (snapshot + reinserción + toast con Zustand), script `npm run check`, tests E2E con Playwright (casos que jsdom no reproduce: foco atrapado y Escape en `<dialog>`, blur al desmontar en `EditableTitle`).
+- Pendiente de decidir (iteración 5): al borrar un compartimento, ¿sus ítems se borran o pasan a sueltos?
 - Iteración 1 (capa de datos) mergeada en `develop` (PR #2).
 - Setup (iteración 0) mergeado en `develop` (PR #1).
 - Entorno instalado y verificado: Git 2.55.0, nvm-windows 2.0.1, Node.js 26.13.1 LTS y npm 11.20.0. Versión de Node registrada en `.nvmrc`.
@@ -113,7 +125,7 @@ Se descartó React Native/Expo (dependería del ordenador sin pagar los 99 $/añ
 - Ramas: `main`, `develop` y una rama por iteración que sale de `develop`.
 - ESLint y Prettier configurados. Comandos disponibles en `frontend/`: `dev`, `build`, `lint`, `format`, `format:check`, `preview`, `test` (watch), `test:run` y `typecheck`.
 - TypeScript se mantiene en la línea 6.0 por compatibilidad con `typescript-eslint`; la plantilla original incluía TypeScript 7 y Oxlint.
-- Roadmap del MVP (una rama/PR por iteración): 0) cerrar setup · 1) capa de datos (tipos, Dexie, UUID de dispositivo, tests) · 2) CRUD de viajes · 3) maletas · 4) ítems y cantidades · 5) duplicar maleta · 6) PWA/offline · 7) CI y despliegue.
+- Roadmap del MVP (una rama/PR por iteración): 0) setup ✅ · 1) capa de datos ✅ · 2) CRUD de viajes ✅ (después eliminado) · 3) refactor: maleta como entidad principal · 4) ítems y empaquetado (añadir escribiendo con autocompletado del catálogo, cantidades, un toque = empaquetar, progreso) · 5) compartimentos (plegables, estado en Zustand) · 6) duplicar maleta · 7) PWA/offline · 8) CI y despliegue.
 - `npm audit` detecta 9 avisos moderados procedentes de `minimatch`, dependencia transitiva de las herramientas de lint. Pendiente de actualización compatible; no se ha aplicado `audit fix --force`.
 - Instalados: Dexie, Zod, uuid, Vitest, Testing Library y fake-indexeddb. Pendientes: PWA y Zustand. El MVP no necesita `venv` porque no incluye backend Python.
 - Actualiza esta sección conforme avance el proyecto.

@@ -18,38 +18,18 @@ function makeQuantity(overrides: Partial<ItemQuantity> = {}): ItemQuantity {
 }
 
 describe('AppDb', () => {
-  it('guarda y recupera un viaje por su id', async () => {
+  it('guarda y recupera una maleta por su id', async () => {
     const db = createTestDb()
-    const trip = {
+    const luggage = {
       id: uuidv7(),
-      name: 'Japón',
-      startDate: '2027-04-01',
-      endDate: '2027-04-15',
+      name: 'Mochila Japón',
       createdAt: TEST_TIMESTAMP,
       updatedAt: TEST_TIMESTAMP,
     }
 
-    await db.trips.add(trip)
+    await db.luggages.add(luggage)
 
-    expect(await db.trips.get(trip.id)).toEqual(trip)
-  })
-
-  it('busca las maletas de un viaje por el índice tripId', async () => {
-    const db = createTestDb()
-    const tripId = uuidv7()
-    const base = { createdAt: TEST_TIMESTAMP, updatedAt: TEST_TIMESTAMP }
-    await db.luggages.bulkAdd([
-      { id: uuidv7(), tripId, name: 'Maleta grande', ...base },
-      { id: uuidv7(), tripId, name: 'Mochila', ...base },
-      { id: uuidv7(), tripId: uuidv7(), name: 'De otro viaje', ...base },
-    ])
-
-    const luggages = await db.luggages.where('tripId').equals(tripId).toArray()
-
-    expect(luggages.map((l) => l.name).sort()).toEqual([
-      'Maleta grande',
-      'Mochila',
-    ])
+    expect(await db.luggages.get(luggage.id)).toEqual(luggage)
   })
 
   describe('índice único [luggageId+itemId]', () => {

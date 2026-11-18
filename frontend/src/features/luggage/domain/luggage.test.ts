@@ -1,18 +1,15 @@
-import { v7 as uuidv7 } from 'uuid'
 import { describe, expect, it } from 'vitest'
+import { errorPaths } from '@/test/zod'
 import { NewLuggageSchema } from './luggage'
 
 describe('NewLuggageSchema', () => {
-  it('acepta una maleta válida', () => {
-    const result = NewLuggageSchema.safeParse({
-      tripId: uuidv7(),
-      name: 'Maleta grande',
+  it('acepta una maleta válida y recorta el nombre', () => {
+    expect(NewLuggageSchema.parse({ name: '  Mochila Japón ' })).toEqual({
+      name: 'Mochila Japón',
     })
-    expect(result.success).toBe(true)
   })
 
-  it('rechaza una maleta sin viaje', () => {
-    const result = NewLuggageSchema.safeParse({ name: 'Maleta grande' })
-    expect(result.success).toBe(false)
+  it.each(['', '   '])('rechaza el nombre vacío %j', (name) => {
+    expect(errorPaths(NewLuggageSchema.safeParse({ name }))).toEqual(['name'])
   })
 })

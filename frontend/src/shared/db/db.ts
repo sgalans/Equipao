@@ -2,7 +2,6 @@ import { Dexie, type EntityTable } from 'dexie'
 import type { Item } from '@/features/items/domain/item'
 import type { ItemQuantity } from '@/features/luggage/domain/itemQuantity'
 import type { Luggage } from '@/features/luggage/domain/luggage'
-import type { Trip } from '@/features/trips/domain/trip'
 
 /** Fila clave/valor para datos internos de la app (p. ej. el id de dispositivo). */
 export interface MetaEntry {
@@ -20,9 +19,8 @@ export const DEFAULT_DB_NAME = 'luggage-app'
  */
 export class AppDb extends Dexie {
   // `declare` solo informa a TypeScript del tipo: no genera código. Si
-  // usáramos `trips!: ...`, JavaScript crearía un campo de clase con valor
+  // usáramos `luggages!: ...`, JavaScript crearía un campo de clase con valor
   // undefined que podría pisar la tabla que Dexie añade a la instancia.
-  declare trips: EntityTable<Trip, 'id'>
   declare luggages: EntityTable<Luggage, 'id'>
   declare items: EntityTable<Item, 'id'>
   declare itemQuantities: EntityTable<ItemQuantity, 'id'>
@@ -34,21 +32,21 @@ export class AppDb extends Dexie {
 
     /*
      * Esquema versionado: es el equivalente a las migraciones de Alembic.
-     * Para cambiarlo NUNCA se edita una versión publicada: se añade
+     * La versión 1 aún NO se ha desplegado, por eso todavía la editamos
+     * (iteración 3: se quitaron Trip y Item.color). A partir del primer
+     * despliegue, NUNCA se edita una versión publicada: se añade
      * this.version(2).stores({...}).upgrade(tx => ...) y Dexie migra los datos
      * de quien tenga la versión 1 en su navegador.
      *
      * Sintaxis: el primer campo es la clave primaria y el resto son índices.
      * Solo se declaran los campos por los que vamos a BUSCAR u ORDENAR; el
-     * resto (name, color, num…) se guarda igualmente, pero sin índice.
+     * resto (name, num…) se guarda igualmente, pero sin índice.
      *   '&campo'      → índice único
      *   '[a+b]'       → índice compuesto
      */
     this.version(1).stores({
-      // startDate: para listar los viajes ordenados por fecha.
-      trips: 'id, startDate',
-      // tripId: clave foránea → buscar las maletas de un viaje.
-      luggages: 'id, tripId',
+      // createdAt: para listar las maletas (las más recientes primero).
+      luggages: 'id, createdAt',
       // Sin índices extra: el catálogo se ordena en memoria con
       // Intl.Collator('es'), porque IndexedDB ordena por código Unicode.
       items: 'id',

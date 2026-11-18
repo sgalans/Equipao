@@ -7,7 +7,7 @@ export function NotFoundPage() {
     <section>
       <h1 className={page.title}>Página no encontrada</h1>
       <p>La dirección no existe.</p>
-      <Link to="/">Volver a mis viajes</Link>
+      <Link to="/">Volver a mis maletas</Link>
     </section>
   )
 }

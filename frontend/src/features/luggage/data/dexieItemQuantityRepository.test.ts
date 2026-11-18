@@ -5,22 +5,11 @@ import { createTestRepositories } from '@/test/repositories'
 
 const MISSING_ID = '0190a0a0-0000-7000-8000-000000000000'
 
-/** Viaje + maleta + ítem del catálogo, listos para relacionarse. */
+/** Maleta + ítem del catálogo, listos para relacionarse. */
 async function setup() {
   const repos = createTestRepositories()
-  const trip = await repos.trips.create({
-    name: 'Japón',
-    startDate: '2027-04-01',
-    endDate: '2027-04-15',
-  })
-  const luggage = await repos.luggages.create({
-    tripId: trip.id,
-    name: 'Grande',
-  })
-  const socks = await repos.items.create({
-    name: 'Calcetines',
-    color: '#3366ff',
-  })
+  const luggage = await repos.luggages.create({ name: 'Grande' })
+  const socks = await repos.items.create({ name: 'Calcetines' })
   return { ...repos, luggage, socks }
 }
 

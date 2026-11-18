@@ -1,0 +1,20 @@
+.view {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  /* Permite que un nombre largo haga salto de línea dentro de la cabecera
+     en lugar de empujar el botón de borrar fuera de la pantalla. */
+  min-width: 0;
+}
+
+.title {
+  cursor: text;
+  overflow-wrap: anywhere;
+}
+
+/* El campo imita el tamaño del título para que el cambio no "salte". */
+.input {
+  font-size: 1.5rem;
+  font-weight: 700;
+  flex: 1;
+}

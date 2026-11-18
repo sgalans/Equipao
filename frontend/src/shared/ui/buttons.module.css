@@ -57,3 +57,17 @@
   background: var(--danger);
   color: var(--on-accent);
 }
+
+/* Icono de acción principal (añadir). */
+.iconPrimary {
+  composes: icon;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* Icono discreto, sin borde (acciones secundarias como "renombrar"). */
+.iconGhost {
+  composes: icon;
+  background: transparent;
+  color: var(--text-muted);
+}
