@@ -7,6 +7,7 @@
     "types": ["vite/client"],
     "allowArbitraryExtensions": true,
     "skipLibCheck": true,
+    "strict": true,
 
     /* Bundler mode */
     "moduleResolution": "bundler",
@@ -15,6 +16,9 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
+
+    /* Alias: '@/x' = 'src/x'. Debe coincidir con resolve.alias de vite.config.ts */
+    "paths": { "@/*": ["./src/*"] },
 
     /* Linting */
     "noUnusedLocals": true,
