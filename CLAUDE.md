@@ -30,7 +30,7 @@
 
 ## 3. El producto
 
-App para preparar **maletas**: listas de equipaje donde se marca lo que ya está guardado. Prioridad de producto: **lo más simple de usar posible, con el mínimo de clics** (crear en línea en vez de pantallas aparte, un toque para empaquetar…). Debe funcionar **offline** y ser accesible desde navegador (Chrome/Safari) e instalable en el móvil como **PWA**.
+App para preparar **maletas**: listas de equipaje donde se marca lo que ya está guardado. **Dispositivo principal: iPhone con Safari (y como PWA instalada en la pantalla de inicio).** Se diseña para el dedo y el teclado en pantalla de iOS, no para ratón ni teclado físico: zonas táctiles de 44 px o más, inputs de 16 px o más (si no, iOS hace zoom), botones visibles para toda acción (Enter es un atajo, no la única vía) y verificar en el iPhone real lo que dependa del teclado o del foco. Prioridad de producto: **lo más simple de usar posible, con el mínimo de clics** (crear en línea en vez de pantallas aparte, un toque para empaquetar…). Debe funcionar **offline** y ser accesible desde navegador (Chrome/Safari) e instalable en el móvil como **PWA**.
 
 Se descartó React Native/Expo (dependería del ordenador sin pagar los 99 $/año de Apple Developer) y Flutter (fricción con iOS sin Mac).
 
