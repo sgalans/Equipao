@@ -53,3 +53,15 @@ export class InUseError extends DomainError {
     this.usages = usages
   }
 }
+
+/**
+ * Los datos violarían una invariante entre entidades, p. ej. meter un
+ * artículo en un compartimento de OTRA maleta. Es un error de programación
+ * o de datos corruptos, no algo que el usuario pueda provocar desde la UI.
+ */
+export class ConsistencyError extends DomainError {
+  constructor(message: string) {
+    super(message)
+    this.name = 'ConsistencyError'
+  }
+}

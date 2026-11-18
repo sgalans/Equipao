@@ -79,13 +79,14 @@ export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
 
     remove(id) {
       // ON DELETE CASCADE a mano (IndexedDB no tiene claves foráneas): hijos
-      // primero y luego el padre, todo en una transacción para que nunca
-      // queden ItemQuantity huérfanas si algo falla a medias.
+      // primero (contenido y compartimentos) y luego el padre, todo en una
+      // transacción para que nunca queden filas huérfanas si algo falla.
       return db.transaction(
         'rw',
-        [db.luggages, db.itemQuantities],
+        [db.luggages, db.itemQuantities, db.compartments],
         async () => {
           await db.itemQuantities.where('luggageId').equals(id).delete()
+          await db.compartments.where('luggageId').equals(id).delete()
           await db.luggages.delete(id)
         },
       )

@@ -59,9 +59,9 @@ Se descartó React Native/Expo (dependería del ordenador sin pagar los 99 $/añ
 Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 
 - `Luggage` (maleta, entidad principal): id (uuid), name, createdAt, updatedAt
-- `Compartment` (compartimento, **iteración 5**): id (uuid), luggageId → Luggage, name, createdAt, updatedAt. Un solo nivel (no se anidan).
+- `Compartment` (compartimento): id (uuid), luggageId → Luggage, name, createdAt, updatedAt. Un solo nivel (no se anidan).
 - `Item` (catálogo global): id (uuid), name, createdAt, updatedAt
-- `ItemQuantity` (junction table): id (uuid), luggageId → Luggage, compartmentId? → Compartment (null = suelto; iteración 5), itemId → Item, num, nAlreadyPacked, createdAt, updatedAt
+- `ItemQuantity` (junction table): id (uuid), luggageId → Luggage, compartmentId → Compartment (`null` explícito = suelto), itemId → Item, num, nAlreadyPacked, createdAt, updatedAt
 - **Eliminados**: `Trip` (tras la iteración 2: añadía navegación sin aportar al caso de uso) y `Item.color` (YAGNI). Sin fechas en la maleta por ahora.
 
 ### Vocabulario de la interfaz (lenguaje ubicuo)
@@ -85,7 +85,8 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 - **IDs: UUID v7** con la librería `uuid` (ordenables y sin depender de `crypto.randomUUID`, que solo existe en HTTPS/localhost).
 - **Timestamps**: `createdAt`/`updatedAt` como ISO 8601 UTC (`toISOString()`). Si en el futuro hay fechas de calendario, guardarlas como `'YYYY-MM-DD'` y formatear en UTC (evita el bug de zona horaria).
 - **Repositorios: ports & adapters.** La interfaz (`XRepository`) vive en `features/<f>/domain/` y la implementación (`createDexieXRepository(db)`, patrón factory + inyección de dependencias) en `features/<f>/data/`. Los repositorios validan con Zod, rellenan id/timestamps y traducen errores técnicos a errores de dominio (`src/shared/domain/errors.ts`).
-- **Integridad referencial** (en Architecture.md): borrar Luggage → CASCADE (su contenido; en la iteración 5 también sus compartimentos); borrar Item en uso → RESTRICT (`InUseError`); `UNIQUE (luggageId, itemId)` → `DuplicateError`. Al crear se comprueba que las FK existen (`EntityNotFoundError`). Los borrados son idempotentes.
+- **Integridad referencial** (en Architecture.md): borrar Luggage → CASCADE (su contenido y sus compartimentos); borrar Compartment → SET NULL (sus artículos pasan a sueltos); invariante "el compartimento es de la misma maleta" → `ConsistencyError`; borrar Item en uso → RESTRICT (`InUseError`); `UNIQUE (luggageId, itemId)` → `DuplicateError`. Al crear se comprueba que las FK existen (`EntityNotFoundError`). Los borrados son idempotentes.
+- **Migraciones de Dexie**: la `version(1)` está congelada (hay datos reales en navegadores). Cada cambio de esquema = nueva versión (`SCHEMA_Vn` exportado en `src/shared/db/db.ts`) con `upgrade()` si hay que transformar datos, y un test que crea una BD con la versión anterior, la migra y comprueba el resultado (`db.migration.test.ts`). v2 = compartimentos.
 - **Nombres de errores propios**: nunca coinciden con los de DOMException/IndexedDB (p. ej. `NotFoundError`), porque Dexie los convierte en sus propios errores al salir de una transacción.
 - **UI**: React Router (rutas en `src/app/routes.ts`, layout `AppLayout`), React Hook Form + `zodResolver` con los esquemas Zod existentes, CSS Modules (`X.module.css` junto al componente) y variables CSS globales en `index.css`.
 - **Inyección de repositorios en la UI con React Context**: `RepositoriesContext` y `useRepositories()` en `src/shared/di/` (solo conocen las interfaces); la composition root (`src/app/compositionRoot.ts`) es el único sitio que crea implementaciones concretas. Lecturas reactivas con `useLiveQuery(() => repo.list(), [repo])`.
@@ -118,19 +119,20 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 
 ## 10. Estado actual
 
-- Fase: **iteración 4 (artículos y empaquetado) terminada** en la rama `crud/items`, pendiente de PR a `develop`: dominio (`packing.ts`, `search.ts`), repositorios (`findByName`, `togglePacked`, `resize`, `listEntriesByLuggage`, `listSummaries`), caso de uso `addItemByName`, UI del detalle (`AddItemForm`, `PackingList`, `PackingListRow`, `PackingProgress`) y progreso en las tarjetas del inicio (`aria-label` "Nombre, 3 de 5 listos"). 110 tests. Verificado en iPhone: el teclado se mantiene abierto al añadir con OK y al tocar sugerencias. Siguiente: iteración 5 (compartimentos).
+- Fase: **iteración 5 (compartimentos)** en la rama `crud/compartments`. Decisiones: borrar compartimento → artículos a sueltos (SET NULL); sueltos arriba sin cabecera; "+" en cada compartimento para añadir dentro; plegado persistido con Zustand. Pasos: 1) datos ✅ (migración v2 con test, `CompartmentRepository`, `moveTo`, invariante, `addItemByName` con compartimento) · 2) UI (secciones plegables, "+" por compartimento, "Mover a…", crear/renombrar/borrar, texto de ayuda).
+- Iteración 4 (artículos y empaquetado + navegación "‹ Mis maletas") mergeada en `develop`.
 - Iteración 3 (maleta como entidad principal: crear en línea, detalle, `EditableTitle`, borrar) mergeada en `develop`.
 - Iteración 2 (CRUD de viajes) mergeada en `develop` (PR #3); después se decidió eliminar los viajes. Se reutilizan sus piezas: router, DI por Context, `FormField`, `ConfirmDialog`, estilos y `renderApp`.
 - **Riesgo conocido**: sin desplegar ni instalar como PWA, Safari de iOS puede borrar IndexedDB tras 7 días sin visitar la web. Usar solo datos de prueba hasta la iteración de PWA (el usuario decidió no adelantar el despliegue).
 - Pendientes técnicos: el bundle supera 500 kB (157 kB gzip) → code splitting en la iteración de PWA; en el despliegue hará falta un rewrite de todas las rutas a `index.html`.
-- Backlog: "Deshacer" al borrar (snapshot + reinserción + toast con Zustand), script `npm run check`, tests E2E con Playwright (casos que jsdom no reproduce: foco atrapado y Escape en `<dialog>`, blur al desmontar en `EditableTitle`).
+- Backlog: "Deshacer" al borrar (snapshot + reinserción + toast con Zustand), tests E2E con Playwright (casos que jsdom no reproduce: foco atrapado y Escape en `<dialog>`, blur al desmontar en `EditableTitle`).
 - Pendiente de decidir (iteración 5): al borrar un compartimento, ¿sus ítems se borran o pasan a sueltos?
 - Iteración 1 (capa de datos) mergeada en `develop` (PR #2).
 - Setup (iteración 0) mergeado en `develop` (PR #1).
 - Entorno instalado y verificado: Git 2.55.0, nvm-windows 2.0.1, Node.js 26.13.1 LTS y npm 11.20.0. Versión de Node registrada en `.nvmrc`.
 - Identidad de Git configurada para este repositorio. Remoto `origin`: https://github.com/sgalans/LugGAge.git.
 - Ramas: `main`, `develop` y una rama por iteración que sale de `develop`.
-- ESLint y Prettier configurados. Comandos disponibles en `frontend/`: `dev`, `build`, `lint`, `format`, `format:check`, `preview`, `test` (watch), `test:run` y `typecheck`.
+- ESLint y Prettier configurados. Comandos disponibles en `frontend/`: `dev`, `build`, `lint`, `format`, `format:check`, `preview`, `test` (watch), `test:run`, `typecheck` y **`check`** (typecheck + lint + formato + tests; ejecutarlo antes de cada commit y antes de dar un paso por terminado).
 - TypeScript se mantiene en la línea 6.0 por compatibilidad con `typescript-eslint`; la plantilla original incluía TypeScript 7 y Oxlint.
 - Roadmap del MVP (una rama/PR por iteración): 0) setup ✅ · 1) capa de datos ✅ · 2) CRUD de viajes ✅ (después eliminado) · 3) refactor: maleta como entidad principal · 4) ítems y empaquetado (añadir escribiendo con autocompletado del catálogo, cantidades, un toque = empaquetar, progreso) · 5) compartimentos (plegables, estado en Zustand) · 6) duplicar maleta · 7) PWA/offline · 8) CI y despliegue.
 - `npm audit` detecta 9 avisos moderados procedentes de `minimatch`, dependencia transitiva de las herramientas de lint. Pendiente de actualización compatible; no se ha aplicado `audit fix --force`.

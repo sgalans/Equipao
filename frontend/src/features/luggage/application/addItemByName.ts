@@ -12,7 +12,8 @@ import type { ItemQuantityRepository } from '../domain/itemQuantityRepository'
  *
  * 1. Reutiliza el artículo del catálogo si ya existe ("calcetines" =
  *    "Calcetines"); si no, lo crea: el catálogo se llena solo.
- * 2. Lo añade a la maleta con cantidad 1.
+ * 2. Lo añade a la maleta con cantidad 1, suelto o en el compartimento
+ *    indicado (botón "+" de cada compartimento).
  *
  * Si ya estaba en la maleta, quantities.add lanza DuplicateError (índice
  * único) y la UI lo avisa. El orden importa: un artículo NUEVO nunca puede
@@ -23,6 +24,7 @@ export async function addItemByName(
   repositories: { items: ItemRepository; quantities: ItemQuantityRepository },
   luggageId: string,
   rawName: string,
+  compartmentId: string | null = null,
 ): Promise<ItemQuantity> {
   const { items, quantities } = repositories
   const name = NameSchema.parse(rawName)
@@ -31,6 +33,7 @@ export async function addItemByName(
   return quantities.add({
     luggageId,
     itemId: item.id,
+    compartmentId,
     num: 1,
     nAlreadyPacked: 0,
   })

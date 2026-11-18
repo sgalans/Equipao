@@ -58,3 +58,22 @@ describe('addItemByName', () => {
     expect(await repos.items.list()).toEqual([])
   })
 })
+
+describe('addItemByName con compartimento', () => {
+  it('añade el artículo directamente dentro del compartimento', async () => {
+    const repos = await setup()
+    const kit = await repos.compartments.create({
+      luggageId: repos.luggage.id,
+      name: 'Neceser',
+    })
+
+    const added = await addItemByName(
+      repos,
+      repos.luggage.id,
+      'Cepillo',
+      kit.id,
+    )
+
+    expect(added.compartmentId).toBe(kit.id)
+  })
+})
