@@ -1,0 +1,37 @@
+/*
+ * Estilos de botón compartidos. Se aplican igual a <button> y a <Link>
+ * (un enlace que parece botón), para que la navegación siga siendo un enlace
+ * de verdad (accesible, abrir en pestaña nueva…) aunque se vea como botón.
+ */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 44px: tamaño mínimo de zona táctil recomendado por Apple para el dedo. */
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.primary {
+  composes: button;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.secondary {
+  composes: button;
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+}

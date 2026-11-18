@@ -17,13 +17,20 @@ export const IdSchema = z.uuid()
  * Al tener formato fijo, comparar dos fechas como strings equivale a compararlas
  * cronológicamente ('2026-01-09' < '2026-01-10').
  */
-export const IsoDateSchema = z.iso.date()
+// Los mensajes de error van en el esquema (single source of truth): todos los
+// formularios que lo usen muestran el mismo texto. Un <input type="date">
+// vacío envía '', que también cae en este mensaje.
+export const IsoDateSchema = z.iso.date({ error: 'Introduce una fecha válida' })
 
 /** Instante exacto en UTC, ISO 8601: '2026-11-17T15:39:00.000Z'. */
 export const TimestampSchema = z.iso.datetime()
 
 /** Nombre visible: sin espacios sobrantes, no vacío y con un límite razonable. */
-export const NameSchema = z.string().trim().min(1).max(100)
+export const NameSchema = z
+  .string()
+  .trim()
+  .min(1, 'El nombre es obligatorio')
+  .max(100, 'El nombre no puede superar los 100 caracteres')
 
 /**
  * Campos comunes a todas las entidades persistidas. Es un "shape" (objeto

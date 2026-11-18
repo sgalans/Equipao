@@ -8,6 +8,8 @@
   --bg: #ffffff;
   --border: #e5e4e7;
   --accent: #2f6fde;
+  --on-accent: #ffffff;
+  --danger: #c62828;
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
 
@@ -26,6 +28,8 @@
     --bg: #16151a;
     --border: #2e2c35;
     --accent: #6c9cff;
+    --on-accent: #0b1020;
+    --danger: #ff6b6b;
   }
 }
 
@@ -39,9 +43,20 @@ body {
   margin: 0;
 }
 
-/* Mobile-first: ancho completo en el móvil, columna centrada en pantallas grandes. */
-.app {
-  max-width: 40rem;
-  margin: 0 auto;
-  padding: 1rem;
+/* Estilos base de los campos. 16px de fuente como mínimo: con menos, Safari
+   de iOS hace zoom automático al enfocar el campo. */
+input {
+  font: inherit;
+  font-size: max(1rem, 16px);
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  min-height: 2.75rem;
+  width: 100%;
+}
+
+input[aria-invalid='true'] {
+  border-color: var(--danger);
 }

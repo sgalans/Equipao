@@ -105,7 +105,7 @@ Se descartó React Native/Expo (dependería del ordenador sin pagar los 99 $/añ
 
 ## 10. Estado actual
 
-- Fase: **iteración 2 (CRUD de viajes)** en la rama `feature/crud-trip`. Pasos: 1) infraestructura + lista de viajes ✅ · 2) crear · 3) editar · 4) borrar con confirmación. El bundle supera 500 kB (157 kB gzip): revisar con code splitting en la iteración 6.
+- Fase: **iteración 2 (CRUD de viajes)** en la rama `feature/crud-trip`. Pasos: 1) infraestructura + lista de viajes ✅ · 2) crear (`/trips/new`, `TripForm` reutilizable, `FormField` accesible) ✅ · 3) editar (`/trips/:tripId/edit`) · 4) borrar con confirmación. El bundle supera 500 kB (157 kB gzip): revisar con code splitting en la iteración 6.
 - Iteración 1 (capa de datos) mergeada en `develop` (PR #2).
 - Setup (iteración 0) mergeado en `develop` (PR #1).
 - Entorno instalado y verificado: Git 2.55.0, nvm-windows 2.0.1, Node.js 26.13.1 LTS y npm 11.20.0. Versión de Node registrada en `.nvmrc`.

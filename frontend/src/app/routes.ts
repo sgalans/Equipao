@@ -1,4 +1,5 @@
 import type { RouteObject } from 'react-router'
+import { NewTripPage } from '@/features/trips/ui/NewTripPage'
 import { TripsPage } from '@/features/trips/ui/TripsPage'
 import { AppLayout } from './AppLayout'
 
@@ -15,6 +16,7 @@ export const routes: RouteObject[] = [
     children: [
       // index: la ruta hija que se pinta en "/" exactamente.
       { index: true, Component: TripsPage },
+      { path: 'trips/new', Component: NewTripPage },
       // Iteración 3: { path: 'trips/:tripId', Component: TripDetailPage }
     ],
   },

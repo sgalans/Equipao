@@ -1,6 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks'
+import { Link } from 'react-router'
 import { useRepositories } from '@/shared/di/repositories'
 import { formatDateRange } from '@/shared/lib/dates'
+import buttons from '@/shared/ui/buttons.module.css'
+import page from '@/shared/ui/page.module.css'
 import styles from './TripsPage.module.css'
 
 /** Pantalla principal: lista de viajes. */
@@ -23,7 +26,12 @@ export function TripsPage() {
 
   return (
     <section>
-      <h1 className={styles.title}>Mis viajes</h1>
+      <header className={page.header}>
+        <h1 className={page.title}>Mis viajes</h1>
+        <Link to="/trips/new" className={buttons.primary}>
+          Nuevo viaje
+        </Link>
+      </header>
 
       {tripList.length === 0 ? (
         <p className={styles.empty}>Aún no tienes viajes.</p>
