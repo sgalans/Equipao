@@ -41,10 +41,21 @@ export function TripsPage() {
             // `key` estable (el id) para que React sepa qué fila es cuál
             // al añadir, borrar o reordenar. Nunca el índice del array.
             <li key={trip.id} className={styles.card}>
-              <span className={styles.name}>{trip.name}</span>
-              <span className={styles.dates}>
-                {formatDateRange(trip.startDate, trip.endDate)}
-              </span>
+              <div className={styles.info}>
+                <span className={styles.name}>{trip.name}</span>
+                <span className={styles.dates}>
+                  {formatDateRange(trip.startDate, trip.endDate)}
+                </span>
+              </div>
+              <Link
+                to={`/trips/${trip.id}/edit`}
+                className={buttons.secondary}
+                // Todos los enlaces dicen "Editar": el aria-label añade el
+                // nombre para que el lector de pantalla sepa cuál es cuál.
+                aria-label={`Editar ${trip.name}`}
+              >
+                Editar
+              </Link>
             </li>
           ))}
         </ul>
