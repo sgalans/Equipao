@@ -35,3 +35,25 @@
   color: var(--text);
   border-color: var(--border);
 }
+
+/* Acciones destructivas (borrar): rojo para que no se pulse por inercia. */
+.danger {
+  composes: button;
+  background: var(--danger);
+  color: var(--on-accent);
+}
+
+/* Botón de solo icono: cuadrado de 44px (zona táctil mínima).
+   Necesita SIEMPRE un aria-label: sin texto no tiene nombre accesible. */
+.icon {
+  composes: button;
+  padding: 0;
+  width: 2.75rem;
+}
+
+/* Icono de acción destructiva (borrar): mismo rojo que .danger. */
+.iconDanger {
+  composes: icon;
+  background: var(--danger);
+  color: var(--on-accent);
+}

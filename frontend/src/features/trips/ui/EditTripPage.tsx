@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useRepositories } from '@/shared/di/repositories'
 import page from '@/shared/ui/page.module.css'
+import { DeleteTripButton } from './DeleteTripButton'
 import { TripForm } from './TripForm'
 
 /** Pantalla /trips/:tripId/edit: reutiliza TripForm con los datos del viaje. */
@@ -37,6 +38,12 @@ export function EditTripPage() {
     <section>
       <header className={page.header}>
         <h1 className={page.title}>Editar viaje</h1>
+        <DeleteTripButton
+          trip={trip}
+          // replace: sustituye esta entrada del historial. Así el botón
+          // "atrás" no lleva a la pantalla de editar un viaje que ya no existe.
+          onDeleted={() => navigate('/', { replace: true })}
+        />
       </header>
       <TripForm
         // React Hook Form solo lee defaultValues al montarse. La `key` fuerza

@@ -81,7 +81,7 @@ Se descartó React Native/Expo (dependería del ordenador sin pagar los 99 $/añ
 - **Nombres de errores propios**: nunca coinciden con los de DOMException/IndexedDB (p. ej. `NotFoundError`), porque Dexie los convierte en sus propios errores al salir de una transacción.
 - **UI (iteración 2)**: React Router (rutas en `src/app/routes.ts`, layout `AppLayout`), React Hook Form + `zodResolver` con los esquemas Zod existentes, CSS Modules (`X.module.css` junto al componente) y variables CSS globales en `index.css`.
 - **Inyección de repositorios en la UI con React Context**: `RepositoriesContext` y `useRepositories()` en `src/shared/di/` (solo conocen las interfaces); la composition root (`src/app/compositionRoot.ts`) es el único sitio que crea implementaciones concretas. Lecturas reactivas con `useLiveQuery(() => repo.list(), [repo])`.
-- **Tests de UI**: `renderApp(path, repositories)` (`src/test/render.tsx`) monta las rutas reales con `createMemoryRouter` y una base de datos aislada.
+- **Tests de UI**: `renderApp(path, repositories)` (`src/test/render.tsx`) monta las rutas reales con `createMemoryRouter` y una base de datos aislada. jsdom no implementa `<dialog>.showModal()`: hay un stub en `src/test/setup.dom.ts`; dentro de un diálogo, buscar con `within(dialog)` (Testing Library no modela `inert`).
 
 ## 7. Principios
 
@@ -105,7 +105,7 @@ Se descartó React Native/Expo (dependería del ordenador sin pagar los 99 $/añ
 
 ## 10. Estado actual
 
-- Fase: **iteración 2 (CRUD de viajes)** en la rama `feature/crud-trip`. Pasos: 1) infraestructura + lista de viajes ✅ · 2) crear (`/trips/new`, `TripForm` reutilizable, `FormField` accesible) ✅ · 3) editar (`/trips/:tripId/edit`, ruta 404 `*`) ✅ · 4) borrar con confirmación. El bundle supera 500 kB (157 kB gzip): revisar con code splitting en la iteración 6.
+- Fase: **iteración 2 (CRUD de viajes) terminada** en la rama `feature/crud-trip`, pendiente de PR a `develop`: lista (`/`), crear (`/trips/new`), editar (`/trips/:tripId/edit`) con botón de icono (papelera) en la cabecera para borrar (`ConfirmDialog` sobre `<dialog>` nativo; el mensaje aclara que el catálogo de ítems no se borra) y ruta 404. 88 tests. El bundle supera 500 kB (157 kB gzip): revisar con code splitting en la iteración 6. Para el despliegue (iteración 7) hará falta un rewrite de todas las rutas a `index.html`.
 - Iteración 1 (capa de datos) mergeada en `develop` (PR #2).
 - Setup (iteración 0) mergeado en `develop` (PR #1).
 - Entorno instalado y verificado: Git 2.55.0, nvm-windows 2.0.1, Node.js 26.13.1 LTS y npm 11.20.0. Versión de Node registrada en `.nvmrc`.
