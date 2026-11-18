@@ -5,6 +5,7 @@ import { normalizeForSearch } from '@/features/items/domain/search'
 import { useRepositories } from '@/shared/di/repositories'
 import { EditableTitle } from '@/shared/ui/EditableTitle'
 import page from '@/shared/ui/page.module.css'
+import { luggageProgress } from '../domain/packing'
 import { AddItemForm } from './AddItemForm'
 import { DeleteLuggageButton } from './DeleteLuggageButton'
 import { PackingList } from './PackingList'
@@ -77,7 +78,7 @@ export function LuggageDetailPage() {
         />
       </header>
 
-      <PackingProgress entries={entries} />
+      <PackingProgress {...luggageProgress(entries)} />
       <AddItemForm
         luggageId={luggage.id}
         entries={entries}

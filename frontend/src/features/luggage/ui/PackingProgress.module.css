@@ -7,6 +7,21 @@
   font-size: 0.875rem;
 }
 
+/* Variante de tarjeta: misma información, más discreta. */
+.compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+
+.compact .track {
+  height: 0.25rem;
+}
+
 .done {
   color: var(--success);
   font-weight: 600;
