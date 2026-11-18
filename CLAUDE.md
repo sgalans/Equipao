@@ -79,6 +79,9 @@ Se descartó React Native/Expo (dependería del ordenador sin pagar los 99 $/añ
 - **Repositorios: ports & adapters.** La interfaz (`XRepository`) vive en `features/<f>/domain/` y la implementación (`createDexieXRepository(db)`, patrón factory + inyección de dependencias) en `features/<f>/data/`. Los repositorios validan con Zod, rellenan id/timestamps y traducen errores técnicos a errores de dominio (`src/shared/domain/errors.ts`).
 - **Integridad referencial** (en Architecture.md): borrar Trip → CASCADE (maletas y su contenido); borrar Luggage → CASCADE (su contenido); borrar Item en uso → RESTRICT (`InUseError`); `UNIQUE (luggageId, itemId)` → `DuplicateError`. Al crear se comprueba que las FK existen (`EntityNotFoundError`). Los borrados son idempotentes.
 - **Nombres de errores propios**: nunca coinciden con los de DOMException/IndexedDB (p. ej. `NotFoundError`), porque Dexie los convierte en sus propios errores al salir de una transacción.
+- **UI (iteración 2)**: React Router (rutas en `src/app/routes.ts`, layout `AppLayout`), React Hook Form + `zodResolver` con los esquemas Zod existentes, CSS Modules (`X.module.css` junto al componente) y variables CSS globales en `index.css`.
+- **Inyección de repositorios en la UI con React Context**: `RepositoriesContext` y `useRepositories()` en `src/shared/di/` (solo conocen las interfaces); la composition root (`src/app/compositionRoot.ts`) es el único sitio que crea implementaciones concretas. Lecturas reactivas con `useLiveQuery(() => repo.list(), [repo])`.
+- **Tests de UI**: `renderApp(path, repositories)` (`src/test/render.tsx`) monta las rutas reales con `createMemoryRouter` y una base de datos aislada.
 
 ## 7. Principios
 
@@ -102,7 +105,8 @@ Se descartó React Native/Expo (dependería del ordenador sin pagar los 99 $/añ
 
 ## 10. Estado actual
 
-- Fase: **iteración 1 (capa de datos) terminada** en la rama `basic/data-layer`, pendiente de PR a `develop`: esquemas Zod, esquema Dexie (`src/shared/db/db.ts`), `getDeviceId`, alias `@/` y los 4 repositorios con tests (65 tests). Siguiente: iteración 2 (CRUD de viajes en la UI: composition root en `src/app/`, `dexie-react-hooks`/`useLiveQuery`, formularios).
+- Fase: **iteración 2 (CRUD de viajes)** en la rama `feature/crud-trip`. Pasos: 1) infraestructura + lista de viajes ✅ · 2) crear · 3) editar · 4) borrar con confirmación. El bundle supera 500 kB (157 kB gzip): revisar con code splitting en la iteración 6.
+- Iteración 1 (capa de datos) mergeada en `develop` (PR #2).
 - Setup (iteración 0) mergeado en `develop` (PR #1).
 - Entorno instalado y verificado: Git 2.55.0, nvm-windows 2.0.1, Node.js 26.13.1 LTS y npm 11.20.0. Versión de Node registrada en `.nvmrc`.
 - Identidad de Git configurada para este repositorio. Remoto `origin`: https://github.com/sgalans/LugGAge.git.
