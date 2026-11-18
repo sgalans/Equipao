@@ -93,6 +93,7 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 - **Catálogo implícito**: al añadir por nombre se reutiliza el artículo si existe (`findByName`: Collator 'es' base, iguala mayúsculas/tildes, distingue ñ) o se crea. Sin pantalla de catálogo por ahora.
 - **Capa `application`** (`features/<f>/application/`): casos de uso que coordinan varios repositorios (p. ej. `addItemByName`). Solo conocen los ports.
 - **Operaciones leer-calcular-escribir dentro del repositorio y en una transacción** (`togglePacked`, `resize`), no en la UI: evita *lost updates*.
+- **Navegación**: el layout muestra "LugGAge" en el inicio y "‹ Mis maletas" en el resto de pantallas (convención iOS, imprescindible en la PWA instalada, que no tiene botón atrás). Navegación jerárquica: siempre al inicio, nunca `navigate(-1)`.
 - **Tests de UI**: `renderApp(path, repositories)` (`src/test/render.tsx`) monta las rutas reales con `createMemoryRouter` y una base de datos aislada. jsdom no implementa `<dialog>.showModal()`: hay un stub en `src/test/setup.dom.ts`; dentro de un diálogo, buscar con `within(dialog)` (Testing Library no modela `inert`).
 
 ## 7. Principios
