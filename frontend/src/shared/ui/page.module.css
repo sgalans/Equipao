@@ -1,0 +1,13 @@
+/* Estructura común de las pantallas: cabecera con título y acciones. */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.title {
+  font-size: 1.5rem;
+  margin: 0;
+}

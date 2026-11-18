@@ -1,0 +1,28 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Mobile-first: fechas una debajo de otra; en pantallas anchas, en fila. */
+.dates {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 30rem) {
+  .dates {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.formError {
+  margin: 0;
+  color: var(--danger);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
