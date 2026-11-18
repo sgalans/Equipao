@@ -76,6 +76,9 @@ Se descartó React Native/Expo (dependería del ordenador sin pagar los 99 $/añ
 - **Validación con Zod**: el esquema es la fuente de verdad y los tipos se infieren con `z.infer`. Cada entidad tiene `XSchema` (persistida) y `NewXSchema` (input sin id ni timestamps).
 - **IDs: UUID v7** con la librería `uuid` (ordenables y sin depender de `crypto.randomUUID`, que solo existe en HTTPS/localhost).
 - **Fechas**: `startDate`/`endDate` como `'YYYY-MM-DD'`; `createdAt`/`updatedAt` como ISO 8601 UTC (`toISOString()`).
+- **Repositorios: ports & adapters.** La interfaz (`XRepository`) vive en `features/<f>/domain/` y la implementación (`createDexieXRepository(db)`, patrón factory + inyección de dependencias) en `features/<f>/data/`. Los repositorios validan con Zod, rellenan id/timestamps y traducen errores técnicos a errores de dominio (`src/shared/domain/errors.ts`).
+- **Integridad referencial** (en Architecture.md): borrar Trip → CASCADE (maletas y su contenido); borrar Luggage → CASCADE (su contenido); borrar Item en uso → RESTRICT (`InUseError`); `UNIQUE (luggageId, itemId)` → `DuplicateError`. Al crear se comprueba que las FK existen (`EntityNotFoundError`). Los borrados son idempotentes.
+- **Nombres de errores propios**: nunca coinciden con los de DOMException/IndexedDB (p. ej. `NotFoundError`), porque Dexie los convierte en sus propios errores al salir de una transacción.
 
 ## 7. Principios
 
@@ -99,7 +102,7 @@ Se descartó React Native/Expo (dependería del ordenador sin pagar los 99 $/añ
 
 ## 10. Estado actual
 
-- Fase: **iteración 1 (capa de datos)** en la rama `basic/data-layer`. Hechos: tooling de tests, esquemas Zod del dominio, alias `@/` (→ `src/`), esquema de Dexie en `src/shared/db/db.ts` (índice único `[luggageId+itemId]`: un ítem no se repite en una maleta) y `getDeviceId`. Siguiente: repositorios (con borrado en cascada en transacción).
+- Fase: **iteración 1 (capa de datos) terminada** en la rama `basic/data-layer`, pendiente de PR a `develop`: esquemas Zod, esquema Dexie (`src/shared/db/db.ts`), `getDeviceId`, alias `@/` y los 4 repositorios con tests (65 tests). Siguiente: iteración 2 (CRUD de viajes en la UI: composition root en `src/app/`, `dexie-react-hooks`/`useLiveQuery`, formularios).
 - Setup (iteración 0) mergeado en `develop` (PR #1).
 - Entorno instalado y verificado: Git 2.55.0, nvm-windows 2.0.1, Node.js 26.13.1 LTS y npm 11.20.0. Versión de Node registrada en `.nvmrc`.
 - Identidad de Git configurada para este repositorio. Remoto `origin`: https://github.com/sgalans/LugGAge.git.

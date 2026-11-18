@@ -49,8 +49,9 @@ export class AppDb extends Dexie {
       trips: 'id, startDate',
       // tripId: clave foránea → buscar las maletas de un viaje.
       luggages: 'id, tripId',
-      // name: para listar el catálogo ordenado alfabéticamente.
-      items: 'id, name',
+      // Sin índices extra: el catálogo se ordena en memoria con
+      // Intl.Collator('es'), porque IndexedDB ordena por código Unicode.
+      items: 'id',
       // luggageId: contenido de una maleta.
       // itemId: en qué maletas aparece un ítem (p. ej. antes de borrarlo).
       // &[luggageId+itemId]: equivale a UNIQUE (luggage_id, item_id) en SQL:
