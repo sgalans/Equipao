@@ -3,7 +3,7 @@ import {
   entityBaseShape,
   IsoDateSchema,
   NameSchema,
-} from '../../../shared/domain/schemas'
+} from '@/shared/domain/schemas'
 
 /** Campos que decide el usuario (sin id ni timestamps). */
 const tripFields = {

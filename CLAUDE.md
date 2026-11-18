@@ -99,7 +99,7 @@ Se descartó React Native/Expo (dependería del ordenador sin pagar los 99 $/añ
 
 ## 10. Estado actual
 
-- Fase: **iteración 1 (capa de datos)** en la rama `basic/data-layer`. Hechos: tooling de tests y esquemas Zod del dominio. Siguiente: alias `@/`, esquema de Dexie (índice único `[luggageId+itemId]`: un ítem no se repite en una maleta) y UUID de dispositivo; después, repositorios.
+- Fase: **iteración 1 (capa de datos)** en la rama `basic/data-layer`. Hechos: tooling de tests, esquemas Zod del dominio, alias `@/` (→ `src/`), esquema de Dexie en `src/shared/db/db.ts` (índice único `[luggageId+itemId]`: un ítem no se repite en una maleta) y `getDeviceId`. Siguiente: repositorios (con borrado en cascada en transacción).
 - Setup (iteración 0) mergeado en `develop` (PR #1).
 - Entorno instalado y verificado: Git 2.55.0, nvm-windows 2.0.1, Node.js 26.13.1 LTS y npm 11.20.0. Versión de Node registrada en `.nvmrc`.
 - Identidad de Git configurada para este repositorio. Remoto `origin`: https://github.com/sgalans/LugGAge.git.

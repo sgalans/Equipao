@@ -1,9 +1,5 @@
 import { z } from 'zod'
-import {
-  entityBaseShape,
-  IdSchema,
-  NameSchema,
-} from '../../../shared/domain/schemas'
+import { entityBaseShape, IdSchema, NameSchema } from '@/shared/domain/schemas'
 
 const luggageFields = {
   // Clave foránea → Trip. Zod solo comprueba el formato; que el viaje exista

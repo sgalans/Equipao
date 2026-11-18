@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { entityBaseShape, NameSchema } from '../../../shared/domain/schemas'
+import { entityBaseShape, NameSchema } from '@/shared/domain/schemas'
 
 /**
  * Item es el catálogo global ("Calcetines", "Cargador"…), reutilizable entre

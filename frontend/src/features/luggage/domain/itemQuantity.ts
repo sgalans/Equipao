@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { entityBaseShape, IdSchema } from '../../../shared/domain/schemas'
+import { entityBaseShape, IdSchema } from '@/shared/domain/schemas'
 
 /**
  * ItemQuantity es la junction table entre Luggage e Item: cuántas unidades de

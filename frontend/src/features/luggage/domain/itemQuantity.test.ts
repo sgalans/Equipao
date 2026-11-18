@@ -1,6 +1,6 @@
 import { v7 as uuidv7 } from 'uuid'
 import { describe, expect, it } from 'vitest'
-import { errorPaths } from '../../../test/zod'
+import { errorPaths } from '@/test/zod'
 import { NewItemQuantitySchema } from './itemQuantity'
 
 const validQuantity = {

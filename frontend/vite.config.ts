@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 // Importamos defineConfig desde 'vitest/config' (no desde 'vite') para que
 // TypeScript conozca la sección `test`. Vitest reutiliza esta misma config de
@@ -7,6 +8,12 @@ import { defineConfig } from 'vitest/config'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    // Alias '@/' → src/. TypeScript lo conoce por `paths` (tsconfig.app.json);
+    // Vite (y Vitest, que hereda esta config) lo necesitan aquí para resolverlo
+    // de verdad al compilar. Ruta absoluta calculada desde este fichero.
+    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+  },
   test: {
     // Dos "proyectos" de test con distinto entorno. Arrancar jsdom (navegador
     // simulado) es lo más caro de cada fichero de test, así que solo lo pagan
