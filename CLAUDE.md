@@ -117,7 +117,7 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 
 ## 10. Estado actual
 
-- Fase: **iteración 4 (artículos y empaquetado)** en la rama `crud/items`. Pasos: 1) dominio y datos ✅ (`packing.ts`, `search.ts`, `findByName`, `togglePacked`, `resize`, `listEntriesByLuggage`, `addItemByName`) · 2) UI del detalle (añadir con sugerencias, filas con círculo, cantidad y quitar, progreso) · 3) progreso en las tarjetas del inicio.
+- Fase: **iteración 4 (artículos y empaquetado)** en la rama `crud/items`. Pasos: 1) dominio y datos ✅ (`packing.ts`, `search.ts`, `findByName`, `togglePacked`, `resize`, `listEntriesByLuggage`, `addItemByName`) · 2) UI del detalle ✅ (`AddItemForm` con sugerencias que no cierran el teclado, `PackingList`/`PackingListRow` con círculo `role=checkbox` y acordeón `− N +`/papelera, `PackingProgress`) · 3) progreso en las tarjetas del inicio.
 - Iteración 3 (maleta como entidad principal: crear en línea, detalle, `EditableTitle`, borrar) mergeada en `develop`.
 - Iteración 2 (CRUD de viajes) mergeada en `develop` (PR #3); después se decidió eliminar los viajes. Se reutilizan sus piezas: router, DI por Context, `FormField`, `ConfirmDialog`, estilos y `renderApp`.
 - **Riesgo conocido**: sin desplegar ni instalar como PWA, Safari de iOS puede borrar IndexedDB tras 7 días sin visitar la web. Usar solo datos de prueba hasta la iteración de PWA (el usuario decidió no adelantar el despliegue).

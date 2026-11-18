@@ -10,6 +10,8 @@
   --accent: #2f6fde;
   --on-accent: #ffffff;
   --danger: #c62828;
+  --success: #2e7d32;
+  --highlight: rgb(47 111 222 / 0.15);
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
 
@@ -30,6 +32,8 @@
     --accent: #6c9cff;
     --on-accent: #0b1020;
     --danger: #ff6b6b;
+    --success: #66bb6a;
+    --highlight: rgb(108 156 255 / 0.2);
   }
 }
 

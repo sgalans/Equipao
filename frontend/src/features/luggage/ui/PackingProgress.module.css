@@ -1,0 +1,35 @@
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 1rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.done {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.track {
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  background: var(--success);
+  /* La barra crece suave al empaquetar: feedback inmediato del toque. */
+  transition: width 0.2s ease-out;
+}
+
+/* Quien pide al sistema menos animaciones (Ajustes > Accesibilidad > Reducir
+   movimiento en iOS) no las recibe. */
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition: none;
+  }
+}
