@@ -3,6 +3,8 @@ import { Link } from 'react-router'
 import { useRepositories } from '@/shared/di/repositories'
 import page from '@/shared/ui/page.module.css'
 import { CreateLuggageForm } from './CreateLuggageForm'
+import { PackingProgress } from './PackingProgress'
+import { progressLabel } from './progressLabel'
 import styles from './LuggageListPage.module.css'
 
 /** Pantalla de inicio: crear maletas y abrirlas con un toque. */
@@ -13,7 +15,8 @@ export function LuggageListPage() {
   // parte de la app (u otra pestaña) cambia las maletas, se vuelve a ejecutar
   // y el componente se re-renderiza solo. Dexie es la single source of truth:
   // al crear una maleta no hace falta "avisar" a la lista, aparece sola.
-  const luggageList = useLiveQuery(() => luggages.list(), [luggages])
+  // listSummaries: cada maleta con su progreso, en solo dos consultas.
+  const luggageList = useLiveQuery(() => luggages.listSummaries(), [luggages])
 
   return (
     <section>
@@ -37,8 +40,19 @@ export function LuggageListPage() {
             // `key` estable (el id), nunca el índice del array.
             <li key={luggage.id}>
               {/* Toda la tarjeta es el enlace: zona táctil grande, un toque. */}
-              <Link to={`/luggages/${luggage.id}`} className={styles.card}>
-                {luggage.name}
+              <Link
+                to={`/luggages/${luggage.id}`}
+                className={styles.card}
+                // Nombre accesible explícito: "Mochila, 3 de 5 listos".
+                // Empieza por el texto visible (regla WCAG "label in name").
+                aria-label={`${luggage.name}, ${progressLabel(luggage.done, luggage.total)}`}
+              >
+                <span className={styles.name}>{luggage.name}</span>
+                <PackingProgress
+                  done={luggage.done}
+                  total={luggage.total}
+                  variant="compact"
+                />
               </Link>
             </li>
           ))}

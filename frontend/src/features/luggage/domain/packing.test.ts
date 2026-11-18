@@ -1,0 +1,74 @@
+import { describe, expect, it } from 'vitest'
+import {
+  isFullyPacked,
+  isLuggageFullyPacked,
+  luggageProgress,
+  packedCountAfterResize,
+  toggledPackedCount,
+} from './packing'
+
+const q = (nAlreadyPacked: number, num: number) => ({ num, nAlreadyPacked })
+
+describe('isFullyPacked', () => {
+  it.each([
+    [q(0, 1), false],
+    [q(1, 1), true],
+    [q(2, 5), false],
+    [q(5, 5), true],
+  ])('%o → %s', (counts, expected) => {
+    expect(isFullyPacked(counts)).toBe(expected)
+  })
+})
+
+describe('toggledPackedCount (todo o nada)', () => {
+  it('sin guardar → guarda todas las unidades', () => {
+    expect(toggledPackedCount(q(0, 5))).toBe(5)
+  })
+
+  it('completo → las saca todas', () => {
+    expect(toggledPackedCount(q(5, 5))).toBe(0)
+  })
+
+  it('a medias (p. ej. tras subir la cantidad) → lo completa', () => {
+    expect(toggledPackedCount(q(5, 6))).toBe(6)
+  })
+})
+
+describe('packedCountAfterResize', () => {
+  it('al subir la cantidad conserva lo guardado (la unidad nueva falta)', () => {
+    expect(packedCountAfterResize(q(5, 5), 6)).toBe(5)
+  })
+
+  it('al bajarla recorta para no violar nAlreadyPacked <= num', () => {
+    expect(packedCountAfterResize(q(5, 5), 4)).toBe(4)
+  })
+
+  it('si no había nada guardado, sigue en 0', () => {
+    expect(packedCountAfterResize(q(0, 3), 1)).toBe(0)
+  })
+})
+
+describe('luggageProgress', () => {
+  it('cuenta artículos completos, no unidades', () => {
+    // 5 calcetines guardados pesan lo mismo que 1 pasaporte: 1 artículo.
+    expect(luggageProgress([q(5, 5), q(0, 1), q(2, 3)])).toEqual({
+      done: 1,
+      total: 3,
+    })
+  })
+
+  it('maleta vacía → 0 de 0', () => {
+    expect(luggageProgress([])).toEqual({ done: 0, total: 0 })
+  })
+})
+
+describe('isLuggageFullyPacked', () => {
+  it('true solo si todos los artículos están completos', () => {
+    expect(isLuggageFullyPacked([q(1, 1), q(5, 5)])).toBe(true)
+    expect(isLuggageFullyPacked([q(1, 1), q(4, 5)])).toBe(false)
+  })
+
+  it('una maleta vacía no está "hecha"', () => {
+    expect(isLuggageFullyPacked([])).toBe(false)
+  })
+})

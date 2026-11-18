@@ -68,3 +68,26 @@ describe('DexieItemRepository', () => {
     })
   })
 })
+
+describe('DexieItemRepository.findByName', () => {
+  it('encuentra sin distinguir mayúsculas, tildes ni espacios', async () => {
+    const { items } = createTestRepositories()
+    const camera = await items.create({ name: 'Cámara' })
+
+    expect(await items.findByName('  camara ')).toEqual(camera)
+    expect(await items.findByName('CÁMARA')).toEqual(camera)
+  })
+
+  it('distingue la ñ (en español es otra letra)', async () => {
+    const { items } = createTestRepositories()
+    await items.create({ name: 'Paño' })
+
+    expect(await items.findByName('Pano')).toBeUndefined()
+  })
+
+  it('devuelve undefined si no existe', async () => {
+    const { items } = createTestRepositories()
+
+    expect(await items.findByName('Toalla')).toBeUndefined()
+  })
+})

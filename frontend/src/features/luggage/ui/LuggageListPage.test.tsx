@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { renderApp } from '@/test/render'
@@ -23,10 +23,11 @@ describe('LuggageListPage', () => {
     renderApp('/', repositories)
 
     const items = await screen.findAllByRole('listitem')
-    expect(items.map((li) => li.textContent)).toEqual([
-      'Mochila Japón',
-      'Maleta finde',
-    ])
+    expect(
+      items.map((li) =>
+        within(li).getByRole('link').getAttribute('aria-label'),
+      ),
+    ).toEqual(['Mochila Japón, Vacía', 'Maleta finde, Vacía'])
   })
 
   describe('crear en línea', () => {
@@ -39,7 +40,7 @@ describe('LuggageListPage', () => {
       await user.type(input, '  Mochila Japón {Enter}')
 
       expect(
-        await screen.findByRole('link', { name: 'Mochila Japón' }),
+        await screen.findByRole('link', { name: 'Mochila Japón, Vacía' }),
       ).toBeInTheDocument()
       expect(input).toHaveValue('')
       expect(input).toHaveFocus()
@@ -58,7 +59,7 @@ describe('LuggageListPage', () => {
       await user.click(screen.getByRole('button', { name: 'Crear maleta' }))
 
       expect(
-        await screen.findByRole('link', { name: 'Neceser' }),
+        await screen.findByRole('link', { name: 'Neceser, Vacía' }),
       ).toBeInTheDocument()
     })
 
@@ -68,9 +69,9 @@ describe('LuggageListPage', () => {
       const input = screen.getByLabelText('Nombre de la nueva maleta')
 
       await user.type(input, 'Una{Enter}')
-      await screen.findByRole('link', { name: 'Una' })
+      await screen.findByRole('link', { name: 'Una, Vacía' })
       await user.type(input, 'Dos{Enter}')
-      await screen.findByRole('link', { name: 'Dos' })
+      await screen.findByRole('link', { name: 'Dos, Vacía' })
 
       expect(await repositories.luggages.list()).toHaveLength(2)
     })
@@ -95,11 +96,68 @@ describe('LuggageListPage', () => {
     const luggage = await repositories.luggages.create({ name: 'Neceser' })
     const { router } = renderApp('/', repositories)
 
-    await user.click(await screen.findByRole('link', { name: 'Neceser' }))
+    await user.click(
+      await screen.findByRole('link', { name: 'Neceser, Vacía' }),
+    )
 
     expect(router.state.location.pathname).toBe(`/luggages/${luggage.id}`)
     expect(
       await screen.findByRole('heading', { name: 'Neceser' }),
+    ).toBeInTheDocument()
+  })
+})
+
+describe('Progreso en las tarjetas', () => {
+  it.each([
+    [
+      [
+        [5, 5],
+        [0, 1],
+      ],
+      'Grande, 1 de 2 listos',
+    ],
+    [[[1, 1]], 'Grande, ¡Maleta lista!'],
+    [[], 'Grande, Vacía'],
+  ] as const)(
+    'con cantidades %j la tarjeta dice "%s"',
+    async (counts, expectedName) => {
+      const repositories = createTestRepositories()
+      const luggage = await repositories.luggages.create({ name: 'Grande' })
+      for (const [index, [packed, num]] of counts.entries()) {
+        const item = await repositories.items.create({ name: `Art ${index}` })
+        await repositories.quantities.add({
+          luggageId: luggage.id,
+          itemId: item.id,
+          num,
+          nAlreadyPacked: packed,
+        })
+      }
+
+      renderApp('/', repositories)
+
+      expect(
+        await screen.findByRole('link', { name: expectedName }),
+      ).toBeInTheDocument()
+    },
+  )
+
+  it('se actualiza al empaquetar en otra parte de la app (useLiveQuery)', async () => {
+    const repositories = createTestRepositories()
+    const luggage = await repositories.luggages.create({ name: 'Grande' })
+    const item = await repositories.items.create({ name: 'Toalla' })
+    const quantity = await repositories.quantities.add({
+      luggageId: luggage.id,
+      itemId: item.id,
+      num: 1,
+      nAlreadyPacked: 0,
+    })
+    renderApp('/', repositories)
+    await screen.findByRole('link', { name: 'Grande, 0 de 1 listos' })
+
+    await repositories.quantities.togglePacked(quantity.id)
+
+    expect(
+      await screen.findByRole('link', { name: 'Grande, ¡Maleta lista!' }),
     ).toBeInTheDocument()
   })
 })

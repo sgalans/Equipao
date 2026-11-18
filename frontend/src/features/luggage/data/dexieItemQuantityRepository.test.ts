@@ -114,3 +114,74 @@ describe('DexieItemQuantityRepository', () => {
     expect(await items.getById(socks.id)).toEqual(socks)
   })
 })
+
+describe('DexieItemQuantityRepository: empaquetado y lectura', () => {
+  async function setupWithQuantity(num: number, nAlreadyPacked = 0) {
+    const repos = createTestRepositories()
+    const luggage = await repos.luggages.create({ name: 'Grande' })
+    const socks = await repos.items.create({ name: 'Calcetines' })
+    const quantity = await repos.quantities.add({
+      luggageId: luggage.id,
+      itemId: socks.id,
+      num,
+      nAlreadyPacked,
+    })
+    return { ...repos, luggage, socks, quantity }
+  }
+
+  it('togglePacked guarda todo y, con otro toque, lo saca todo', async () => {
+    const { quantities, quantity } = await setupWithQuantity(5)
+
+    expect(await quantities.togglePacked(quantity.id)).toMatchObject({
+      nAlreadyPacked: 5,
+    })
+    expect(await quantities.togglePacked(quantity.id)).toMatchObject({
+      nAlreadyPacked: 0,
+    })
+  })
+
+  it('resize al alza conserva lo guardado (5/5 → 5/6)', async () => {
+    const { quantities, quantity } = await setupWithQuantity(5, 5)
+
+    expect(await quantities.resize(quantity.id, 6)).toMatchObject({
+      num: 6,
+      nAlreadyPacked: 5,
+    })
+  })
+
+  it('resize a la baja recorta lo guardado (5/5 → 4/4) sin violar el CHECK', async () => {
+    const { quantities, quantity } = await setupWithQuantity(5, 5)
+
+    expect(await quantities.resize(quantity.id, 4)).toMatchObject({
+      num: 4,
+      nAlreadyPacked: 4,
+    })
+  })
+
+  it('togglePacked y resize lanzan EntityNotFoundError si no existe', async () => {
+    const { quantities } = await setupWithQuantity(1)
+
+    await expect(quantities.togglePacked(MISSING_ID)).rejects.toBeInstanceOf(
+      EntityNotFoundError,
+    )
+    await expect(quantities.resize(MISSING_ID, 2)).rejects.toBeInstanceOf(
+      EntityNotFoundError,
+    )
+  })
+
+  it('listEntriesByLuggage incluye el nombre del artículo, en orden de añadido', async () => {
+    const { quantities, items, luggage, quantity } = await setupWithQuantity(5)
+    const charger = await items.create({ name: 'Cargador' })
+    await quantities.add({
+      luggageId: luggage.id,
+      itemId: charger.id,
+      num: 1,
+      nAlreadyPacked: 0,
+    })
+
+    const entries = await quantities.listEntriesByLuggage(luggage.id)
+
+    expect(entries.map((e) => e.itemName)).toEqual(['Calcetines', 'Cargador'])
+    expect(entries[0]).toEqual({ ...quantity, itemName: 'Calcetines' })
+  })
+})

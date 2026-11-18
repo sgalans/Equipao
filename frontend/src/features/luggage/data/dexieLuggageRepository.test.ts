@@ -104,3 +104,35 @@ describe('DexieLuggageRepository', () => {
     })
   })
 })
+
+describe('DexieLuggageRepository.listSummaries', () => {
+  it('añade a cada maleta su progreso en artículos completos', async () => {
+    freezeTime('2026-11-18T10:00:00.000Z')
+    const { luggages, items, quantities } = createTestRepositories()
+    const socks = await items.create({ name: 'Calcetines' })
+    const passport = await items.create({ name: 'Pasaporte' })
+    const big = await luggages.create({ name: 'Grande' })
+    await quantities.add({
+      luggageId: big.id,
+      itemId: socks.id,
+      num: 5,
+      nAlreadyPacked: 5,
+    })
+    await quantities.add({
+      luggageId: big.id,
+      itemId: passport.id,
+      num: 1,
+      nAlreadyPacked: 0,
+    })
+    vi.setSystemTime(new Date('2026-11-19T10:00:00.000Z'))
+    const empty = await luggages.create({ name: 'Vacía' })
+
+    const summaries = await luggages.listSummaries()
+
+    // Mismo orden que list() (más recientes primero) y sin mezclar maletas.
+    expect(summaries).toEqual([
+      { ...empty, done: 0, total: 0 },
+      { ...big, done: 1, total: 2 },
+    ])
+  })
+})

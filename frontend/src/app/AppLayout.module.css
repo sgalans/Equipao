@@ -23,6 +23,20 @@
   text-decoration: none;
 }
 
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  /* Zona táctil de 44px aunque el texto sea pequeño; el margen negativo
+     compensa el padding para que el icono quede alineado con el contenido. */
+  min-height: 2.75rem;
+  margin: -0.5rem 0 -0.5rem -0.5rem;
+  padding: 0 0.5rem;
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
 /* Mobile-first: ancho completo en el móvil, columna centrada en pantallas grandes. */
 .main {
   max-width: 40rem;
