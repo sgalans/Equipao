@@ -1,4 +1,5 @@
 import type { RouteObject } from 'react-router'
+import { LuggageDetailPage } from '@/features/luggage/ui/LuggageDetailPage'
 import { LuggageListPage } from '@/features/luggage/ui/LuggageListPage'
 import { AppLayout } from './AppLayout'
 import { NotFoundPage } from './NotFoundPage'
@@ -16,7 +17,7 @@ export const routes: RouteObject[] = [
     children: [
       // index: la ruta hija que se pinta en "/" exactamente.
       { index: true, Component: LuggageListPage },
-      // Paso 2: { path: 'luggages/:luggageId', Component: LuggageDetailPage }
+      { path: 'luggages/:luggageId', Component: LuggageDetailPage },
       // Comodín: cualquier otra URL. Debe ser la red de seguridad final.
       { path: '*', Component: NotFoundPage },
     ],

@@ -67,7 +67,7 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 ### Vocabulario de la interfaz (lenguaje ubicuo)
 
 - **Maleta** = `Luggage`. **Compartimento** = `Compartment`. Texto de ayuda acordado: *"Un compartimento es un subgrupo de objetos dentro de tu maleta: el neceser, la mochila de mano, el maletín del portátil… Un espacio donde agrupar los objetos que van juntos."*
-- `Item` en la interfaz: **pendiente de decidir entre "ítem" y "objeto"**.
+- `Item` en la interfaz: **"artículo"** (propuesto por Claude, pendiente de confirmar por el usuario; descartados "ítem" y "objeto"). Además, preferir microcopy que no necesite el sustantivo ("Añadir a la maleta…", "3 de 12 guardados").
 
 ## 6. Decisiones cerradas
 
@@ -113,10 +113,10 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 
 ## 10. Estado actual
 
-- Fase: **iteración 3 (refactor: la maleta como entidad principal)** en la rama `refactor/luggage-first`. Pasos: 1) documentación + capa de datos sin `Trip` ni color, inicio = lista de maletas de solo lectura · 2) UI de maletas (crear en línea, detalle, renombrar, borrar).
+- Fase: **iteración 3 (refactor: la maleta como entidad principal)** en la rama `refactor/luggage-first`. Pasos: 1) documentación + capa de datos sin `Trip` ni color ✅ · 2) UI de maletas ✅: crear en línea en el inicio (`CreateLuggageForm`, Enter o "+"), detalle en `/luggages/:luggageId` con título editable en el sitio (`EditableTitle`: Enter/blur guarda, Escape cancela) y papelera roja con confirmación.
 - Iteración 2 (CRUD de viajes) mergeada en `develop` (PR #3); después se decidió eliminar los viajes. Se reutilizan sus piezas: router, DI por Context, `FormField`, `ConfirmDialog`, estilos y `renderApp`.
 - Pendientes técnicos: el bundle supera 500 kB (157 kB gzip) → code splitting en la iteración de PWA; en el despliegue hará falta un rewrite de todas las rutas a `index.html`.
-- Backlog: "Deshacer" al borrar (snapshot + reinserción + toast con Zustand), script `npm run check`, tests E2E con Playwright.
+- Backlog: "Deshacer" al borrar (snapshot + reinserción + toast con Zustand), script `npm run check`, tests E2E con Playwright (casos que jsdom no reproduce: foco atrapado y Escape en `<dialog>`, blur al desmontar en `EditableTitle`).
 - Pendiente de decidir (iteración 5): al borrar un compartimento, ¿sus ítems se borran o pasan a sueltos?
 - Iteración 1 (capa de datos) mergeada en `develop` (PR #2).
 - Setup (iteración 0) mergeado en `develop` (PR #1).

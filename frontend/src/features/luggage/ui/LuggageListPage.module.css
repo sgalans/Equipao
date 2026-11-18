@@ -12,10 +12,18 @@
 }
 
 .card {
+  display: block;
   padding: 0.75rem 1rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
+  color: var(--text);
   font-weight: 600;
+  text-decoration: none;
   /* Un nombre largo se parte en líneas en vez de desbordar la tarjeta. */
   overflow-wrap: anywhere;
+}
+
+.card:hover,
+.card:focus-visible {
+  border-color: var(--accent);
 }
