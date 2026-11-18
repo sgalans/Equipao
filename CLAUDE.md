@@ -67,7 +67,7 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 ### Vocabulario de la interfaz (lenguaje ubicuo)
 
 - **Maleta** = `Luggage`. **Compartimento** = `Compartment`. Texto de ayuda acordado: *"Un compartimento es un subgrupo de objetos dentro de tu maleta: el neceser, la mochila de mano, el maletín del portátil… Un espacio donde agrupar los objetos que van juntos."*
-- `Item` en la interfaz: **"artículo"** (propuesto por Claude, pendiente de confirmar por el usuario; descartados "ítem" y "objeto"). Además, preferir microcopy que no necesite el sustantivo ("Añadir a la maleta…", "3 de 12 guardados").
+- `Item` en la interfaz: **"artículo"** (confirmado; descartados "ítem", "objeto", "cosa" y "elemento"). Además, preferir microcopy que no necesite el sustantivo ("Añadir a la maleta…", "3 de 12 guardados").
 
 ## 6. Decisiones cerradas
 
@@ -89,6 +89,10 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 - **Nombres de errores propios**: nunca coinciden con los de DOMException/IndexedDB (p. ej. `NotFoundError`), porque Dexie los convierte en sus propios errores al salir de una transacción.
 - **UI**: React Router (rutas en `src/app/routes.ts`, layout `AppLayout`), React Hook Form + `zodResolver` con los esquemas Zod existentes, CSS Modules (`X.module.css` junto al componente) y variables CSS globales en `index.css`.
 - **Inyección de repositorios en la UI con React Context**: `RepositoriesContext` y `useRepositories()` en `src/shared/di/` (solo conocen las interfaces); la composition root (`src/app/compositionRoot.ts`) es el único sitio que crea implementaciones concretas. Lecturas reactivas con `useLiveQuery(() => repo.list(), [repo])`.
+- **Empaquetado (iteración 4)**: "todo o nada" (un toque guarda todas las unidades, otro las saca; a medias → completa). Al cambiar la cantidad se conserva lo guardado recortado a `num` (5/5 → 6 = 5/6; → 4 = 4/4). Progreso = artículos completos, no unidades. Orden fijo por orden de añadido (nada se mueve bajo el dedo). Añadir un artículo que ya está en la maleta → aviso, no suma. Quitar un artículo de la maleta → sin confirmación. Reglas puras en `features/luggage/domain/packing.ts`.
+- **Catálogo implícito**: al añadir por nombre se reutiliza el artículo si existe (`findByName`: Collator 'es' base, iguala mayúsculas/tildes, distingue ñ) o se crea. Sin pantalla de catálogo por ahora.
+- **Capa `application`** (`features/<f>/application/`): casos de uso que coordinan varios repositorios (p. ej. `addItemByName`). Solo conocen los ports.
+- **Operaciones leer-calcular-escribir dentro del repositorio y en una transacción** (`togglePacked`, `resize`), no en la UI: evita *lost updates*.
 - **Tests de UI**: `renderApp(path, repositories)` (`src/test/render.tsx`) monta las rutas reales con `createMemoryRouter` y una base de datos aislada. jsdom no implementa `<dialog>.showModal()`: hay un stub en `src/test/setup.dom.ts`; dentro de un diálogo, buscar con `within(dialog)` (Testing Library no modela `inert`).
 
 ## 7. Principios
@@ -113,8 +117,10 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 
 ## 10. Estado actual
 
-- Fase: **iteración 3 (refactor: la maleta como entidad principal)** en la rama `refactor/luggage-first`. Pasos: 1) documentación + capa de datos sin `Trip` ni color ✅ · 2) UI de maletas ✅: crear en línea en el inicio (`CreateLuggageForm`, Enter o "+"), detalle en `/luggages/:luggageId` con título editable en el sitio (`EditableTitle`: Enter/blur guarda, Escape cancela) y papelera roja con confirmación.
+- Fase: **iteración 4 (artículos y empaquetado)** en la rama `crud/items`. Pasos: 1) dominio y datos ✅ (`packing.ts`, `search.ts`, `findByName`, `togglePacked`, `resize`, `listEntriesByLuggage`, `addItemByName`) · 2) UI del detalle (añadir con sugerencias, filas con círculo, cantidad y quitar, progreso) · 3) progreso en las tarjetas del inicio.
+- Iteración 3 (maleta como entidad principal: crear en línea, detalle, `EditableTitle`, borrar) mergeada en `develop`.
 - Iteración 2 (CRUD de viajes) mergeada en `develop` (PR #3); después se decidió eliminar los viajes. Se reutilizan sus piezas: router, DI por Context, `FormField`, `ConfirmDialog`, estilos y `renderApp`.
+- **Riesgo conocido**: sin desplegar ni instalar como PWA, Safari de iOS puede borrar IndexedDB tras 7 días sin visitar la web. Usar solo datos de prueba hasta la iteración de PWA (el usuario decidió no adelantar el despliegue).
 - Pendientes técnicos: el bundle supera 500 kB (157 kB gzip) → code splitting en la iteración de PWA; en el despliegue hará falta un rewrite de todas las rutas a `index.html`.
 - Backlog: "Deshacer" al borrar (snapshot + reinserción + toast con Zustand), script `npm run check`, tests E2E con Playwright (casos que jsdom no reproduce: foco atrapado y Escape en `<dialog>`, blur al desmontar en `EditableTitle`).
 - Pendiente de decidir (iteración 5): al borrar un compartimento, ¿sus ítems se borran o pasan a sueltos?

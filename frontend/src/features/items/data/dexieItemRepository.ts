@@ -20,6 +20,19 @@ export function createDexieItemRepository(db: AppDb): ItemRepository {
       return db.items.get(id)
     },
 
+    async findByName(name) {
+      const needle = name.trim()
+      // Recorremos el catálogo en memoria: con cientos de artículos es
+      // instantáneo. El Collator con sensitivity 'base' iguala mayúsculas y
+      // tildes pero distingue la ñ, porque en español es otra letra.
+      // (Si el catálogo creciera a decenas de miles, se guardaría un campo
+      // normalizado e indexado; hoy sería optimización prematura.)
+      const items = await db.items.toArray()
+      return items.find(
+        (item) => spanishCollator.compare(item.name, needle) === 0,
+      )
+    },
+
     async create(input) {
       const item = { ...newEntityBase(), ...NewItemSchema.parse(input) }
       await db.items.add(item)
