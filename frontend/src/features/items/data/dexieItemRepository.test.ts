@@ -12,7 +12,7 @@ describe('DexieItemRepository', () => {
       'Neceser',
       'Álbum',
     ]) {
-      await items.create({ name, color: '#000000' })
+      await items.create({ name })
     }
 
     const names = (await items.list()).map((i) => i.name)
@@ -28,19 +28,19 @@ describe('DexieItemRepository', () => {
     ])
   })
 
-  it('update cambia el color normalizándolo', async () => {
+  it('update renombra el ítem normalizando el nombre', async () => {
     const { items } = createTestRepositories()
-    const item = await items.create({ name: 'Cargador', color: '#000000' })
+    const item = await items.create({ name: 'Cargador' })
 
-    const updated = await items.update(item.id, { color: '#FFAA00' })
+    const updated = await items.update(item.id, { name: '  Cargador USB-C ' })
 
-    expect(updated.color).toBe('#ffaa00')
+    expect(updated).toMatchObject({ id: item.id, name: 'Cargador USB-C' })
   })
 
   describe('remove (ON DELETE RESTRICT)', () => {
     it('borra un ítem que no está en ninguna maleta', async () => {
       const { items } = createTestRepositories()
-      const item = await items.create({ name: 'Cargador', color: '#000000' })
+      const item = await items.create({ name: 'Cargador' })
 
       await items.remove(item.id)
 
@@ -48,15 +48,10 @@ describe('DexieItemRepository', () => {
     })
 
     it('impide borrar un ítem en uso e indica en cuántas maletas está', async () => {
-      const { items, trips, luggages, quantities } = createTestRepositories()
-      const socks = await items.create({ name: 'Calcetines', color: '#3366ff' })
-      const trip = await trips.create({
-        name: 'Japón',
-        startDate: '2027-04-01',
-        endDate: '2027-04-15',
-      })
+      const { items, luggages, quantities } = createTestRepositories()
+      const socks = await items.create({ name: 'Calcetines' })
       for (const name of ['Grande', 'Mochila']) {
-        const luggage = await luggages.create({ tripId: trip.id, name })
+        const luggage = await luggages.create({ name })
         await quantities.add({
           luggageId: luggage.id,
           itemId: socks.id,

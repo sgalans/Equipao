@@ -1,10 +1,8 @@
 import { z } from 'zod'
-import { entityBaseShape, IdSchema, NameSchema } from '@/shared/domain/schemas'
+import { entityBaseShape, NameSchema } from '@/shared/domain/schemas'
 
+/** Maleta: la entidad principal de la app. */
 const luggageFields = {
-  // Clave foránea → Trip. Zod solo comprueba el formato; que el viaje exista
-  // de verdad lo garantizará el repositorio (IndexedDB no tiene FOREIGN KEY).
-  tripId: IdSchema,
   name: NameSchema,
 }
 

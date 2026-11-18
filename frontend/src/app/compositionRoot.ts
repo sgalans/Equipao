@@ -1,7 +1,6 @@
 import { createDexieItemRepository } from '@/features/items/data/dexieItemRepository'
 import { createDexieItemQuantityRepository } from '@/features/luggage/data/dexieItemQuantityRepository'
 import { createDexieLuggageRepository } from '@/features/luggage/data/dexieLuggageRepository'
-import { createDexieTripRepository } from '@/features/trips/data/dexieTripRepository'
 import type { AppDb } from '@/shared/db/db'
 import type { Repositories } from '@/shared/di/repositories'
 
@@ -12,7 +11,6 @@ import type { Repositories } from '@/shared/di/repositories'
  */
 export function createDexieRepositories(db: AppDb): Repositories {
   return {
-    trips: createDexieTripRepository(db),
     luggages: createDexieLuggageRepository(db),
     quantities: createDexieItemQuantityRepository(db),
     items: createDexieItemRepository(db),

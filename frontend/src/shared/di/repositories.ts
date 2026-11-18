@@ -2,14 +2,12 @@ import { createContext, useContext } from 'react'
 import type { ItemRepository } from '@/features/items/domain/itemRepository'
 import type { ItemQuantityRepository } from '@/features/luggage/domain/itemQuantityRepository'
 import type { LuggageRepository } from '@/features/luggage/domain/luggageRepository'
-import type { TripRepository } from '@/features/trips/domain/tripRepository'
 
 /**
  * Contrato con todos los repositorios de la app. Solo conoce las INTERFACES
  * (ports), nunca Dexie: así la UI no sabe cómo se guardan los datos.
  */
 export interface Repositories {
-  trips: TripRepository
   luggages: LuggageRepository
   quantities: ItemQuantityRepository
   items: ItemRepository

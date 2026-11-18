@@ -1,17 +1,15 @@
 import { describe, expect, it } from 'vitest'
+import { errorPaths } from '@/test/zod'
 import { NewItemSchema } from './item'
 
 describe('NewItemSchema', () => {
-  it('acepta un ítem válido y normaliza el color a minúsculas', () => {
-    const result = NewItemSchema.parse({ name: 'Calcetines', color: '#FF8800' })
-    expect(result).toEqual({ name: 'Calcetines', color: '#ff8800' })
+  it('acepta un ítem válido y recorta el nombre', () => {
+    expect(NewItemSchema.parse({ name: ' Calcetines ' })).toEqual({
+      name: 'Calcetines',
+    })
   })
 
-  it.each(['red', '#fff', '#12345g', 'ff8800', '#ff88001'])(
-    'rechaza el color inválido %j',
-    (color) => {
-      const result = NewItemSchema.safeParse({ name: 'Calcetines', color })
-      expect(result.success).toBe(false)
-    },
-  )
+  it('rechaza el nombre vacío', () => {
+    expect(errorPaths(NewItemSchema.safeParse({ name: ' ' }))).toEqual(['name'])
+  })
 })
