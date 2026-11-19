@@ -58,3 +58,19 @@
   background: transparent;
   color: var(--text-muted);
 }
+
+/* Acción secundaria con icono y texto ("✎ Renombrar", "🗑 Borrar"):
+   discreta, pero con 44px de zona táctil. */
+.textAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 2.75rem;
+  padding: 0 0.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}

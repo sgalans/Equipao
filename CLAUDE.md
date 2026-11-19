@@ -120,7 +120,7 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 
 ## 10. Estado actual
 
-- Fase: **iteración 7 (catálogo de artículos)** en la rama `feature/items-catalog`. Decisiones: enlace "Artículos" en la cabecera del inicio; borrar un artículo usado lo quita de las maletas (CASCADE con aviso que lista las maletas); renombrar a un nombre existente → aviso (sin fusionar); tocar la fila despliega Renombrar/Borrar; buscador; uso "En N maletas"; sin crear artículos desde aquí. Pasos: 1) datos ✅ (`listWithUsage`, CASCADE, `DuplicateError` al renombrar; `InUseError` eliminado) · 2) UI (`/items`).
+- Fase: **iteración 7 (catálogo de artículos) terminada**, pendiente de PR a `develop`, en la rama `feature/items-catalog`. Decisiones: enlace "Artículos" en la cabecera del inicio; borrar un artículo usado lo quita de las maletas (CASCADE con aviso que lista las maletas); renombrar a un nombre existente → aviso (sin fusionar); tocar la fila despliega Renombrar/Borrar; buscador; uso "En N maletas"; sin crear artículos desde aquí. Pasos: 1) datos ✅ (`listWithUsage`, CASCADE, `DuplicateError` al renombrar; `InUseError` eliminado) · 2) UI ✅ (`/items`: `ItemsCatalogPage` con buscador, `CatalogRow` con acordeón Renombrar/Borrar y aviso con `Intl.ListFormat`; enlace "Artículos" en la cabecera del inicio; estilo compartido `buttons.textAction`). 166 tests.
 - Iteración 6 (duplicar maleta) mergeada en `develop`.
 - Iteración 5 (compartimentos) mergeada en `develop`.
 - Iteración 4 (artículos y empaquetado + navegación "‹ Mis maletas") mergeada en `develop`.

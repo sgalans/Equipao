@@ -19,9 +19,16 @@ export function AppLayout() {
     <div className={styles.shell}>
       <header className={styles.header}>
         {isHome ? (
-          <Link to="/" className={styles.brand}>
-            LugGAge
-          </Link>
+          <>
+            <Link to="/" className={styles.brand}>
+              LugGAge
+            </Link>
+            {/* Acceso al catálogo: un toque desde el inicio, sin ocupar
+                espacio fijo (decisión de producto). */}
+            <Link to="/items" className={styles.navLink}>
+              Artículos
+            </Link>
+          </>
         ) : (
           // Navegación jerárquica ("up"): siempre al inicio, no a la página
           // anterior del historial (navigate(-1)). Así es predecible y
