@@ -126,7 +126,7 @@ export function CompartmentSection({
         </h2>
         <button
           type="button"
-          className={`${buttons.iconGhost} ${styles.addToggle}`}
+          className={`${buttons.iconGhost} ${styles.headerButton} ${styles.addToggle}`}
           // El mismo botón abre y cierra: al abrirse, el "+" gira y se ve
           // como "×" (ver CSS), y el nombre accesible cambia con él para
           // que VoiceOver también anuncie que ahora cierra.
@@ -147,7 +147,7 @@ export function CompartmentSection({
         </button>
         <button
           type="button"
-          className={buttons.iconGhost}
+          className={`${buttons.iconGhost} ${styles.headerButton}`}
           aria-label={`Más acciones de ${compartment.name}`}
           title="Más acciones"
           aria-expanded={showActions}
@@ -190,7 +190,7 @@ export function CompartmentSection({
       {/* Plegado = no se pinta el contenido (ni ocupa sitio ni lo lee el
           lector de pantalla). aria-expanded en el botón anuncia el estado. */}
       {!isCollapsed && (
-        <div id={contentId}>
+        <div id={contentId} className={styles.content}>
           {isAdding && (
             <div className={styles.addForm}>
               <AddItemForm

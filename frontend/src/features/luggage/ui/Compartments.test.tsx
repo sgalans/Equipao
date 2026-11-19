@@ -462,9 +462,14 @@ describe('Compartimento "listo" (estado propio)', () => {
 
     await user.click(screen.getByRole('checkbox', { name: 'Neceser listo' }))
 
-    expect(
-      await screen.findByRole('checkbox', { name: 'Neceser listo' }),
-    ).toBeChecked()
+    // waitFor y no findByRole: el checkbox YA existía (sin marcar), así que
+    // findByRole lo devolvía al instante y a veces se comprobaba antes de
+    // que cambiara (test intermitente). Hay que esperar al CAMBIO.
+    await waitFor(() =>
+      expect(
+        screen.getByRole('checkbox', { name: 'Neceser listo' }),
+      ).toBeChecked(),
+    )
     // Se pliega solo: sus artículos dejan de verse.
     expect(
       screen.getByRole('button', { name: 'Neceser, Listo' }),

@@ -6,6 +6,9 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  /* Un poco de aire entre filas. Es padding (no margin) para que la zona
+     táctil crezca con la fila y no queden huecos "muertos" entre filas. */
+  padding: 0.25rem 0;
 }
 
 /* Toda la fila (salvo el círculo) despliega las opciones. */
