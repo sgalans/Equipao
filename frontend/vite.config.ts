@@ -1,13 +1,50 @@
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
 // Importamos defineConfig desde 'vitest/config' (no desde 'vite') para que
 // TypeScript conozca la sección `test`. Vitest reutiliza esta misma config de
 // Vite: mismos plugins, alias y transformaciones en la app y en los tests.
 import { defineConfig } from 'vitest/config'
+import { APP_NAME } from './src/app/appInfo.ts'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // PWA: manifest (instalable) + service worker (funciona sin conexión).
+    VitePWA({
+      // Una versión nueva NO se instala sola: espera a que el usuario la
+      // acepte (decisión de producto: nunca recargar mientras empaqueta). El
+      // aviso "Nueva versión disponible" se añade en el paso de
+      // actualizaciones con useRegisterSW.
+      registerType: 'prompt',
+      // Iconos generados a partir de public/icon.svg (pwa-assets.config.ts):
+      // los añade al manifest y los <link> de iOS al index.html.
+      pwaAssets: { config: true, overrideManifestIcons: true },
+      manifest: {
+        // El mismo nombre completo y bajo el icono (cabe: iOS muestra ~12
+        // caracteres). Sale de APP_NAME: un único sitio para el nombre.
+        name: APP_NAME,
+        short_name: APP_NAME,
+        description: 'Prepara tus maletas y marca lo que ya está guardado.',
+        lang: 'es',
+        start_url: '/',
+        scope: '/',
+        // standalone: se abre a pantalla completa, sin la barra de Safari.
+        display: 'standalone',
+        background_color: '#ffffff',
+        theme_color: '#2f6fde',
+      },
+      workbox: {
+        // Todo lo que se publica se guarda en el dispositivo (precaché):
+        // así la app arranca y funciona sin conexión.
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+        // SPA sin conexión: cualquier ruta (/luggages/123…) sirve index.html
+        // desde la caché y React Router hace el resto.
+        navigateFallback: 'index.html',
+      },
+    }),
+  ],
   resolve: {
     // Alias '@/' → src/. TypeScript lo conoce por `paths` (tsconfig.app.json);
     // Vite (y Vitest, que hereda esta config) lo necesitan aquí para resolverlo

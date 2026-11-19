@@ -1,6 +1,7 @@
 import { Link, Outlet, useMatch, useMatches } from 'react-router'
 import { ChevronLeftIcon } from '@/shared/ui/icons/ChevronLeftIcon'
 import { Toaster } from '@/shared/ui/notifications/Toaster'
+import { APP_NAME } from './appInfo'
 import styles from './AppLayout.module.css'
 import { HOME_BACK_LINK, type RouteHandle } from './navigation'
 
@@ -33,7 +34,7 @@ export function AppLayout() {
         {isHome ? (
           <>
             <Link to="/" className={styles.brand}>
-              LugGAge
+              {APP_NAME}
             </Link>
             {/* Acceso al catálogo: un toque desde el inicio, sin ocupar
                 espacio fijo (decisión de producto). */}

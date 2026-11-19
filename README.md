@@ -1,4 +1,4 @@
-# LugGAge
+# Equipao
 
 App para preparar maletas: listas de equipaje donde se marca lo que ya está guardado. Pensada para el iPhone (se instala como PWA desde Safari) y para funcionar **sin conexión**: todos los datos viven en el propio dispositivo.
 
