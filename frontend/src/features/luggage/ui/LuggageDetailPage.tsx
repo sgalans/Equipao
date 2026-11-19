@@ -8,6 +8,7 @@ import page from '@/shared/ui/page.module.css'
 import { packingProgress } from '../domain/packing'
 import { AddItemForm } from './AddItemForm'
 import { DeleteLuggageButton } from './DeleteLuggageButton'
+import { LuggageDescription } from './LuggageDescription'
 import { PackingList } from './PackingList'
 import styles from './LuggageDetailPage.module.css'
 import { PackingProgress } from './PackingProgress'
@@ -92,6 +93,14 @@ export function LuggageDetailPage() {
           }}
         />
       </header>
+      <LuggageDescription
+        // key: si cambia de maleta, el editor empieza de cero.
+        key={luggage.id}
+        value={luggage.description}
+        onSave={async (description) => {
+          await luggages.update(luggage.id, { description })
+        }}
+      />
 
       <PackingProgress {...packingProgress(entries, compartmentList)} />
       <AddItemForm

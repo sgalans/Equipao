@@ -11,6 +11,11 @@ import styles from './LuggageListPage.module.css'
 
 const HIGHLIGHT_MS = 2000
 
+/** Primera línea de la descripción (la tarjeta solo muestra esa). */
+function firstLine(description: string): string {
+  return description.split('\n')[0].trim()
+}
+
 /** Pantalla de inicio: crear, abrir y duplicar maletas. */
 export function LuggageListPage() {
   const { luggages } = useRepositories()
@@ -65,11 +70,23 @@ export function LuggageListPage() {
               <Link
                 to={`/luggages/${luggage.id}`}
                 className={styles.card}
-                // Nombre accesible explícito: "Mochila, 3 de 5 listos".
-                // Empieza por el texto visible (regla WCAG "label in name").
-                aria-label={`${luggage.name}, ${progressLabel(luggage.done, luggage.total)}`}
+                // Nombre accesible explícito: "Mochila, Japón, 3 de 5 listos"
+                // (lo mismo que se ve). Empieza por el texto visible (regla
+                // WCAG "label in name").
+                aria-label={[
+                  luggage.name,
+                  firstLine(luggage.description),
+                  progressLabel(luggage.done, luggage.total),
+                ]
+                  .filter(Boolean)
+                  .join(', ')}
               >
                 <span className={styles.name}>{luggage.name}</span>
+                {luggage.description && (
+                  <span className={styles.description}>
+                    {firstLine(luggage.description)}
+                  </span>
+                )}
                 <PackingProgress
                   done={luggage.done}
                   total={luggage.total}
