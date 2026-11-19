@@ -128,6 +128,51 @@ export function createDexieItemQuantityRepository(
       }
     },
 
+    addMany(luggageId, itemIds, compartmentId = null) {
+      return db.transaction(
+        'rw',
+        [db.itemQuantities, db.luggages, db.items, db.compartments],
+        async () => {
+          // FOREIGN KEY (luggageId), invariante del compartimento y
+          // FOREIGN KEY (itemId) de CADA artículo: si algo no existe es un
+          // error (no se ignora en silencio) y no se añade nada.
+          if (!(await db.luggages.get(luggageId))) {
+            throw new EntityNotFoundError('Luggage', luggageId)
+          }
+          await assertCompartmentBelongsTo(compartmentId, luggageId)
+          // Set: si llegara el mismo id dos veces, se trata una sola vez.
+          const uniqueItemIds = [...new Set(itemIds)]
+          const items = await db.items.bulkGet(uniqueItemIds)
+          const missing = uniqueItemIds.find((_, index) => !items[index])
+          if (missing) throw new EntityNotFoundError('Item', missing)
+
+          // Lo que ya está en la maleta se salta (decisión de producto: ni
+          // se vuelve a añadir ni se suma cantidad).
+          const alreadyIn = new Set(
+            (await listByLuggage(luggageId)).map((q) => q.itemId),
+          )
+          const toAdd = uniqueItemIds.filter((itemId) => !alreadyIn.has(itemId))
+          const added = toAdd.map((itemId) =>
+            ItemQuantitySchema.parse({
+              ...newEntityBase(),
+              luggageId,
+              itemId,
+              compartmentId,
+              num: 1,
+              nAlreadyPacked: 0,
+            }),
+          )
+          await db.itemQuantities.bulkAdd(added)
+          return {
+            added,
+            skippedItemIds: uniqueItemIds.filter((itemId) =>
+              alreadyIn.has(itemId),
+            ),
+          }
+        },
+      )
+    },
+
     togglePacked(id) {
       return modify(id, (current) => ({
         nAlreadyPacked: toggledPackedCount(current),

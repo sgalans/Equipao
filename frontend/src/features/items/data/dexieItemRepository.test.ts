@@ -156,3 +156,16 @@ describe('DexieItemRepository.findByName', () => {
     expect(await items.findByName('Toalla')).toBeUndefined()
   })
 })
+
+describe('DexieItemRepository.create: sin duplicados en el catálogo', () => {
+  it('rechaza un nombre que ya existe (aunque cambien mayúsculas o tildes)', async () => {
+    const { items } = createTestRepositories()
+    await items.create({ name: 'Cámara' })
+
+    await expect(items.create({ name: ' camara ' })).rejects.toMatchObject({
+      name: 'DuplicateError',
+      message: 'Ya existe un artículo llamado «Cámara»',
+    })
+    expect(await items.list()).toHaveLength(1)
+  })
+})
