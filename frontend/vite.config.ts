@@ -53,6 +53,27 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    // El aviso por defecto salta a los 500 kB. Medido (iteración 10): el
+    // chunk "vendor" (~507 kB, ~157 kB gzip) son librerías que la PRIMERA
+    // pantalla necesita (React, React Router, Zod, Dexie) y que la PWA
+    // descarga una sola vez. Partirlo más solo silenciaría el aviso sin
+    // reducir lo descargado. Si se quiere adelgazar de verdad: valorar
+    // `zod/mini` (backlog).
+    chunkSizeWarningLimit: 600,
+    rolldownOptions: {
+      output: {
+        // Las librerías (React, React Router, Zod, Dexie…: ~90% del peso) en
+        // su propio fichero. Al publicar una versión nueva normalmente solo
+        // cambia NUESTRO código, y el service worker solo vuelve a descargar
+        // los ficheros cuyo hash ha cambiado: actualizaciones mucho más
+        // ligeras.
+        codeSplitting: {
+          groups: [{ name: 'vendor', test: /node_modules/ }],
+        },
+      },
+    },
+  },
   resolve: {
     // Alias '@/' → src/. TypeScript lo conoce por `paths` (tsconfig.app.json);
     // Vite (y Vitest, que hereda esta config) lo necesitan aquí para resolverlo

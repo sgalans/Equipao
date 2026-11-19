@@ -34,10 +34,13 @@ describe('Acceso al catálogo', () => {
 
     await user.click(screen.getByRole('link', { name: 'Artículos' }))
 
-    expect(router.state.location.pathname).toBe('/items')
+    // Primero la pantalla y DESPUÉS la URL: el catálogo se carga bajo
+    // demanda (code splitting) y React Router no cambia de pantalla ni de URL
+    // hasta tenerlo descargado (así nunca hay una pantalla en blanco).
     expect(
       await screen.findByRole('heading', { name: 'Artículos' }),
     ).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/items')
 
     await user.click(screen.getByRole('link', { name: 'Mis maletas' }))
     expect(router.state.location.pathname).toBe('/')
