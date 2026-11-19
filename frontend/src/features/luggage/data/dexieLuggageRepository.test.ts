@@ -136,3 +136,101 @@ describe('DexieLuggageRepository.listSummaries', () => {
     ])
   })
 })
+
+describe('DexieLuggageRepository.duplicate', () => {
+  /** Maleta con un artículo suelto (guardado) y un compartimento con dos. */
+  async function setupFullLuggage() {
+    const repos = createTestRepositories()
+    const source = await repos.luggages.create({ name: 'Mochila' })
+    const kit = await repos.compartments.create({
+      luggageId: source.id,
+      name: 'Neceser',
+    })
+    const add = async (
+      name: string,
+      compartmentId: string | null,
+      num: number,
+      packed: number,
+    ) => {
+      const item = await repos.items.create({ name })
+      return repos.quantities.add({
+        luggageId: source.id,
+        itemId: item.id,
+        compartmentId,
+        num,
+        nAlreadyPacked: packed,
+      })
+    }
+    await add('Pasaporte', null, 1, 1)
+    await add('Cepillo', kit.id, 1, 1)
+    await add('Calcetines', kit.id, 5, 2)
+    return { ...repos, source, kit }
+  }
+
+  it('crea "Nombre (copia)" con los mismos artículos y cantidades, sin nada guardado', async () => {
+    const { luggages, quantities, source } = await setupFullLuggage()
+
+    const copy = await luggages.duplicate(source.id)
+
+    expect(copy.name).toBe('Mochila (copia)')
+    expect(copy.id).not.toBe(source.id)
+    const copied = await quantities.listEntriesByLuggage(copy.id)
+    // Mismo orden de añadido, mismas cantidades, todo a 0 guardado.
+    expect(copied.map((e) => [e.itemName, e.num, e.nAlreadyPacked])).toEqual([
+      ['Pasaporte', 1, 0],
+      ['Cepillo', 1, 0],
+      ['Calcetines', 5, 0],
+    ])
+  })
+
+  it('copia los compartimentos y cada artículo apunta al compartimento de la COPIA', async () => {
+    const { luggages, compartments, quantities, source, kit } =
+      await setupFullLuggage()
+
+    const copy = await luggages.duplicate(source.id)
+
+    const [copiedKit] = await compartments.listByLuggage(copy.id)
+    expect(copiedKit).toMatchObject({ name: 'Neceser', luggageId: copy.id })
+    expect(copiedKit.id).not.toBe(kit.id)
+    const copied = await quantities.listByLuggage(copy.id)
+    expect(copied.map((q) => q.compartmentId)).toEqual([
+      null,
+      copiedKit.id,
+      copiedKit.id,
+    ])
+  })
+
+  it('no toca la maleta original ni el catálogo', async () => {
+    const { luggages, quantities, compartments, items, source } =
+      await setupFullLuggage()
+    const before = {
+      quantities: await quantities.listByLuggage(source.id),
+      compartments: await compartments.listByLuggage(source.id),
+      items: await items.list(),
+    }
+
+    await luggages.duplicate(source.id)
+
+    expect(await quantities.listByLuggage(source.id)).toEqual(before.quantities)
+    expect(await compartments.listByLuggage(source.id)).toEqual(
+      before.compartments,
+    )
+    // Los artículos del catálogo se REUTILIZAN, no se duplican.
+    expect(await items.list()).toEqual(before.items)
+  })
+
+  it('duplicar una copia da "(copia 2)"', async () => {
+    const { luggages, source } = await setupFullLuggage()
+    const copy = await luggages.duplicate(source.id)
+
+    expect((await luggages.duplicate(copy.id)).name).toBe('Mochila (copia 2)')
+  })
+
+  it('lanza EntityNotFoundError si la maleta no existe', async () => {
+    const { luggages } = createTestRepositories()
+
+    await expect(luggages.duplicate(MISSING_ID)).rejects.toBeInstanceOf(
+      EntityNotFoundError,
+    )
+  })
+})

@@ -9,6 +9,7 @@ import { luggageProgress } from '../domain/packing'
 import { AddItemForm } from './AddItemForm'
 import { DeleteLuggageButton } from './DeleteLuggageButton'
 import { PackingList } from './PackingList'
+import styles from './LuggageDetailPage.module.css'
 import { PackingProgress } from './PackingProgress'
 
 const HIGHLIGHT_MS = 2000
@@ -89,12 +90,6 @@ export function LuggageDetailPage() {
             await luggages.update(luggage.id, { name })
           }}
         />
-        <DeleteLuggageButton
-          luggage={luggage}
-          // replace: la pantalla de una maleta borrada no queda en el
-          // historial; "atrás" no lleva a una maleta que ya no existe.
-          onDeleted={() => navigate('/', { replace: true })}
-        />
       </header>
 
       <PackingProgress {...luggageProgress(entries)} />
@@ -110,6 +105,15 @@ export function LuggageDetailPage() {
         highlightedId={highlightedId}
         onDuplicate={highlightExisting}
       />
+
+      <footer className={styles.footer}>
+        <DeleteLuggageButton
+          luggage={luggage}
+          // replace: la pantalla de una maleta borrada no queda en el
+          // historial; "atrás" no lleva a una maleta que ya no existe.
+          onDeleted={() => navigate('/', { replace: true })}
+        />
+      </footer>
     </section>
   )
 }

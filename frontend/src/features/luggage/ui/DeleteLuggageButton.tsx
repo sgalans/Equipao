@@ -5,6 +5,7 @@ import buttons from '@/shared/ui/buttons.module.css'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { TrashIcon } from '@/shared/ui/icons/TrashIcon'
 import type { Luggage } from '../domain/luggage'
+import styles from './DeleteLuggageButton.module.css'
 
 interface DeleteLuggageButtonProps {
   luggage: Luggage
@@ -12,7 +13,7 @@ interface DeleteLuggageButtonProps {
   onDeleted: () => void | Promise<void>
 }
 
-/** Papelera + diálogo que explica qué se borra (y qué no) en cascada. */
+/** Botón "Borrar maleta" + diálogo que explica qué se borra (y qué no). */
 export function DeleteLuggageButton({
   luggage,
   onDeleted,
@@ -30,14 +31,14 @@ export function DeleteLuggageButton({
     <>
       <button
         type="button"
-        className={buttons.iconDanger}
-        // Botón de solo icono: aria-label le da nombre para los lectores de
-        // pantalla; title muestra una ayuda al pasar el ratón en escritorio.
-        aria-label="Borrar maleta"
-        title="Borrar maleta"
+        // Al final de la maleta, con texto visible (decisión de producto):
+        // lejos de lo que se toca a menudo, para no borrar por accidente.
+        // El nombre accesible sale del propio texto: no hace falta aria-label.
+        className={`${buttons.danger} ${styles.button}`}
         onClick={() => setIsConfirming(true)}
       >
         <TrashIcon />
+        Borrar maleta
       </button>
 
       <ConfirmDialog

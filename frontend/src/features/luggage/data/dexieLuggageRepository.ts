@@ -3,6 +3,7 @@ import type { AppDb } from '@/shared/db/db'
 import { EntityNotFoundError } from '@/shared/domain/errors'
 import { LuggageSchema, NewLuggageSchema } from '../domain/luggage'
 import type { LuggageRepository } from '../domain/luggageRepository'
+import { copyName } from '../domain/copyName'
 import { luggageProgress } from '../domain/packing'
 
 /**
@@ -57,6 +58,64 @@ export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
       const luggage = { ...newEntityBase(), ...NewLuggageSchema.parse(input) }
       await db.luggages.add(luggage)
       return luggage
+    },
+
+    duplicate(id) {
+      // Una maleta, sus compartimentos y sus artículos forman un AGREGADO
+      // (DDD) con la maleta como raíz: se copian juntos o no se copia nada.
+      return db.transaction(
+        'rw',
+        [db.luggages, db.compartments, db.itemQuantities],
+        async () => {
+          const source = await db.luggages.get(id)
+          if (!source) throw new EntityNotFoundError('Luggage', id)
+
+          const copy = LuggageSchema.parse({
+            ...newEntityBase(),
+            name: copyName(source.name),
+          })
+
+          // Los compartimentos de la copia tienen ids NUEVOS. Este mapa
+          // traduce "compartimento original → compartimento de la copia",
+          // para que cada artículo apunte al de SU maleta (invariante).
+          const compartmentIdMap = new Map<string, string>()
+          const compartments = (
+            await db.compartments
+              .where('luggageId')
+              .equals(id)
+              .sortBy('createdAt')
+          ).map((compartment) => {
+            const base = newEntityBase()
+            compartmentIdMap.set(compartment.id, base.id)
+            return { ...compartment, ...base, luggageId: copy.id }
+          })
+
+          // Se copian en el mismo orden: los UUID v7 nuevos se generan en
+          // orden creciente, así que la copia conserva el orden de añadido.
+          const quantities = (
+            await db.itemQuantities
+              .where('luggageId')
+              .equals(id)
+              .sortBy('createdAt')
+          ).map((quantity) => ({
+            ...quantity,
+            ...newEntityBase(),
+            luggageId: copy.id,
+            compartmentId:
+              quantity.compartmentId === null
+                ? null
+                : (compartmentIdMap.get(quantity.compartmentId) ?? null),
+            // Decisión de producto: la copia empieza sin nada guardado.
+            nAlreadyPacked: 0,
+          }))
+
+          await db.luggages.add(copy)
+          // bulkAdd: una sola operación para todas las filas.
+          await db.compartments.bulkAdd(compartments)
+          await db.itemQuantities.bulkAdd(quantities)
+          return copy
+        },
+      )
     },
 
     update(id, changes) {
