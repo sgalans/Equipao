@@ -12,6 +12,7 @@ import {
 } from '../domain/itemQuantity'
 import type { ItemQuantityRepository } from '../domain/itemQuantityRepository'
 import { packedCountAfterResize, toggledPackedCount } from '../domain/packing'
+import { loadQuantitiesOfOneLuggage } from './loadQuantities'
 
 type CountChanges = { num?: number; nAlreadyPacked?: number }
 
@@ -200,6 +201,30 @@ export function createDexieItemQuantityRepository(
           return updated
         },
       )
+    },
+
+    moveMany(ids, compartmentId) {
+      return db.transaction(
+        'rw',
+        [db.itemQuantities, db.compartments],
+        async () => {
+          const rows = await loadQuantitiesOfOneLuggage(db, ids)
+          if (rows.length === 0) return []
+          await assertCompartmentBelongsTo(compartmentId, rows[0].luggageId)
+          const now = nowIso()
+          const moved = rows.map((row) => ({
+            ...row,
+            compartmentId,
+            updatedAt: now,
+          }))
+          await db.itemQuantities.bulkPut(moved)
+          return moved
+        },
+      )
+    },
+
+    async removeMany(ids) {
+      await db.itemQuantities.bulkDelete(ids)
     },
 
     async remove(id) {

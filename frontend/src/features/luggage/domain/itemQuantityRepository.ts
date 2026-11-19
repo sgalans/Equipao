@@ -51,6 +51,15 @@ export interface ItemQuantityRepository {
    * compartimento es de otra maleta.
    */
   moveTo(id: string, compartmentId: string | null): Promise<ItemQuantity>
+  /**
+   * Mueve varios artículos de UNA maleta a un compartimento suyo o a sueltos
+   * (null), todo o nada. EntityNotFoundError si alguno no existe;
+   * ConsistencyError si son de maletas distintas o el compartimento es de
+   * otra maleta.
+   */
+  moveMany(ids: string[], compartmentId: string | null): Promise<ItemQuantity[]>
+  /** Quita varios artículos de la maleta de golpe. Idempotente. */
+  removeMany(ids: string[]): Promise<void>
   /** Quita el ítem de la maleta. Idempotente. */
   remove(id: string): Promise<void>
 }
