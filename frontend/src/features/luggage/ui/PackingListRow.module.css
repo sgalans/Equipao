@@ -89,3 +89,14 @@
   min-width: 5.5rem;
   text-align: center;
 }
+
+/* Fila en modo selección: casilla + nombre + cantidad, todo un botón. */
+.selectable {
+  composes: details;
+  justify-content: flex-start;
+  padding: 0.25rem 0;
+}
+
+.selectable .quantity {
+  margin-left: auto;
+}

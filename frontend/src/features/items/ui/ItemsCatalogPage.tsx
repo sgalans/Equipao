@@ -115,7 +115,7 @@ export function ItemsCatalogPage() {
         {catalog.length > 0 && (
           <button
             type="button"
-            className={styles.selectToggle}
+            className={buttons.headerAction}
             onClick={() => {
               if (isSelecting) exitSelection()
               else {

@@ -31,6 +31,11 @@ interface CompartmentSectionProps {
   /** TODAS las líneas de la maleta: el formulario no sugiere lo que ya está. */
   luggageEntries: LuggageEntry[]
   onDuplicate: (itemName: string) => void
+  /**
+   * Modo selección de la maleta: solo se eligen artículos, así que se ocultan
+   * los controles propios del compartimento ("listo", +, ⋯). Plegar sigue.
+   */
+  isSelecting?: boolean
 }
 
 /**
@@ -45,6 +50,7 @@ export function CompartmentSection({
   renderRows,
   luggageEntries,
   onDuplicate,
+  isSelecting = false,
 }: CompartmentSectionProps) {
   const { compartments } = useRepositories()
   const isCollapsed = useIsCollapsed(compartment.id)
@@ -89,16 +95,18 @@ export function CompartmentSection({
       <div className={styles.header}>
         {/* Mismo círculo que los artículos (estilo compartido): "listo"
             PROPIO del compartimento, independiente de sus artículos. */}
-        <button
-          type="button"
-          role="checkbox"
-          aria-checked={compartment.isReady}
-          aria-label={`${compartment.name} listo`}
-          className={checkCircle.check}
-          onClick={() => void toggleReady()}
-        >
-          {compartment.isReady && <CheckIcon />}
-        </button>
+        {!isSelecting && (
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={compartment.isReady}
+            aria-label={`${compartment.name} listo`}
+            className={checkCircle.check}
+            onClick={() => void toggleReady()}
+          >
+            {compartment.isReady && <CheckIcon />}
+          </button>
+        )}
         <h2 className={styles.heading}>
           {isRenaming ? (
             <InlineEditInput
@@ -124,43 +132,47 @@ export function CompartmentSection({
             </button>
           )}
         </h2>
-        <button
-          type="button"
-          className={`${buttons.iconGhost} ${styles.headerButton} ${styles.addToggle}`}
-          // El mismo botón abre y cierra: al abrirse, el "+" gira y se ve
-          // como "×" (ver CSS), y el nombre accesible cambia con él para
-          // que VoiceOver también anuncie que ahora cierra.
-          aria-label={
-            isAdding
-              ? `Dejar de añadir a ${compartment.name}`
-              : `Añadir a ${compartment.name}`
-          }
-          title={isAdding ? 'Cerrar' : `Añadir a ${compartment.name}`}
-          aria-expanded={isAdding}
-          onClick={() => {
-            // Si estaba plegado, se despliega: no se añade a algo que no se ve.
-            expand(compartment.id)
-            setIsAdding((current) => !current)
-          }}
-        >
-          <PlusIcon />
-        </button>
-        <button
-          type="button"
-          className={`${buttons.iconGhost} ${styles.headerButton}`}
-          aria-label={`Más acciones de ${compartment.name}`}
-          title="Más acciones"
-          aria-expanded={showActions}
-          aria-controls={actionsId}
-          onClick={() => setShowActions((current) => !current)}
-        >
-          <MoreIcon />
-        </button>
+        {!isSelecting && (
+          <>
+            <button
+              type="button"
+              className={`${buttons.iconGhost} ${styles.headerButton} ${styles.addToggle}`}
+              // El mismo botón abre y cierra: al abrirse, el "+" gira y se ve
+              // como "×" (ver CSS), y el nombre accesible cambia con él para
+              // que VoiceOver también anuncie que ahora cierra.
+              aria-label={
+                isAdding
+                  ? `Dejar de añadir a ${compartment.name}`
+                  : `Añadir a ${compartment.name}`
+              }
+              title={isAdding ? 'Cerrar' : `Añadir a ${compartment.name}`}
+              aria-expanded={isAdding}
+              onClick={() => {
+                // Si estaba plegado, se despliega: no se añade a algo que no se ve.
+                expand(compartment.id)
+                setIsAdding((current) => !current)
+              }}
+            >
+              <PlusIcon />
+            </button>
+            <button
+              type="button"
+              className={`${buttons.iconGhost} ${styles.headerButton}`}
+              aria-label={`Más acciones de ${compartment.name}`}
+              title="Más acciones"
+              aria-expanded={showActions}
+              aria-controls={actionsId}
+              onClick={() => setShowActions((current) => !current)}
+            >
+              <MoreIcon />
+            </button>
+          </>
+        )}
       </div>
 
       {/* Fuera del contenido plegable: se puede renombrar o borrar un
           compartimento sin desplegarlo. */}
-      {showActions && (
+      {showActions && !isSelecting && (
         <div id={actionsId} className={styles.actions}>
           <button
             type="button"
@@ -191,7 +203,7 @@ export function CompartmentSection({
           lector de pantalla). aria-expanded en el botón anuncia el estado. */}
       {!isCollapsed && (
         <div id={contentId} className={styles.content}>
-          {isAdding && (
+          {isAdding && !isSelecting && (
             <div className={styles.addForm}>
               <AddItemForm
                 luggageId={compartment.luggageId}

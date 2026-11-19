@@ -80,3 +80,16 @@
   font-size: 0.875rem;
   cursor: pointer;
 }
+
+/* Acción de texto en la cabecera de una pantalla ("Seleccionar",
+   "Cancelar"): azul como un enlace de iOS, con 44px de zona táctil. */
+.headerAction {
+  min-height: 2.75rem;
+  padding: 0 0.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}

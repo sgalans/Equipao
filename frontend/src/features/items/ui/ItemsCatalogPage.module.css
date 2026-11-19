@@ -32,17 +32,6 @@
   border-top: 1px solid var(--border);
 }
 
-.selectToggle {
-  min-height: 2.75rem;
-  padding: 0 0.5rem;
-  border: 0;
-  background: transparent;
-  color: var(--accent);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
 /* Barra fija abajo en modo selección. sticky: se queda pegada al borde
    inferior mientras haces scroll; safe-area: respeta la barra del iPhone. */
 .selectionBar {
