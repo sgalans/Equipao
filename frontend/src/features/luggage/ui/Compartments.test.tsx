@@ -176,11 +176,55 @@ describe('Plegar (estado de UI persistido con Zustand)', () => {
 })
 
 describe('Renombrar y borrar compartimentos', () => {
+  it('las acciones están ocultas hasta tocar ⋯, y otro toque las oculta', async () => {
+    const { user } = await openLuggage(async (repos, luggageId) => {
+      await repos.compartments.create({ luggageId, name: 'Neceser' })
+    })
+    const more = screen.getByRole('button', {
+      name: 'Más acciones de Neceser',
+    })
+    expect(
+      screen.queryByRole('button', { name: 'Renombrar' }),
+    ).not.toBeInTheDocument()
+
+    await user.click(more)
+    expect(more).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('button', { name: 'Renombrar' })).toBeVisible()
+    expect(
+      screen.getByRole('button', { name: 'Borrar compartimento' }),
+    ).toBeVisible()
+
+    await user.click(more)
+    expect(
+      screen.queryByRole('button', { name: 'Renombrar' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('se puede renombrar sin desplegar el compartimento', async () => {
+    const { user } = await openLuggage(async (repos, luggageId) => {
+      await repos.compartments.create({ luggageId, name: 'Neceser' })
+    })
+    await user.click(screen.getByRole('button', { name: /^Neceser,/ }))
+
+    await user.click(
+      screen.getByRole('button', { name: 'Más acciones de Neceser' }),
+    )
+    await user.click(screen.getByRole('button', { name: 'Renombrar' }))
+    await user.keyboard('Aseo{Enter}')
+
+    expect(
+      await screen.findByRole('button', { name: 'Aseo, Vacío' }),
+    ).toHaveAttribute('aria-expanded', 'false')
+  })
+
   it('"Renombrar" → escribir → OK cambia el nombre', async () => {
     const { user } = await openLuggage(async (repos, luggageId) => {
       await repos.compartments.create({ luggageId, name: 'Neceser' })
     })
 
+    await user.click(
+      screen.getByRole('button', { name: 'Más acciones de Neceser' }),
+    )
     await user.click(screen.getByRole('button', { name: 'Renombrar' }))
     const input = screen.getByRole('textbox', {
       name: 'Nombre del compartimento',
@@ -205,6 +249,9 @@ describe('Renombrar y borrar compartimentos', () => {
       },
     )
 
+    await user.click(
+      screen.getByRole('button', { name: 'Más acciones de Neceser' }),
+    )
     await user.click(
       screen.getByRole('button', { name: 'Borrar compartimento' }),
     )

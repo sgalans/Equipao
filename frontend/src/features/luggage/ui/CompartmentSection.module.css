@@ -71,7 +71,7 @@
   font-size: 0.875rem;
 }
 
-/* Acciones poco frecuentes (estilo buttons.textAction). */
+/* Acciones poco frecuentes, visibles solo tras tocar ⋯ (estilo buttons.textAction). */
 .actions {
   display: flex;
   gap: 1rem;

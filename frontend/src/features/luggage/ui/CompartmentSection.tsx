@@ -4,6 +4,7 @@ import { reportError } from '@/shared/ui/notifications/notificationStore'
 import buttons from '@/shared/ui/buttons.module.css'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { ChevronDownIcon } from '@/shared/ui/icons/ChevronDownIcon'
+import { MoreIcon } from '@/shared/ui/icons/MoreIcon'
 import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
 import { PencilIcon } from '@/shared/ui/icons/PencilIcon'
 import { TrashIcon } from '@/shared/ui/icons/TrashIcon'
@@ -32,9 +33,9 @@ interface CompartmentSectionProps {
 
 /**
  * Un compartimento dentro de la maleta:
- *   ▾ Neceser · 2 de 3     [+]  ← tocar = plegar/desplegar; + = añadir dentro
+ *   ▾ Neceser · 2 de 3   [+] [⋯]  ← tocar = plegar; + = añadir; ⋯ = acciones
+ *     ✎ Renombrar   🗑 Borrar       ← solo tras tocar ⋯
  *     (filas de artículos)
- *     ✎ Renombrar   🗑 Borrar   ← acciones poco frecuentes, al final
  */
 export function CompartmentSection({
   compartment,
@@ -49,6 +50,10 @@ export function CompartmentSection({
   const expand = useCollapsedCompartments((state) => state.expand)
   const [isAdding, setIsAdding] = useState(false)
   const [isRenaming, setIsRenaming] = useState(false)
+  // Acciones poco frecuentes (renombrar, borrar) ocultas tras "⋯": los
+  // compartimentos suelen estar desplegados y no deben llenarse de botones.
+  const [showActions, setShowActions] = useState(false)
+  const actionsId = useId()
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
   const contentId = useId()
 
@@ -114,7 +119,47 @@ export function CompartmentSection({
         >
           <PlusIcon />
         </button>
+        <button
+          type="button"
+          className={buttons.iconGhost}
+          aria-label={`Más acciones de ${compartment.name}`}
+          title="Más acciones"
+          aria-expanded={showActions}
+          aria-controls={actionsId}
+          onClick={() => setShowActions((current) => !current)}
+        >
+          <MoreIcon />
+        </button>
       </div>
+
+      {/* Fuera del contenido plegable: se puede renombrar o borrar un
+          compartimento sin desplegarlo. */}
+      {showActions && (
+        <div id={actionsId} className={styles.actions}>
+          <button
+            type="button"
+            className={buttons.textAction}
+            onClick={() => {
+              setShowActions(false)
+              setIsRenaming(true)
+            }}
+          >
+            <PencilIcon />
+            Renombrar
+          </button>
+          <button
+            type="button"
+            className={buttons.textAction}
+            onClick={() => {
+              setShowActions(false)
+              setIsConfirmingDelete(true)
+            }}
+          >
+            <TrashIcon />
+            Borrar compartimento
+          </button>
+        </div>
+      )}
 
       {/* Plegado = no se pinta el contenido (ni ocupa sitio ni lo lee el
           lector de pantalla). aria-expanded en el botón anuncia el estado. */}
@@ -138,24 +183,6 @@ export function CompartmentSection({
           ) : (
             <p className={styles.empty}>Este compartimento está vacío.</p>
           )}
-          <div className={styles.actions}>
-            <button
-              type="button"
-              className={buttons.textAction}
-              onClick={() => setIsRenaming(true)}
-            >
-              <PencilIcon />
-              Renombrar
-            </button>
-            <button
-              type="button"
-              className={buttons.textAction}
-              onClick={() => setIsConfirmingDelete(true)}
-            >
-              <TrashIcon />
-              Borrar compartimento
-            </button>
-          </div>
         </div>
       )}
 
