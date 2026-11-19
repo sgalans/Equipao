@@ -16,7 +16,12 @@
   top: 0;
   border-bottom: 1px solid var(--border);
   background: var(--bg);
-  padding: 0.75rem 1rem;
+  /* Safe areas del iPhone (con viewport-fit=cover): arriba, el notch o la
+     isla dinámica; a los lados, el notch en horizontal. max() mantiene el
+     margen normal cuando el dispositivo no tiene esas zonas (insets = 0). */
+  padding: calc(0.75rem + env(safe-area-inset-top))
+    max(1rem, env(safe-area-inset-right)) 0.75rem
+    max(1rem, env(safe-area-inset-left));
 }
 
 .brand {
@@ -56,5 +61,9 @@
 .main {
   max-width: 40rem;
   margin: 0 auto;
-  padding: 1rem;
+  /* Laterales y abajo respetan las safe areas: el contenido no queda bajo
+     el notch en horizontal ni bajo la barra de inicio del iPhone. */
+  padding: 1rem max(1rem, env(safe-area-inset-right))
+    calc(1rem + env(safe-area-inset-bottom))
+    max(1rem, env(safe-area-inset-left));
 }

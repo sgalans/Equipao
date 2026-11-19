@@ -8,7 +8,7 @@ describe('LuggageListPage', () => {
   it('muestra la cabecera de la app y un mensaje si no hay maletas', async () => {
     renderApp('/')
 
-    expect(screen.getByRole('link', { name: 'LugGAge' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Equipao' })).toBeInTheDocument()
     // findBy* espera (reintenta) hasta que aparezca: useLiveQuery es asíncrono.
     expect(await screen.findByText(/Aún no tienes maletas/)).toBeInTheDocument()
   })

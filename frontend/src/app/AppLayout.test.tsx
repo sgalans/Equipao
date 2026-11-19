@@ -8,7 +8,7 @@ describe('AppLayout: navegación', () => {
   it('en el inicio muestra el nombre de la app y no el botón de volver', async () => {
     renderApp('/')
 
-    expect(screen.getByRole('link', { name: 'LugGAge' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Equipao' })).toBeInTheDocument()
     expect(
       screen.queryByRole('link', { name: 'Mis maletas' }),
     ).not.toBeInTheDocument()

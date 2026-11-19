@@ -1,6 +1,4 @@
 import type { RouteObject } from 'react-router'
-import { ItemsCatalogPage } from '@/features/items/ui/ItemsCatalogPage'
-import { AddItemsPage } from '@/features/luggage/ui/AddItemsPage'
 import { LuggageDetailPage } from '@/features/luggage/ui/LuggageDetailPage'
 import { LuggageListPage } from '@/features/luggage/ui/LuggageListPage'
 import { AppLayout } from './AppLayout'
@@ -27,7 +25,12 @@ export const routes: RouteObject[] = [
       { path: 'luggages/:luggageId', Component: LuggageDetailPage },
       {
         path: 'luggages/:luggageId/add-items',
-        Component: AddItemsPage,
+        // Pantalla secundaria: se carga la primera vez que se abre (code
+        // splitting), no al arrancar la app.
+        lazy: async () => ({
+          Component: (await import('@/features/luggage/ui/AddItemsPage'))
+            .AddItemsPage,
+        }),
         // "‹ Maleta": desde aquí se vuelve a la maleta, no al inicio.
         handle: {
           back: (params) => ({
@@ -36,7 +39,13 @@ export const routes: RouteObject[] = [
           }),
         } satisfies RouteHandle,
       },
-      { path: 'items', Component: ItemsCatalogPage },
+      {
+        path: 'items',
+        lazy: async () => ({
+          Component: (await import('@/features/items/ui/ItemsCatalogPage'))
+            .ItemsCatalogPage,
+        }),
+      },
       // Comodín: cualquier otra URL. Debe ser la red de seguridad final.
       { path: '*', Component: NotFoundPage },
     ],

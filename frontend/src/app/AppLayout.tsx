@@ -1,8 +1,10 @@
 import { Link, Outlet, useMatch, useMatches } from 'react-router'
 import { ChevronLeftIcon } from '@/shared/ui/icons/ChevronLeftIcon'
 import { Toaster } from '@/shared/ui/notifications/Toaster'
+import { APP_NAME } from './appInfo'
 import styles from './AppLayout.module.css'
 import { HOME_BACK_LINK, type RouteHandle } from './navigation'
+import { AppUpdates } from './pwa/AppUpdates'
 
 /**
  * Layout común a todas las pantallas: cabecera fija y, debajo, la ruta
@@ -33,7 +35,7 @@ export function AppLayout() {
         {isHome ? (
           <>
             <Link to="/" className={styles.brand}>
-              LugGAge
+              {APP_NAME}
             </Link>
             {/* Acceso al catálogo: un toque desde el inicio, sin ocupar
                 espacio fijo (decisión de producto). */}
@@ -57,6 +59,8 @@ export function AppLayout() {
       </main>
       {/* Aviso global (p. ej. "No se ha podido guardar"), una sola vez. */}
       <Toaster />
+      {/* Avisos de versión nueva / BD actualizada en otra pestaña. */}
+      <AppUpdates />
     </div>
   )
 }

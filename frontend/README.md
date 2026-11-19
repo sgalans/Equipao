@@ -1,4 +1,4 @@
-﻿# LugGAge — frontend
+# Equipao — frontend
 
 Guía de desarrollo. Qué es la app y su arquitectura: [README del repositorio](../README.md).
 

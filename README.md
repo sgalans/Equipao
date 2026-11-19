@@ -1,4 +1,4 @@
-# LugGAge
+# Equipao
 
 App para preparar maletas: listas de equipaje donde se marca lo que ya está guardado. Pensada para el iPhone (se instala como PWA desde Safari) y para funcionar **sin conexión**: todos los datos viven en el propio dispositivo.
 
@@ -58,3 +58,11 @@ npm run dev
 Para probarla en el móvil en la misma red WiFi: `npm run dev -- --host` y abrir la dirección "Network" que muestra Vite.
 
 Guía de desarrollo (scripts, estructura y tests): [`frontend/README.md`](frontend/README.md).
+
+## Despliegue
+
+En **Vercel**, conectado a este repositorio:
+
+- **Producción** = la rama `main`: cada merge a `main` publica la app.
+- **Vista previa**: cada PR tiene su propia URL de prueba (para probar en el móvil antes de mergear).
+- Proyecto en Vercel con _Root Directory_ `frontend`. La configuración (rutas → `index.html` y cabeceras de caché del service worker) está en [`frontend/vercel.json`](frontend/vercel.json).

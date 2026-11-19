@@ -45,6 +45,9 @@
 
 body {
   margin: 0;
+  /* iOS pinta un destello gris al tocar enlaces y botones: fuera. Nuestros
+     botones ya muestran su propio estado. */
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Estilos base de los campos. 16px de fuente como mínimo: con menos, Safari

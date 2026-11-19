@@ -2,9 +2,36 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LugGAge</title>
+    <!-- viewport-fit=cover: la app ocupa TODA la pantalla del iPhone (también
+         bajo el notch y la barra de inicio); el CSS respeta esas zonas con
+         env(safe-area-inset-*). -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Equipao</title>
+
+    <!-- iOS al instalarla en la pantalla de inicio. -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Equipao" />
+    <!-- "default": barra de estado clara con texto oscuro, a juego con la
+         cabecera blanca. ("black-translucent" pondría la hora en blanco
+         sobre nuestra cabecera blanca: no se vería.) -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <!-- Color de la barra del navegador: el del fondo de la app, en claro y
+         en oscuro (con el azul, Safari teñía la barra sobre una cabecera
+         blanca). Mismos valores que --bg en index.css. -->
+    <meta
+      name="theme-color"
+      content="#ffffff"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#16151a"
+      media="(prefers-color-scheme: dark)"
+    />
   </head>
   <body>
     <div id="root"></div>
