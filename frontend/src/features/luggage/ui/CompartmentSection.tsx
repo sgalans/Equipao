@@ -140,7 +140,7 @@ export function CompartmentSection({
           <div className={styles.actions}>
             <button
               type="button"
-              className={styles.action}
+              className={buttons.textAction}
               onClick={() => setIsRenaming(true)}
             >
               <PencilIcon />
@@ -148,7 +148,7 @@ export function CompartmentSection({
             </button>
             <button
               type="button"
-              className={styles.action}
+              className={buttons.textAction}
               onClick={() => setIsConfirmingDelete(true)}
             >
               <TrashIcon />

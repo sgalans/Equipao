@@ -8,6 +8,9 @@
 }
 
 .header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   /* sticky: la cabecera se queda arriba al hacer scroll en el móvil. */
   position: sticky;
   top: 0;
@@ -20,6 +23,18 @@
   font-weight: 700;
   font-size: 1.125rem;
   color: var(--text);
+  text-decoration: none;
+}
+
+.navLink {
+  display: inline-flex;
+  align-items: center;
+  /* 44px de zona táctil; el margen negativo lo compensa visualmente. */
+  min-height: 2.75rem;
+  margin: -0.5rem -0.5rem -0.5rem 0;
+  padding: 0 0.5rem;
+  color: var(--accent);
+  font-weight: 600;
   text-decoration: none;
 }
 

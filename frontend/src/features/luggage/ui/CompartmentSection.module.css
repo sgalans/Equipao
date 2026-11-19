@@ -71,25 +71,11 @@
   font-size: 0.875rem;
 }
 
-/* Acciones poco frecuentes: discretas, pero con 44px de zona táctil. */
+/* Acciones poco frecuentes (estilo buttons.textAction). */
 .actions {
   display: flex;
   gap: 1rem;
   padding: 0 0 0.5rem 2rem;
-}
-
-.action {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  min-height: 2.75rem;
-  padding: 0 0.5rem;
-  border: 0;
-  background: transparent;
-  color: var(--text-muted);
-  font: inherit;
-  font-size: 0.875rem;
-  cursor: pointer;
 }
 
 /* "+" que se convierte en "×" al abrir el campo de añadir: el mismo

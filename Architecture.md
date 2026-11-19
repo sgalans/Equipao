@@ -11,7 +11,7 @@ Item(id: uuid, name)
 ItemQuantity(id: uuid, luggageId, compartmentId?, itemId, num, nAlreadyPacked)
     {luggageId} references Luggage on delete cascade
     {compartmentId} references Compartment on delete set null  -- null = suelto en la maleta
-    {itemId} references Item on delete restrict
+    {itemId} references Item on delete cascade   -- borrar del catálogo lo quita de las maletas (con aviso en la UI)
     unique (luggageId, itemId)                   -- un ítem ocupa un solo sitio por maleta
     invariant compartment.luggageId = luggageId  -- lo garantiza el repositorio
     check num >= 0
