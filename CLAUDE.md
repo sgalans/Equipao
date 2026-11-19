@@ -102,15 +102,15 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 - **YAGNI**: backend, entidades de usuario y login se posponen hasta que hagan falta de verdad.
 - **Single source of truth**: los valores derivados se calculan, no se guardan redundantes.
 - **Offline-first**: todos los datos del MVP viven en IndexedDB; la sincronización se difiere.
-- Sin backend no hay "usuario" real: un login local sería teatro. Como mucho, "perfiles locales" (opcional, solo si varias personas comparten navegador).
-- Generar un **UUID local de dispositivo** desde el principio para facilitar el sync futuro.
+- Sin backend no hay "usuario" real (y no se quiere: ver sección 8): un login local sería teatro. Como mucho, "perfiles locales" (opcional, solo si varias personas comparten navegador).
+- Hay un **UUID local de dispositivo** (`getDeviceId`) por si algún día hay sincronización; no se usa todavía.
 
-## 8. Fase 2 (futuro, no implementar aún)
+## 8. Backend: descartado por ahora (decisión del usuario)
 
-- Backend: FastAPI + Pydantic + SQLAlchemy + Alembic, con Postgres y Docker Compose.
-- Autenticación (JWT, refresh tokens, OAuth) y sistema de usuarios.
-- API de sincronización offline-first (resolución de conflictos por timestamps; valorar "última escritura gana" vs merge).
-- Tests con `pytest`; despliegue del backend en Railway o Fly.io.
+- **No habrá backend ni usuarios mientras el usuario no lo decida.** Motivo de producto: un backend centralizado obliga a tener cuentas para separar los datos de cada persona, y el login añade pasos que chocan con la prioridad "lo más simple de usar posible".
+- La arquitectura deja la puerta abierta sin coste: repositorios (ports & adapters), UUID v7, `createdAt`/`updatedAt` y `deviceId`. No construir nada "por si acaso" para el backend (YAGNI).
+- Las necesidades que suele cubrir un backend (copia de seguridad, cambiar de móvil, compartir una maleta) se resuelven sin servidor, p. ej. exportar/importar un archivo.
+- Si algún día se retoma: FastAPI + Pydantic + SQLAlchemy + Alembic, Postgres y Docker Compose; sincronización offline-first por timestamps.
 
 ## 9. Pendiente de decidir (pregunta antes de asumir)
 
@@ -126,7 +126,6 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 - **Riesgo conocido**: sin desplegar ni instalar como PWA, Safari de iOS puede borrar IndexedDB tras 7 días sin visitar la web. Usar solo datos de prueba hasta la iteración de PWA (el usuario decidió no adelantar el despliegue).
 - Pendientes técnicos: el bundle supera 500 kB (157 kB gzip) → code splitting en la iteración de PWA; en el despliegue hará falta un rewrite de todas las rutas a `index.html`.
 - Backlog: **arrastrar artículos para ordenar y moverlos entre compartimentos** (idea del usuario, aplazada; si se hace: dnd-kit, asa de arrastre ≡ en cada fila, orden manual con campo `position` + migración v3 y *fractional indexing*, mantener "Mover a…" como alternativa accesible por WCAG 2.2 SC 2.5.7, y probar el gesto con Playwright). "Deshacer" al borrar (snapshot + reinserción + toast con Zustand), tests E2E con Playwright (casos que jsdom no reproduce: foco atrapado y Escape en `<dialog>`, blur al desmontar en `EditableTitle`).
-- Pendiente de decidir (iteración 5): al borrar un compartimento, ¿sus ítems se borran o pasan a sueltos?
 - Iteración 1 (capa de datos) mergeada en `develop` (PR #2).
 - Setup (iteración 0) mergeado en `develop` (PR #1).
 - Entorno instalado y verificado: Git 2.55.0, nvm-windows 2.0.1, Node.js 26.13.1 LTS y npm 11.20.0. Versión de Node registrada en `.nvmrc`.
@@ -134,7 +133,7 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 - Ramas: `main`, `develop` y una rama por iteración que sale de `develop`.
 - ESLint y Prettier configurados. Comandos disponibles en `frontend/`: `dev`, `build`, `lint`, `format`, `format:check`, `preview`, `test` (watch), `test:run`, `typecheck` y **`check`** (typecheck + lint + formato + tests; ejecutarlo antes de cada commit y antes de dar un paso por terminado).
 - TypeScript se mantiene en la línea 6.0 por compatibilidad con `typescript-eslint`; la plantilla original incluía TypeScript 7 y Oxlint.
-- Roadmap del MVP (una rama/PR por iteración): 0) setup ✅ · 1) capa de datos ✅ · 2) CRUD de viajes ✅ (después eliminado) · 3) refactor: maleta como entidad principal · 4) ítems y empaquetado (añadir escribiendo con autocompletado del catálogo, cantidades, un toque = empaquetar, progreso) · 5) compartimentos (plegables, estado en Zustand) · 6) duplicar maleta · 7) PWA/offline · 8) CI y despliegue.
+- Roadmap del MVP (una rama/PR por iteración): 0) setup ✅ · 1) capa de datos ✅ · 2) CRUD de viajes ✅ (después eliminado) · 3) maleta como entidad principal ✅ · 4) artículos y empaquetado ✅ · 5) compartimentos ✅ · 6) duplicar maleta · 7) PWA/offline + despliegue · 8) CI con GitHub Actions.
 - `npm audit` detecta 9 avisos moderados procedentes de `minimatch`, dependencia transitiva de las herramientas de lint. Pendiente de actualización compatible; no se ha aplicado `audit fix --force`.
-- Instalados: Dexie, Zod, uuid, Vitest, Testing Library y fake-indexeddb. Pendientes: PWA y Zustand. El MVP no necesita `venv` porque no incluye backend Python.
+- Instalados: Dexie, Zod, uuid, Zustand, React Router, React Hook Form, Vitest, Testing Library y fake-indexeddb. Pendiente: `vite-plugin-pwa`. El MVP no necesita `venv` porque no incluye backend Python.
 - Actualiza esta sección conforme avance el proyecto.
