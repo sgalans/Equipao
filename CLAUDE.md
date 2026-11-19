@@ -76,7 +76,7 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 - Restricción `CHECK (nAlreadyPacked <= num)`.
 - **No existe** un booleano `everythingPacked`: se **deriva en código**.
 - `createdAt`/`updatedAt` en todas las tablas (barato ahora, útil para resolver conflictos después).
-- Duplicar una maleta = **clonar filas** (Opción A), elegido sobre herencia por plantilla/delta por simplicidad del MVP.
+- Duplicar una maleta = **clonar filas** (Opción A), elegido sobre herencia por plantilla/delta por simplicidad del MVP. Implementado en `luggages.duplicate(id)` (la maleta es la raíz del agregado: maleta + compartimentos + cantidades se copian en una transacción, con un mapa de ids de compartimento). La copia se llama "Nombre (copia)" / "(copia 2)"… (`copyName.ts`), empieza **sin nada guardado** y reutiliza los artículos del catálogo.
 - **Arquitectura del frontend: por features + repositorios.** `src/app/` (App, router, providers), `src/features/<feature>/{domain,data,ui}` y `src/shared/{db,lib,ui}`. La UI nunca habla con Dexie directamente: lo hace a través de repositorios (repository pattern), para poder cambiar a una API en la fase 2.
 - **Las restricciones del modelo (CHECK, FK) se validan en código** en la capa `domain`, porque IndexedDB no las impone.
 - **Fuente de verdad de los datos: Dexie** (`useLiveQuery`). Zustand se usa solo para estado de UI, no para duplicar datos de dominio.
@@ -94,6 +94,7 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 - **Catálogo implícito**: al añadir por nombre se reutiliza el artículo si existe (`findByName`: Collator 'es' base, iguala mayúsculas/tildes, distingue ñ) o se crea. Sin pantalla de catálogo por ahora.
 - **Capa `application`** (`features/<f>/application/`): casos de uso que coordinan varios repositorios (p. ej. `addItemByName`). Solo conocen los ports.
 - **Operaciones leer-calcular-escribir dentro del repositorio y en una transacción** (`togglePacked`, `resize`), no en la UI: evita *lost updates*.
+- **Acciones de la maleta**: duplicar = botón ⧉ en cada fila del listado (al lado de la tarjeta-enlace, nunca dentro: no se anidan elementos interactivos); tras duplicar se queda en el listado y la copia sale la primera, resaltada. Borrar = botón rojo con texto al final del detalle de la maleta.
 - **Navegación**: el layout muestra "LugGAge" en el inicio y "‹ Mis maletas" en el resto de pantallas (convención iOS, imprescindible en la PWA instalada, que no tiene botón atrás). Navegación jerárquica: siempre al inicio, nunca `navigate(-1)`.
 - **Tests de UI**: `renderApp(path, repositories)` (`src/test/render.tsx`) monta las rutas reales con `createMemoryRouter` y una base de datos aislada. jsdom no implementa `<dialog>.showModal()`: hay un stub en `src/test/setup.dom.ts`; dentro de un diálogo, buscar con `within(dialog)` (Testing Library no modela `inert`).
 
@@ -119,7 +120,8 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 
 ## 10. Estado actual
 
-- Fase: **iteración 5 (compartimentos) terminada** en la rama `crud/compartments`, pendiente de PR a `develop`: migración v2 con test, `CompartmentRepository` (SET NULL al borrar), invariante y `moveTo`; UI con secciones plegables (Zustand persistido), "+" por compartimento (reutiliza `AddItemForm` con `compartmentId`/`label`/`autoFocus`/`onClose`), "Mover a…" con `<select>` nativo en la fila desplegada, crear/renombrar/borrar, texto de ayuda en cursiva. Contenido y compartimentos en un solo `useLiveQuery` (evita *tearing*). 139 tests. Siguiente: iteración 6 (duplicar maleta).
+- Fase: **iteración 6 (duplicar maleta) terminada** en la rama `feature/duplicate-luggage`, pendiente de PR a `develop`. 154 tests. Siguiente: iteración 7 (catálogo de artículos).
+- Iteración 5 (compartimentos) mergeada en `develop`.
 - Iteración 4 (artículos y empaquetado + navegación "‹ Mis maletas") mergeada en `develop`.
 - Iteración 3 (maleta como entidad principal: crear en línea, detalle, `EditableTitle`, borrar) mergeada en `develop`.
 - Iteración 2 (CRUD de viajes) mergeada en `develop` (PR #3); después se decidió eliminar los viajes. Se reutilizan sus piezas: router, DI por Context, `FormField`, `ConfirmDialog`, estilos y `renderApp`.
@@ -133,7 +135,7 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 - Ramas: `main`, `develop` y una rama por iteración que sale de `develop`.
 - ESLint y Prettier configurados. Comandos disponibles en `frontend/`: `dev`, `build`, `lint`, `format`, `format:check`, `preview`, `test` (watch), `test:run`, `typecheck` y **`check`** (typecheck + lint + formato + tests; ejecutarlo antes de cada commit y antes de dar un paso por terminado).
 - TypeScript se mantiene en la línea 6.0 por compatibilidad con `typescript-eslint`; la plantilla original incluía TypeScript 7 y Oxlint.
-- Roadmap del MVP (una rama/PR por iteración): 0) setup ✅ · 1) capa de datos ✅ · 2) CRUD de viajes ✅ (después eliminado) · 3) maleta como entidad principal ✅ · 4) artículos y empaquetado ✅ · 5) compartimentos ✅ · 6) duplicar maleta · 7) PWA/offline + despliegue · 8) CI con GitHub Actions.
+- Roadmap del MVP (una rama/PR por iteración): 0) setup ✅ · 1) capa de datos ✅ · 2) CRUD de viajes ✅ (después eliminado) · 3) maleta como entidad principal ✅ · 4) artículos y empaquetado ✅ · 5) compartimentos ✅ · 6) duplicar maleta · 7) **catálogo de artículos**: pantalla con todos los artículos para renombrarlos y borrarlos (decidir qué pasa al borrar uno que está en alguna maleta; hoy el repositorio aplica RESTRICT) · 8) **revisión general** de lo construido antes de publicar · 9) PWA/offline + despliegue · 10) exportar/importar copia (backup, cambiar de móvil, compartir una maleta) · 11) CI con GitHub Actions.
 - `npm audit` detecta 9 avisos moderados procedentes de `minimatch`, dependencia transitiva de las herramientas de lint. Pendiente de actualización compatible; no se ha aplicado `audit fix --force`.
 - Instalados: Dexie, Zod, uuid, Zustand, React Router, React Hook Form, Vitest, Testing Library y fake-indexeddb. Pendiente: `vite-plugin-pwa`. El MVP no necesita `venv` porque no incluye backend Python.
 - Actualiza esta sección conforme avance el proyecto.

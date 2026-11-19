@@ -1,13 +1,17 @@
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { useRepositories } from '@/shared/di/repositories'
 import page from '@/shared/ui/page.module.css'
 import { CreateLuggageForm } from './CreateLuggageForm'
+import { DuplicateLuggageButton } from './DuplicateLuggageButton'
 import { PackingProgress } from './PackingProgress'
 import { progressLabel } from './progressLabel'
 import styles from './LuggageListPage.module.css'
 
-/** Pantalla de inicio: crear maletas y abrirlas con un toque. */
+const HIGHLIGHT_MS = 2000
+
+/** Pantalla de inicio: crear, abrir y duplicar maletas. */
 export function LuggageListPage() {
   const { luggages } = useRepositories()
 
@@ -17,6 +21,16 @@ export function LuggageListPage() {
   // al crear una maleta no hace falta "avisar" a la lista, aparece sola.
   // listSummaries: cada maleta con su progreso, en solo dos consultas.
   const luggageList = useLiveQuery(() => luggages.listSummaries(), [luggages])
+
+  // Copia recién creada: se resalta un momento para que se vea qué ha
+  // pasado (aparece la primera porque la lista va de más reciente a más
+  // antigua). Mismo patrón que el aviso de duplicados en el detalle.
+  const [highlightedId, setHighlightedId] = useState<string | null>(null)
+  useEffect(() => {
+    if (!highlightedId) return
+    const timer = setTimeout(() => setHighlightedId(null), HIGHLIGHT_MS)
+    return () => clearTimeout(timer)
+  }, [highlightedId])
 
   return (
     <section>
@@ -38,8 +52,16 @@ export function LuggageListPage() {
         <ul className={styles.list}>
           {luggageList.map((luggage) => (
             // `key` estable (el id), nunca el índice del array.
-            <li key={luggage.id}>
-              {/* Toda la tarjeta es el enlace: zona táctil grande, un toque. */}
+            <li
+              key={luggage.id}
+              className={
+                highlightedId === luggage.id
+                  ? `${styles.row} ${styles.highlighted}`
+                  : styles.row
+              }
+            >
+              {/* La tarjeta es un enlace y el botón va a su LADO, no dentro:
+                  HTML no permite un elemento interactivo dentro de otro. */}
               <Link
                 to={`/luggages/${luggage.id}`}
                 className={styles.card}
@@ -54,6 +76,10 @@ export function LuggageListPage() {
                   variant="compact"
                 />
               </Link>
+              <DuplicateLuggageButton
+                luggage={luggage}
+                onDuplicated={(copy) => setHighlightedId(copy.id)}
+              />
             </li>
           ))}
         </ul>

@@ -23,12 +23,6 @@
   cursor: not-allowed;
 }
 
-.primary {
-  composes: button;
-  background: var(--accent);
-  color: var(--on-accent);
-}
-
 .secondary {
   composes: button;
   background: transparent;
@@ -49,13 +43,6 @@
   composes: button;
   padding: 0;
   width: 2.75rem;
-}
-
-/* Icono de acción destructiva (borrar): mismo rojo que .danger. */
-.iconDanger {
-  composes: icon;
-  background: var(--danger);
-  color: var(--on-accent);
 }
 
 /* Icono de acción principal (añadir). */

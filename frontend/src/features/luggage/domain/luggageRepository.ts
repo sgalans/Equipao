@@ -20,6 +20,12 @@ export interface LuggageRepository {
   getById(id: string): Promise<Luggage | undefined>
   /** Valida el input y rellena id y timestamps. */
   create(input: NewLuggage): Promise<Luggage>
+  /**
+   * Duplica la maleta con sus compartimentos y artículos, en una sola
+   * transacción. La copia se llama "Nombre (copia)" y empieza SIN nada
+   * guardado (uso como plantilla). Lanza EntityNotFoundError si no existe.
+   */
+  duplicate(id: string): Promise<Luggage>
   /** Renombra. Lanza EntityNotFoundError si no existe. */
   update(id: string, changes: { name?: string }): Promise<Luggage>
   /**

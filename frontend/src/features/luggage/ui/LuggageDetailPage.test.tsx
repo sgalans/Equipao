@@ -109,12 +109,20 @@ describe('LuggageDetailPage', () => {
   })
 
   describe('borrar', () => {
-    it('la papelera tiene nombre accesible aunque solo sea un icono', async () => {
+    it('"Borrar maleta" es un botón con texto, al final de la maleta', async () => {
       await openLuggage()
 
       const button = screen.getByRole('button', { name: 'Borrar maleta' })
-      expect(button).toHaveTextContent('')
-      expect(button).toHaveAttribute('title', 'Borrar maleta')
+      expect(button).toHaveTextContent('Borrar maleta')
+      // Va DESPUÉS de todo el contenido (incluido "Nuevo compartimento"):
+      // lejos de lo que se toca a menudo.
+      const newCompartment = screen.getByRole('button', {
+        name: 'Nuevo compartimento',
+      })
+      expect(
+        newCompartment.compareDocumentPosition(button) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy()
     })
 
     it.each([
