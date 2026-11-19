@@ -27,3 +27,9 @@ if (typeof HTMLDialogElement.prototype.showModal !== 'function') {
     this.dispatchEvent(new Event('close'))
   }
 }
+
+// Higiene entre tests: localStorage (p. ej. el plegado de compartimentos
+// que persiste Zustand) no debe filtrarse de un test a otro.
+afterEach(() => {
+  localStorage.clear()
+})

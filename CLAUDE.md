@@ -66,7 +66,7 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 
 ### Vocabulario de la interfaz (lenguaje ubicuo)
 
-- **Maleta** = `Luggage`. **Compartimento** = `Compartment`. Texto de ayuda acordado: *"Un compartimento es un subgrupo de objetos dentro de tu maleta: el neceser, la mochila de mano, el maletín del portátil… Un espacio donde agrupar los objetos que van juntos."*
+- **Maleta** = `Luggage`. **Compartimento** = `Compartment`. Texto de ayuda acordado: *"Contenedor para meter artículos, como un neceser, una mochila o un maletín."*
 - `Item` en la interfaz: **"artículo"** (confirmado; descartados "ítem", "objeto", "cosa" y "elemento"). Además, preferir microcopy que no necesite el sustantivo ("Añadir a la maleta…", "3 de 12 guardados").
 
 ## 6. Decisiones cerradas
@@ -119,7 +119,7 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 
 ## 10. Estado actual
 
-- Fase: **iteración 5 (compartimentos)** en la rama `crud/compartments`. Decisiones: borrar compartimento → artículos a sueltos (SET NULL); sueltos arriba sin cabecera; "+" en cada compartimento para añadir dentro; plegado persistido con Zustand. Pasos: 1) datos ✅ (migración v2 con test, `CompartmentRepository`, `moveTo`, invariante, `addItemByName` con compartimento) · 2) UI (secciones plegables, "+" por compartimento, "Mover a…", crear/renombrar/borrar, texto de ayuda).
+- Fase: **iteración 5 (compartimentos)** en la rama `crud/compartments`. Decisiones: borrar compartimento → artículos a sueltos (SET NULL); sueltos arriba sin cabecera; "+" en cada compartimento para añadir dentro; plegado persistido con Zustand. Pasos: 1) datos ✅ (migración v2 con test, `CompartmentRepository`, `moveTo`, invariante, `addItemByName` con compartimento) · 2a) UI ✅: secciones plegables (`CompartmentSection`, Zustand persistido en `collapsedCompartmentsStore.ts`), crear (`NewCompartment` + texto de ayuda), renombrar y borrar; `InlineEditInput` extraído y compartido con `EditableTitle`; contenido y compartimentos en un solo `useLiveQuery` (evita *tearing*) · 2b) "+" por compartimento y "Mover a…".
 - Iteración 4 (artículos y empaquetado + navegación "‹ Mis maletas") mergeada en `develop`.
 - Iteración 3 (maleta como entidad principal: crear en línea, detalle, `EditableTitle`, borrar) mergeada en `develop`.
 - Iteración 2 (CRUD de viajes) mergeada en `develop` (PR #3); después se decidió eliminar los viajes. Se reutilizan sus piezas: router, DI por Context, `FormField`, `ConfirmDialog`, estilos y `renderApp`.

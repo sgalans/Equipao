@@ -1,0 +1,87 @@
+.section {
+  border-bottom: 1px solid var(--border);
+}
+
+.heading {
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* Toda la cabecera es el botón de plegar: zona táctil grande. */
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 3rem;
+  padding: 0 0.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chevron {
+  display: grid;
+  color: var(--text-muted);
+  transition: transform 0.15s ease-out;
+}
+
+/* Plegado: la flecha apunta a la derecha (▸). */
+.toggle[aria-expanded='false'] .chevron {
+  transform: rotate(-90deg);
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.progress {
+  flex: none;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+.renameInput {
+  margin: 0.25rem 0;
+  font-weight: 700;
+}
+
+.empty {
+  margin: 0 0 0.5rem 2.5rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+/* Acciones poco frecuentes: discretas, pero con 44px de zona táctil. */
+.actions {
+  display: flex;
+  gap: 1rem;
+  padding: 0 0 0.5rem 2rem;
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 2.75rem;
+  padding: 0 0.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}

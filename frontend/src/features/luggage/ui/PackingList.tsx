@@ -1,42 +1,83 @@
 import { useState } from 'react'
+import type { Compartment } from '../domain/compartment'
 import type { LuggageEntry } from '../domain/itemQuantityRepository'
+import { CompartmentSection } from './CompartmentSection'
+import { NewCompartment } from './NewCompartment'
 import styles from './PackingList.module.css'
 import { PackingListRow } from './PackingListRow'
 
 interface PackingListProps {
+  luggageId: string
   entries: LuggageEntry[]
+  compartments: Compartment[]
   /** Fila a resaltar (p. ej. al intentar añadir algo que ya estaba). */
   highlightedId: string | null
 }
 
-/** Lista de artículos de la maleta. Orden fijo: el de añadido. */
-export function PackingList({ entries, highlightedId }: PackingListProps) {
-  // Acordeón: como mucho una fila desplegada. Es estado de UI local, no
-  // datos: vive aquí y no en la base de datos (ni en Zustand: nadie más
-  // lo necesita).
+/**
+ * Contenido de la maleta: primero los artículos sueltos (sin cabecera, justo
+ * bajo el campo de añadir), después cada compartimento como sección
+ * plegable y al final "Nuevo compartimento". Orden fijo: el de añadido.
+ */
+export function PackingList({
+  luggageId,
+  entries,
+  compartments,
+  highlightedId,
+}: PackingListProps) {
+  // Acordeón: como mucho una fila desplegada EN TODA LA MALETA (también
+  // entre compartimentos). Estado de UI local: nadie más lo necesita.
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  if (entries.length === 0) {
+  const loose = entries.filter((entry) => entry.compartmentId === null)
+
+  function renderRows(rows: LuggageEntry[]) {
     return (
-      <p className={styles.empty}>
-        Esta maleta está vacía. Escribe arriba lo que quieras llevar.
-      </p>
+      <ul className={styles.list}>
+        {rows.map((entry) => (
+          <PackingListRow
+            key={entry.id}
+            entry={entry}
+            isExpanded={expandedId === entry.id}
+            isHighlighted={highlightedId === entry.id}
+            onToggleExpanded={() =>
+              setExpandedId((current) =>
+                current === entry.id ? null : entry.id,
+              )
+            }
+          />
+        ))}
+      </ul>
     )
   }
 
+  const isEmpty = entries.length === 0 && compartments.length === 0
+
   return (
-    <ul className={styles.list} aria-label="Artículos de la maleta">
-      {entries.map((entry) => (
-        <PackingListRow
-          key={entry.id}
-          entry={entry}
-          isExpanded={expandedId === entry.id}
-          isHighlighted={highlightedId === entry.id}
-          onToggleExpanded={() =>
-            setExpandedId((current) => (current === entry.id ? null : entry.id))
-          }
+    <div className={styles.contents}>
+      {isEmpty && (
+        <p className={styles.empty}>
+          Esta maleta está vacía. Escribe arriba lo que quieras llevar.
+        </p>
+      )}
+
+      {loose.length > 0 && renderRows(loose)}
+
+      {compartments.map((compartment) => (
+        <CompartmentSection
+          key={compartment.id}
+          compartment={compartment}
+          entries={entries.filter(
+            (entry) => entry.compartmentId === compartment.id,
+          )}
+          renderRows={renderRows}
         />
       ))}
-    </ul>
+
+      <NewCompartment
+        luggageId={luggageId}
+        showHelp={compartments.length === 0}
+      />
+    </div>
   )
 }
