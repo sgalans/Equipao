@@ -19,6 +19,10 @@ export interface ItemRepository {
    * "Camara"), pero sí la ñ ("año" ≠ "ano"). Evita duplicados en el catálogo.
    */
   findByName(name: string): Promise<Item | undefined>
+  /**
+   * Crea un artículo. Lanza DuplicateError si ya hay otro con ese nombre
+   * (mismo criterio que findByName): el catálogo nunca tiene duplicados.
+   */
   create(input: NewItem): Promise<Item>
   /**
    * Renombra. Lanza EntityNotFoundError si no existe y DuplicateError si ya

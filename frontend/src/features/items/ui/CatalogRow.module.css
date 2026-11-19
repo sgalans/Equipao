@@ -45,3 +45,14 @@
   color: var(--danger);
   font-size: 0.875rem;
 }
+
+/* Fila en modo selección: el círculo de casilla + nombre + uso. */
+.selectable {
+  composes: details;
+  justify-content: flex-start;
+  padding-left: 0;
+}
+
+.selectable .usage {
+  margin-left: auto;
+}

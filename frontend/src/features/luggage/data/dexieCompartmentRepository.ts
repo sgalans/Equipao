@@ -1,12 +1,29 @@
 import { newEntityBase, nowIso } from '@/shared/data/entityBase'
 import type { AppDb } from '@/shared/db/db'
 import { EntityNotFoundError } from '@/shared/domain/errors'
-import { CompartmentSchema, NewCompartmentSchema } from '../domain/compartment'
+import {
+  CompartmentSchema,
+  NewCompartmentSchema,
+  type Compartment,
+  type NewCompartment,
+} from '../domain/compartment'
 import type { CompartmentRepository } from '../domain/compartmentRepository'
+import { loadQuantitiesOfOneLuggage } from './loadQuantities'
 
 export function createDexieCompartmentRepository(
   db: AppDb,
 ): CompartmentRepository {
+  /** FOREIGN KEY + insert. Llamar dentro de una transacción con luggages. */
+  async function insert(input: NewCompartment): Promise<Compartment> {
+    const data = NewCompartmentSchema.parse(input)
+    if (!(await db.luggages.get(data.luggageId))) {
+      throw new EntityNotFoundError('Luggage', data.luggageId)
+    }
+    const compartment = { ...newEntityBase(), ...data }
+    await db.compartments.add(compartment)
+    return compartment
+  }
+
   return {
     listByLuggage(luggageId) {
       return db.compartments
@@ -16,16 +33,36 @@ export function createDexieCompartmentRepository(
     },
 
     create(input) {
-      const data = NewCompartmentSchema.parse(input)
       // FOREIGN KEY: comprobación + insert en la misma transacción.
-      return db.transaction('rw', [db.compartments, db.luggages], async () => {
-        if (!(await db.luggages.get(data.luggageId))) {
-          throw new EntityNotFoundError('Luggage', data.luggageId)
-        }
-        const compartment = { ...newEntityBase(), ...data }
-        await db.compartments.add(compartment)
-        return compartment
-      })
+      return db.transaction('rw', [db.compartments, db.luggages], () =>
+        insert(input),
+      )
+    },
+
+    createWithQuantities(input, quantityIds) {
+      // Crear el compartimento y mover los artículos en UNA transacción: si
+      // algo falla no queda un compartimento vacío creado a medias.
+      return db.transaction(
+        'rw',
+        [db.compartments, db.luggages, db.itemQuantities],
+        async () => {
+          const compartment = await insert(input)
+          const rows = await loadQuantitiesOfOneLuggage(
+            db,
+            quantityIds,
+            compartment.luggageId,
+          )
+          const now = nowIso()
+          await db.itemQuantities.bulkPut(
+            rows.map((row) => ({
+              ...row,
+              compartmentId: compartment.id,
+              updatedAt: now,
+            })),
+          )
+          return compartment
+        },
+      )
     },
 
     toggleReady(id) {

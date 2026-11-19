@@ -8,6 +8,10 @@ interface ConfirmDialogProps {
   /** Explicación de las consecuencias (p. ej. qué más se va a borrar). */
   children: ReactNode
   confirmLabel: string
+  /** 'danger' (rojo, por defecto) para borrar; 'primary' (azul) para el resto. */
+  confirmVariant?: 'danger' | 'primary'
+  /** Desactiva "confirmar" (p. ej. si falta elegir algo en el diálogo). */
+  confirmDisabled?: boolean
   onConfirm: () => Promise<void>
   /** Cancelar, pulsar Escape o cerrar el diálogo de cualquier otra forma. */
   onCancel: () => void
@@ -27,6 +31,8 @@ export function ConfirmDialog({
   title,
   children,
   confirmLabel,
+  confirmVariant = 'danger',
+  confirmDisabled = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -84,9 +90,9 @@ export function ConfirmDialog({
         </button>
         <button
           type="button"
-          className={buttons.danger}
+          className={buttons[confirmVariant]}
           onClick={() => void handleConfirm()}
-          disabled={isBusy}
+          disabled={isBusy || confirmDisabled}
         >
           {confirmLabel}
         </button>

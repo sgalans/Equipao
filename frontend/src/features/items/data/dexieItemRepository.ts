@@ -20,6 +20,11 @@ function findByNameIn(items: Item[], name: string): Item | undefined {
   return items.find((item) => isSameItemName(item.name, name))
 }
 
+/** Mismo mensaje al crear y al renombrar: una sola definición. */
+function duplicateNameError(existingName: string): DuplicateError {
+  return new DuplicateError(`Ya existe un artículo llamado «${existingName}»`)
+}
+
 export function createDexieItemRepository(db: AppDb): ItemRepository {
   return {
     async list() {
@@ -62,10 +67,17 @@ export function createDexieItemRepository(db: AppDb): ItemRepository {
       return findByNameIn(await db.items.toArray(), name)
     },
 
-    async create(input) {
+    create(input) {
       const item = { ...newEntityBase(), ...NewItemSchema.parse(input) }
-      await db.items.add(item)
-      return item
+      // Comprobar y crear en la misma transacción: la regla "sin duplicados
+      // en el catálogo" se cumple venga de donde venga la petición (catálogo,
+      // añadir por nombre…), no solo si la UI se acuerda de comprobarlo.
+      return db.transaction('rw', db.items, async () => {
+        const clash = findByNameIn(await db.items.toArray(), item.name)
+        if (clash) throw duplicateNameError(clash.name)
+        await db.items.add(item)
+        return item
+      })
     },
 
     update(id, changes) {
@@ -85,11 +97,7 @@ export function createDexieItemRepository(db: AppDb): ItemRepository {
         // (con el criterio de findByName) lo impide. El MISMO artículo sí
         // puede cambiar mayúsculas o tildes ("calcetines" → "Calcetines").
         const clash = findByNameIn(items, updated.name)
-        if (clash && clash.id !== id) {
-          throw new DuplicateError(
-            `Ya existe un artículo llamado «${clash.name}»`,
-          )
-        }
+        if (clash && clash.id !== id) throw duplicateNameError(clash.name)
         await db.items.put(updated)
         return updated
       })

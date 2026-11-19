@@ -1,15 +1,14 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { useRepositories } from '@/shared/di/repositories'
+import highlightStyles from '@/shared/ui/highlight.module.css'
 import page from '@/shared/ui/page.module.css'
+import { useTemporaryHighlight } from '@/shared/ui/useTemporaryHighlight'
 import { CreateLuggageForm } from './CreateLuggageForm'
 import { DuplicateLuggageButton } from './DuplicateLuggageButton'
 import { PackingProgress } from './PackingProgress'
 import { progressLabel } from './progressLabel'
 import styles from './LuggageListPage.module.css'
-
-const HIGHLIGHT_MS = 2000
 
 /** Primera línea de la descripción (la tarjeta solo muestra esa). */
 function firstLine(description: string): string {
@@ -30,12 +29,7 @@ export function LuggageListPage() {
   // Copia recién creada: se resalta un momento para que se vea qué ha
   // pasado (aparece la primera porque la lista va de más reciente a más
   // antigua). Mismo patrón que el aviso de duplicados en el detalle.
-  const [highlightedId, setHighlightedId] = useState<string | null>(null)
-  useEffect(() => {
-    if (!highlightedId) return
-    const timer = setTimeout(() => setHighlightedId(null), HIGHLIGHT_MS)
-    return () => clearTimeout(timer)
-  }, [highlightedId])
+  const { highlightedId, highlight } = useTemporaryHighlight()
 
   return (
     <section>
@@ -61,7 +55,7 @@ export function LuggageListPage() {
               key={luggage.id}
               className={
                 highlightedId === luggage.id
-                  ? `${styles.row} ${styles.highlighted}`
+                  ? `${styles.row} ${highlightStyles.highlighted}`
                   : styles.row
               }
             >
@@ -95,7 +89,7 @@ export function LuggageListPage() {
               </Link>
               <DuplicateLuggageButton
                 luggage={luggage}
-                onDuplicated={(copy) => setHighlightedId(copy.id)}
+                onDuplicated={(copy) => highlight(copy.id)}
               />
             </li>
           ))}

@@ -3,6 +3,7 @@ import { useRepositories } from '@/shared/di/repositories'
 import { reportError } from '@/shared/ui/notifications/notificationStore'
 import buttons from '@/shared/ui/buttons.module.css'
 import checkCircle from '@/shared/ui/checkCircle.module.css'
+import highlightStyles from '@/shared/ui/highlight.module.css'
 import { CheckIcon } from '@/shared/ui/icons/CheckIcon'
 import { MinusIcon } from '@/shared/ui/icons/MinusIcon'
 import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
@@ -21,6 +22,11 @@ interface PackingListRowProps {
   /** Compartimentos de la maleta, para "Mover a…". */
   compartments: Compartment[]
   onToggleExpanded: () => void
+  /**
+   * Modo selección (mover o quitar varios): la fila entera es una casilla;
+   * no empaqueta ni se despliega.
+   */
+  selection?: { isSelected: boolean; onToggle: () => void }
 }
 
 /** Valor del <select> para "suelto": los <option> solo admiten strings. */
@@ -40,6 +46,7 @@ export function PackingListRow({
   isHighlighted,
   compartments,
   onToggleExpanded,
+  selection,
 }: PackingListRowProps) {
   const { quantities } = useRepositories()
   const panelId = useId()
@@ -55,12 +62,34 @@ export function PackingListRow({
     operation.catch(reportError)
   }
 
+  if (selection) {
+    return (
+      <li className={styles.row}>
+        {/* Toda la fila es la casilla: zona táctil grande. */}
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={selection.isSelected}
+          aria-label={entry.itemName}
+          className={styles.selectable}
+          onClick={selection.onToggle}
+        >
+          <span className={checkCircle.check} aria-hidden="true">
+            {selection.isSelected && <CheckIcon />}
+          </span>
+          <span className={styles.name}>{entry.itemName}</span>
+          <span className={styles.quantity}>×{entry.num}</span>
+        </button>
+      </li>
+    )
+  }
+
   return (
     <li
       className={[
         styles.row,
         isDone ? styles.done : '',
-        isHighlighted ? styles.highlighted : '',
+        isHighlighted ? highlightStyles.highlighted : '',
       ].join(' ')}
     >
       <div className={styles.main}>

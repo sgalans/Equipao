@@ -1,9 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks'
+import { Link } from 'react-router'
 import { useId, useMemo, useRef, useState } from 'react'
 import { suggestItems } from '@/features/items/domain/search'
 import { useRepositories } from '@/shared/di/repositories'
 import { DuplicateError } from '@/shared/domain/errors'
 import buttons from '@/shared/ui/buttons.module.css'
+import { ListPlusIcon } from '@/shared/ui/icons/ListPlusIcon'
 import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
 import { addItemByName } from '../application/addItemByName'
 import type { LuggageEntry } from '../domain/itemQuantityRepository'
@@ -23,6 +25,11 @@ interface AddItemFormProps {
   focusOnMount?: boolean
   /** Escape cierra el formulario (solo cuando se puede cerrar). */
   onClose?: () => void
+  /**
+   * Enlace a "Añadir más artículos del catálogo" (solo el campo principal de
+   * la maleta): las dos formas de añadir quedan juntas.
+   */
+  catalogLink?: string
 }
 
 /**
@@ -37,6 +44,7 @@ export function AddItemForm({
   label = 'Añadir a la maleta',
   focusOnMount = false,
   onClose,
+  catalogLink,
 }: AddItemFormProps) {
   const repositories = useRepositories()
   const [query, setQuery] = useState('')
@@ -127,6 +135,18 @@ export function AddItemForm({
         >
           <PlusIcon />
         </button>
+        {catalogLink && (
+          // <Link> y no botón: lleva a otra pantalla. Solo icono en pantalla;
+          // el texto completo es su nombre accesible y la ayuda del ratón.
+          <Link
+            to={catalogLink}
+            className={buttons.icon}
+            aria-label="Añadir más artículos del catálogo"
+            title="Añadir más artículos del catálogo"
+          >
+            <ListPlusIcon />
+          </Link>
+        )}
       </form>
 
       {suggestions.length > 0 && (

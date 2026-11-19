@@ -2,3 +2,19 @@
 .footer {
   margin-top: 2.5rem;
 }
+
+/* Barra fija abajo en modo selección: Mover / Quitar. */
+.selectionBar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0.75rem 0 calc(0.75rem + env(safe-area-inset-bottom));
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+
+.selectionBar button {
+  flex: 1;
+}

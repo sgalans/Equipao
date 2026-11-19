@@ -47,9 +47,7 @@ describe('Acceso al catálogo', () => {
     await openCatalog()
 
     expect(
-      screen.getByText(
-        'Aún no tienes artículos. Se crean al añadirlos a una maleta.',
-      ),
+      screen.getByText(/Aún no tienes artículos\. Escribe arriba/),
     ).toBeInTheDocument()
   })
 })
@@ -69,25 +67,6 @@ describe('Listado y búsqueda', () => {
         within(row).getByRole('button').getAttribute('aria-label'),
       ),
     ).toEqual(['Abrigo, Sin usar', 'Calcetines, En 2 maletas'])
-  })
-
-  it('el buscador filtra sin distinguir tildes y avisa si no hay resultados', async () => {
-    const { user } = await openCatalog(async (repos) => {
-      await repos.items.create({ name: 'Cámara' })
-      await repos.items.create({ name: 'Toalla' })
-    })
-    const search = screen.getByRole('searchbox', { name: 'Buscar artículos' })
-
-    await user.type(search, 'camara')
-
-    expect(screen.getAllByRole('listitem')).toHaveLength(1)
-    expect(screen.getByRole('button', { name: /^Cámara,/ })).toBeInTheDocument()
-
-    await user.clear(search)
-    await user.type(search, 'zzz')
-    expect(
-      screen.getByText('Ningún artículo coincide con «zzz».'),
-    ).toBeInTheDocument()
   })
 })
 
@@ -172,5 +151,76 @@ describe('Borrar', () => {
     for (const luggageId of luggageIds) {
       expect(await repositories.quantities.listByLuggage(luggageId)).toEqual([])
     }
+  })
+})
+
+describe('Campo único "Buscar o crear"', () => {
+  const field = () =>
+    screen.getByRole('searchbox', { name: 'Buscar o crear artículos' })
+  const createButton = () =>
+    screen.getByRole('button', { name: 'Crear artículo' })
+
+  it('escribir filtra sin distinguir tildes, y avisa si no hay resultados', async () => {
+    const { user } = await openCatalog(async (repos) => {
+      await repos.items.create({ name: 'Cámara' })
+      await repos.items.create({ name: 'Toalla' })
+    })
+
+    await user.type(field(), 'camara')
+    expect(screen.getAllByRole('listitem')).toHaveLength(1)
+    expect(screen.getByRole('button', { name: /^Cámara,/ })).toBeInTheDocument()
+
+    await user.clear(field())
+    await user.type(field(), 'zzz')
+    expect(
+      screen.getByText('Ningún artículo coincide con «zzz».'),
+    ).toBeInTheDocument()
+    // Sin fila "Crear «X»" (decisión de producto): se crea con el "+".
+    expect(screen.queryByText(/Crear «/)).not.toBeInTheDocument()
+  })
+
+  it('"+" crea el artículo, vacía el campo y mantiene el foco', async () => {
+    const { user, repositories } = await openCatalog()
+
+    await user.type(field(), 'Toalla')
+    await user.click(createButton())
+
+    expect(
+      await screen.findByRole('button', { name: 'Toalla, Sin usar' }),
+    ).toBeInTheDocument()
+    expect(field()).toHaveValue('')
+    expect(field()).toHaveFocus()
+    expect((await repositories.items.list()).map((i) => i.name)).toEqual([
+      'Toalla',
+    ])
+  })
+
+  it('Intro NUNCA crea: el campo solo busca', async () => {
+    const { user, repositories } = await openCatalog()
+
+    await user.type(field(), 'Toalla{Enter}')
+
+    expect(await repositories.items.list()).toEqual([])
+    expect(field()).toHaveValue('Toalla')
+  })
+
+  it('si el nombre ya existe, "+" lo señala y avisa en vez de duplicarlo', async () => {
+    const { user, repositories } = await openCatalog(async (repos) => {
+      await repos.items.create({ name: 'Cámara' })
+    })
+
+    await user.type(field(), 'camara')
+    await user.click(createButton())
+
+    expect(
+      await screen.findByText('«Cámara» ya está en tu catálogo.'),
+    ).toBeInTheDocument()
+    expect(await repositories.items.list()).toHaveLength(1)
+  })
+
+  it('"+" está desactivado con el campo vacío', async () => {
+    await openCatalog()
+
+    expect(createButton()).toBeDisabled()
   })
 })

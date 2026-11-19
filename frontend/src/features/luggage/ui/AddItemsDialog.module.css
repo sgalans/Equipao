@@ -1,0 +1,31 @@
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Mismo aspecto que los inputs; 16px para que iOS no haga zoom. */
+.field select {
+  min-height: 2.75rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: max(1rem, 16px);
+  font-weight: 400;
+}
+
+.note {
+  margin: 0;
+  font-size: 0.875rem;
+}

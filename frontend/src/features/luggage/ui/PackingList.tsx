@@ -14,6 +14,11 @@ interface PackingListProps {
   highlightedId: string | null
   /** Al intentar añadir algo que ya estaba (desde el "+" de un compartimento). */
   onDuplicate: (itemName: string) => void
+  /** Modo selección: qué líneas están marcadas y cómo cambiar una. */
+  selection?: {
+    selected: ReadonlySet<string>
+    onToggle: (quantityId: string) => void
+  }
 }
 
 /**
@@ -27,6 +32,7 @@ export function PackingList({
   compartments,
   highlightedId,
   onDuplicate,
+  selection,
 }: PackingListProps) {
   // Acordeón: como mucho una fila desplegada EN TODA LA MALETA (también
   // entre compartimentos). Estado de UI local: nadie más lo necesita.
@@ -44,6 +50,12 @@ export function PackingList({
             isExpanded={expandedId === entry.id}
             isHighlighted={highlightedId === entry.id}
             compartments={compartments}
+            selection={
+              selection && {
+                isSelected: selection.selected.has(entry.id),
+                onToggle: () => selection.onToggle(entry.id),
+              }
+            }
             onToggleExpanded={() =>
               setExpandedId((current) =>
                 current === entry.id ? null : entry.id,
@@ -77,13 +89,16 @@ export function PackingList({
           renderRows={renderRows}
           luggageEntries={entries}
           onDuplicate={onDuplicate}
+          isSelecting={selection !== undefined}
         />
       ))}
 
-      <NewCompartment
-        luggageId={luggageId}
-        showHelp={compartments.length === 0}
-      />
+      {selection === undefined && (
+        <NewCompartment
+          luggageId={luggageId}
+          showHelp={compartments.length === 0}
+        />
+      )}
     </div>
   )
 }

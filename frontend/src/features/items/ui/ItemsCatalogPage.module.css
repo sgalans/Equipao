@@ -1,5 +1,24 @@
-.search {
-  margin-bottom: 1rem;
+.field {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.field input {
+  flex: 1;
+  width: auto;
+}
+
+.message {
+  min-height: 1.25rem;
+  margin: 0.25rem 0 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.error {
+  margin: 0.25rem 0 0;
+  color: var(--danger);
+  font-size: 0.875rem;
 }
 
 .empty {
@@ -11,4 +30,19 @@
   margin: 0;
   padding: 0;
   border-top: 1px solid var(--border);
+}
+
+/* Barra fija abajo en modo selección. sticky: se queda pegada al borde
+   inferior mientras haces scroll; safe-area: respeta la barra del iPhone. */
+.selectionBar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  padding: 0.75rem 0 calc(0.75rem + env(safe-area-inset-bottom));
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+
+.selectionBar button {
+  flex: 1;
 }

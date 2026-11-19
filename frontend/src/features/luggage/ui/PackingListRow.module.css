@@ -90,23 +90,13 @@
   text-align: center;
 }
 
-/* Resalte breve cuando se intenta añadir un artículo que ya estaba. */
-.highlighted {
-  animation: highlight 2s ease-out;
+/* Fila en modo selección: casilla + nombre + cantidad, todo un botón. */
+.selectable {
+  composes: details;
+  justify-content: flex-start;
+  padding: 0.25rem 0;
 }
 
-@keyframes highlight {
-  from {
-    background: var(--highlight);
-  }
-  to {
-    background: transparent;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .highlighted {
-    animation: none;
-    background: var(--highlight);
-  }
+.selectable .quantity {
+  margin-left: auto;
 }
