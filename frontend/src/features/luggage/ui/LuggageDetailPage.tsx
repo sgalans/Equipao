@@ -5,7 +5,7 @@ import { isSameItemName } from '@/features/items/domain/itemName'
 import { useRepositories } from '@/shared/di/repositories'
 import { EditableTitle } from '@/shared/ui/EditableTitle'
 import page from '@/shared/ui/page.module.css'
-import { luggageProgress } from '../domain/packing'
+import { packingProgress } from '../domain/packing'
 import { AddItemForm } from './AddItemForm'
 import { DeleteLuggageButton } from './DeleteLuggageButton'
 import { PackingList } from './PackingList'
@@ -93,7 +93,7 @@ export function LuggageDetailPage() {
         />
       </header>
 
-      <PackingProgress {...luggageProgress(entries)} />
+      <PackingProgress {...packingProgress(entries, compartmentList)} />
       <AddItemForm
         luggageId={luggage.id}
         entries={entries}

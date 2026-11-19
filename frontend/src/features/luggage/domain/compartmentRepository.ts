@@ -6,6 +6,8 @@ export interface CompartmentRepository {
   listByLuggage(luggageId: string): Promise<Compartment[]>
   /** Lanza EntityNotFoundError si la maleta no existe (FOREIGN KEY). */
   create(input: NewCompartment): Promise<Compartment>
+  /** Marca o desmarca el compartimento como listo. EntityNotFoundError si no existe. */
+  toggleReady(id: string): Promise<Compartment>
   /** Renombra. Lanza EntityNotFoundError si no existe. */
   update(id: string, changes: { name?: string }): Promise<Compartment>
   /**

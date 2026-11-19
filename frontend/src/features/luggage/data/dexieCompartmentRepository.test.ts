@@ -143,3 +143,33 @@ describe('Invariante: el compartimento es de la misma maleta', () => {
     })
   })
 })
+
+describe('Compartimentos "listos" (estado propio)', () => {
+  it('se crean sin marcar, y toggleReady los marca y desmarca', async () => {
+    const { compartments, kit } = await setup()
+    expect(kit.isReady).toBe(false)
+
+    expect(await compartments.toggleReady(kit.id)).toMatchObject({
+      isReady: true,
+    })
+    expect(await compartments.toggleReady(kit.id)).toMatchObject({
+      isReady: false,
+    })
+  })
+
+  it('marcarlo NO toca sus artículos (son independientes)', async () => {
+    const { compartments, quantities, luggage, kit, quantity } = await setup()
+
+    await compartments.toggleReady(kit.id)
+
+    expect(await quantities.listByLuggage(luggage.id)).toEqual([quantity])
+  })
+
+  it('toggleReady lanza EntityNotFoundError si no existe', async () => {
+    const { compartments } = createTestRepositories()
+
+    await expect(compartments.toggleReady(MISSING_ID)).rejects.toBeInstanceOf(
+      EntityNotFoundError,
+    )
+  })
+})

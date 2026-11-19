@@ -55,6 +55,14 @@ export const SCHEMA_V2 = {
 }
 
 /**
+ * v3 (iteración 8): descripción de la maleta y estado "listo" propio del
+ * compartimento. Ningún índice cambia (no se busca ni se ordena por esos
+ * campos), pero SÍ hay que transformar datos: las filas existentes no tienen
+ * esos campos y el código cuenta con ellos (ver upgrade() en AppDb).
+ */
+export const SCHEMA_V3 = {}
+
+/**
  * Base de datos local (IndexedDB) de la app.
  *
  * Solo la capa `data` (repositorios) debe usar esta clase; la UI nunca habla
@@ -89,6 +97,26 @@ export class AppDb extends Dexie {
             quantity.compartmentId = null
           }),
       )
+
+    this.version(3)
+      .stores(SCHEMA_V3)
+      // Dos tablas en la misma migración: los cambios de esquema de una
+      // misma entrega se agrupan (como una migración de Alembic). Todo en la
+      // transacción del upgrade: o se migran las dos o ninguna.
+      .upgrade(async (tx) => {
+        await tx
+          .table('luggages')
+          .toCollection()
+          .modify((luggage: { description?: string }) => {
+            luggage.description = ''
+          })
+        await tx
+          .table('compartments')
+          .toCollection()
+          .modify((compartment: { isReady?: boolean }) => {
+            compartment.isReady = false
+          })
+      })
   }
 }
 

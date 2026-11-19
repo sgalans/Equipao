@@ -234,3 +234,62 @@ describe('DexieLuggageRepository.duplicate', () => {
     )
   })
 })
+
+describe('Descripción y compartimentos "listos" en el repositorio de maletas', () => {
+  it('update cambia la descripción sin tocar el nombre', async () => {
+    const { luggages } = createTestRepositories()
+    const luggage = await luggages.create({ name: 'Mochila' })
+
+    const updated = await luggages.update(luggage.id, {
+      description: 'Japón, 2 semanas',
+    })
+
+    expect(updated).toMatchObject({
+      name: 'Mochila',
+      description: 'Japón, 2 semanas',
+    })
+  })
+
+  it('listSummaries cuenta por bloques: sueltos + compartimentos marcados', async () => {
+    const { luggages, compartments, items, quantities } =
+      createTestRepositories()
+    const luggage = await luggages.create({ name: 'Grande' })
+    const kit = await compartments.create({
+      luggageId: luggage.id,
+      name: 'Neceser',
+    })
+    await compartments.create({ luggageId: luggage.id, name: 'Mochila' })
+    const passport = await items.create({ name: 'Pasaporte' })
+    await quantities.add({
+      luggageId: luggage.id,
+      itemId: passport.id,
+      num: 1,
+      nAlreadyPacked: 1,
+    })
+    await compartments.toggleReady(kit.id)
+
+    const [summary] = await luggages.listSummaries()
+
+    // Pasaporte (listo) + Neceser (marcado) + Mochila (sin marcar): 2 de 3.
+    expect(summary).toMatchObject({ done: 2, total: 3 })
+  })
+
+  it('duplicate copia la descripción y deja los compartimentos sin marcar', async () => {
+    const { luggages, compartments } = createTestRepositories()
+    const source = await luggages.create({
+      name: 'Mochila',
+      description: 'Plantilla de finde',
+    })
+    const kit = await compartments.create({
+      luggageId: source.id,
+      name: 'Neceser',
+    })
+    await compartments.toggleReady(kit.id)
+
+    const copy = await luggages.duplicate(source.id)
+
+    expect(copy.description).toBe('Plantilla de finde')
+    const [copiedKit] = await compartments.listByLuggage(copy.id)
+    expect(copiedKit.isReady).toBe(false)
+  })
+})

@@ -26,8 +26,11 @@ export interface LuggageRepository {
    * guardado (uso como plantilla). Lanza EntityNotFoundError si no existe.
    */
   duplicate(id: string): Promise<Luggage>
-  /** Renombra. Lanza EntityNotFoundError si no existe. */
-  update(id: string, changes: { name?: string }): Promise<Luggage>
+  /** Cambia nombre y/o descripción. Lanza EntityNotFoundError si no existe. */
+  update(
+    id: string,
+    changes: { name?: string; description?: string },
+  ): Promise<Luggage>
   /**
    * Borra la maleta y su contenido (ON DELETE CASCADE sobre ItemQuantity).
    * Los Items del catálogo no se tocan. Idempotente.

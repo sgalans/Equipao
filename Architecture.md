@@ -1,7 +1,7 @@
-Luggage(id: uuid, name)
+Luggage(id: uuid, name, description)              -- description: '' = sin descripción (máx. 500)
     createdAt, updatedAt
 
-Compartment(id: uuid, luggageId, name)
+Compartment(id: uuid, luggageId, name, isReady)    -- isReady: "listo" propio, independiente de sus artículos
     {luggageId} references Luggage on delete cascade
     createdAt, updatedAt
 

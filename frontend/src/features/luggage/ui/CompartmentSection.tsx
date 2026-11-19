@@ -11,7 +11,7 @@ import { TrashIcon } from '@/shared/ui/icons/TrashIcon'
 import { InlineEditInput } from '@/shared/ui/InlineEditInput'
 import type { Compartment } from '../domain/compartment'
 import type { LuggageEntry } from '../domain/itemQuantityRepository'
-import { luggageProgress } from '../domain/packing'
+import { itemsProgress } from '../domain/packing'
 import { AddItemForm } from './AddItemForm'
 import {
   useCollapsedCompartments,
@@ -57,7 +57,7 @@ export function CompartmentSection({
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
   const contentId = useId()
 
-  const { done, total } = luggageProgress(entries)
+  const { done, total } = itemsProgress(entries)
   const progress = compartmentProgressLabel(done, total)
 
   async function rename(name: string | null) {

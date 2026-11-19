@@ -24,6 +24,7 @@ describe('AppDb', () => {
     const luggage = {
       id: uuidv7(),
       name: 'Mochila Japón',
+      description: '',
       createdAt: TEST_TIMESTAMP,
       updatedAt: TEST_TIMESTAMP,
     }
