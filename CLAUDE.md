@@ -121,7 +121,7 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 
 ## 10. Estado actual
 
-- Fase: **iteración 9 (crear artículos desde el catálogo + añadir varios de golpe)** en la rama `feature/improve-catalog`. Pasos: 1) datos ✅ (`items.create` rechaza duplicados con `DuplicateError`; `quantities.addMany(luggageId, itemIds, compartmentId?)` idempotente y todo-o-nada, devuelve `{ added, skippedItemIds }`) · 2) crear desde el catálogo · 3) seleccionar en el catálogo + diálogo de destino · 4) "Añadir varios" en la maleta.
+- Fase: **iteración 9 (crear artículos desde el catálogo + añadir varios de golpe)** en la rama `feature/improve-catalog`. Pasos: 1) datos ✅ (`items.create` rechaza duplicados con `DuplicateError`; `quantities.addMany(luggageId, itemIds, compartmentId?)` idempotente y todo-o-nada, devuelve `{ added, skippedItemIds }`) · 2) ✅ crear desde el catálogo con un **campo único "Buscar o crear"** (decisión del usuario: escribir filtra; **solo el botón "+" crea** —sin fila "Crear «X»" y sin crear con Intro, a diferencia de los demás campos, para que buscar nunca cree nada—; si el nombre ya existe, "+" lo resalta y avisa) · `QuickCreateForm` (alta rápida de "Mis maletas"), `useTemporaryHighlight` + `highlight.module.css` compartidos · 3) seleccionar en el catálogo + diálogo de destino · 4) "Añadir varios" en la maleta.
 - Iteración 8 (revisión general + ajustes) mergeada en `develop`.
 - Iteración 7 (catálogo de artículos) mergeada en `develop`.
 - Iteración 6 (duplicar maleta) mergeada en `develop`.

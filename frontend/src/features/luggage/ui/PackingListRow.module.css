@@ -89,24 +89,3 @@
   min-width: 5.5rem;
   text-align: center;
 }
-
-/* Resalte breve cuando se intenta añadir un artículo que ya estaba. */
-.highlighted {
-  animation: highlight 2s ease-out;
-}
-
-@keyframes highlight {
-  from {
-    background: var(--highlight);
-  }
-  to {
-    background: transparent;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .highlighted {
-    animation: none;
-    background: var(--highlight);
-  }
-}

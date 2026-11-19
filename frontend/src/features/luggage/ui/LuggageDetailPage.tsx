@@ -1,10 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { isSameItemName } from '@/features/items/domain/itemName'
 import { useRepositories } from '@/shared/di/repositories'
 import { EditableTitle } from '@/shared/ui/EditableTitle'
 import page from '@/shared/ui/page.module.css'
+import { useTemporaryHighlight } from '@/shared/ui/useTemporaryHighlight'
 import { packingProgress } from '../domain/packing'
 import { AddItemForm } from './AddItemForm'
 import { DeleteLuggageButton } from './DeleteLuggageButton'
@@ -12,8 +12,6 @@ import { LuggageDescription } from './LuggageDescription'
 import { PackingList } from './PackingList'
 import styles from './LuggageDetailPage.module.css'
 import { PackingProgress } from './PackingProgress'
-
-const HIGHLIGHT_MS = 2000
 
 /** Pantalla /luggages/:luggageId: la lista de artículos de una maleta. */
 export function LuggageDetailPage() {
@@ -42,14 +40,7 @@ export function LuggageDetailPage() {
   }, [quantities, compartments, luggageId])
 
   // Fila resaltada brevemente (al intentar añadir algo que ya estaba).
-  const [highlightedId, setHighlightedId] = useState<string | null>(null)
-  useEffect(() => {
-    if (!highlightedId) return
-    const timer = setTimeout(() => setHighlightedId(null), HIGHLIGHT_MS)
-    // Limpieza: si se desmonta o cambia antes de tiempo, no queda un
-    // temporizador "huérfano" que actualice un componente que ya no existe.
-    return () => clearTimeout(timer)
-  }, [highlightedId])
+  const { highlightedId, highlight } = useTemporaryHighlight()
 
   // OJO: todos los hooks van ANTES de los `return` tempranos. Las reglas de
   // los hooks exigen llamarlos siempre en el mismo orden en cada render.
@@ -76,7 +67,7 @@ export function LuggageDetailPage() {
     const existing = entries.find((entry) =>
       isSameItemName(entry.itemName, name),
     )
-    setHighlightedId(existing?.id ?? null)
+    highlight(existing?.id ?? null)
   }
 
   return (

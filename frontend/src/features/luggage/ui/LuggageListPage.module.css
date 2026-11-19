@@ -33,27 +33,6 @@
   border-color: var(--accent);
 }
 
-/* Copia recién creada: resalte breve que se desvanece. */
-.highlighted {
-  animation: highlight 2s ease-out;
-}
-
-@keyframes highlight {
-  from {
-    background: var(--highlight);
-  }
-  to {
-    background: transparent;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .highlighted {
-    animation: none;
-    background: var(--highlight);
-  }
-}
-
 .card {
   flex: 1;
   min-width: 0;

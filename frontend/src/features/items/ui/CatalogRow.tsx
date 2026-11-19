@@ -3,6 +3,7 @@ import { useRepositories } from '@/shared/di/repositories'
 import { DuplicateError } from '@/shared/domain/errors'
 import buttons from '@/shared/ui/buttons.module.css'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
+import highlightStyles from '@/shared/ui/highlight.module.css'
 import { PencilIcon } from '@/shared/ui/icons/PencilIcon'
 import { TrashIcon } from '@/shared/ui/icons/TrashIcon'
 import { InlineEditInput } from '@/shared/ui/InlineEditInput'
@@ -24,6 +25,8 @@ function usageLabel(count: number): string {
 interface CatalogRowProps {
   item: ItemSummary
   isExpanded: boolean
+  /** Recién creado (o ya existía al intentar crearlo): resalte breve. */
+  isHighlighted?: boolean
   onToggleExpanded: () => void
 }
 
@@ -34,6 +37,7 @@ interface CatalogRowProps {
 export function CatalogRow({
   item,
   isExpanded,
+  isHighlighted = false,
   onToggleExpanded,
 }: CatalogRowProps) {
   const { items } = useRepositories()
@@ -60,7 +64,13 @@ export function CatalogRow({
   }
 
   return (
-    <li className={styles.row}>
+    <li
+      className={
+        isHighlighted
+          ? `${styles.row} ${highlightStyles.highlighted}`
+          : styles.row
+      }
+    >
       {isRenaming ? (
         <InlineEditInput
           className={styles.renameInput}

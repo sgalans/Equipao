@@ -1,0 +1,26 @@
+/*
+ * Resalte breve que se desvanece (p. ej. "esto ya estaba" o "esta es la copia
+ * nueva"). Compartido por todas las listas; dura lo mismo que HIGHLIGHT_MS en
+ * useTemporaryHighlight.ts.
+ */
+.highlighted {
+  animation: highlight 2s ease-out;
+}
+
+@keyframes highlight {
+  from {
+    background: var(--highlight);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+/* Quien pide menos animaciones (Ajustes > Accesibilidad en iOS) ve un
+   fondo fijo durante el resaltado, sin animación. */
+@media (prefers-reduced-motion: reduce) {
+  .highlighted {
+    animation: none;
+    background: var(--highlight);
+  }
+}

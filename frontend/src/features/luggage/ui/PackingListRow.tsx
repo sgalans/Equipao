@@ -3,6 +3,7 @@ import { useRepositories } from '@/shared/di/repositories'
 import { reportError } from '@/shared/ui/notifications/notificationStore'
 import buttons from '@/shared/ui/buttons.module.css'
 import checkCircle from '@/shared/ui/checkCircle.module.css'
+import highlightStyles from '@/shared/ui/highlight.module.css'
 import { CheckIcon } from '@/shared/ui/icons/CheckIcon'
 import { MinusIcon } from '@/shared/ui/icons/MinusIcon'
 import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
@@ -60,7 +61,7 @@ export function PackingListRow({
       className={[
         styles.row,
         isDone ? styles.done : '',
-        isHighlighted ? styles.highlighted : '',
+        isHighlighted ? highlightStyles.highlighted : '',
       ].join(' ')}
     >
       <div className={styles.main}>
