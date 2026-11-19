@@ -128,10 +128,6 @@ export function createDexieItemQuantityRepository(
       }
     },
 
-    update(id, changes) {
-      return modify(id, () => changes)
-    },
-
     togglePacked(id) {
       return modify(id, (current) => ({
         nAlreadyPacked: toggledPackedCount(current),

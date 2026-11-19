@@ -20,11 +20,6 @@ export interface ItemQuantityRepository {
    * Si se indica compartmentId, debe ser de la misma maleta (ConsistencyError).
    */
   add(input: NewItemQuantity): Promise<ItemQuantity>
-  /** Cambia cantidades; valida 0 <= nAlreadyPacked <= num con los valores finales. */
-  update(
-    id: string,
-    changes: { num?: number; nAlreadyPacked?: number },
-  ): Promise<ItemQuantity>
   /** Empaquetado "todo o nada" (ver domain/packing.ts). */
   togglePacked(id: string): Promise<ItemQuantity>
   /** Cambia la cantidad total ajustando lo ya guardado (ver packing.ts). */

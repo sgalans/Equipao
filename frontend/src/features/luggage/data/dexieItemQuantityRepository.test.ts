@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { ZodError } from 'zod'
 import { DuplicateError, EntityNotFoundError } from '@/shared/domain/errors'
 import { createTestRepositories } from '@/test/repositories'
 
@@ -57,45 +56,6 @@ describe('DexieItemQuantityRepository', () => {
 
       await expect(quantities.add(input)).rejects.toBeInstanceOf(DuplicateError)
       expect(await quantities.listByLuggage(luggage.id)).toHaveLength(1)
-    })
-  })
-
-  describe('update', () => {
-    it('actualiza las cantidades', async () => {
-      const { quantities, luggage, socks } = await setup()
-      const q = await quantities.add({
-        luggageId: luggage.id,
-        itemId: socks.id,
-        num: 5,
-        nAlreadyPacked: 0,
-      })
-
-      const updated = await quantities.update(q.id, { nAlreadyPacked: 3 })
-
-      expect(updated).toMatchObject({ num: 5, nAlreadyPacked: 3 })
-    })
-
-    it('CHECK: no deja bajar num por debajo de lo ya empaquetado', async () => {
-      const { quantities, luggage, socks } = await setup()
-      const q = await quantities.add({
-        luggageId: luggage.id,
-        itemId: socks.id,
-        num: 5,
-        nAlreadyPacked: 4,
-      })
-
-      await expect(quantities.update(q.id, { num: 3 })).rejects.toBeInstanceOf(
-        ZodError,
-      )
-      expect((await quantities.listByLuggage(luggage.id))[0]).toEqual(q)
-    })
-
-    it('lanza EntityNotFoundError si no existe', async () => {
-      const { quantities } = await setup()
-
-      await expect(
-        quantities.update(MISSING_ID, { num: 1 }),
-      ).rejects.toBeInstanceOf(EntityNotFoundError)
     })
   })
 
