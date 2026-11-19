@@ -98,6 +98,7 @@ export function LuggageDetailPage() {
         luggageId={luggage.id}
         entries={entries}
         onDuplicate={highlightExisting}
+        catalogLink={`/luggages/${luggage.id}/add-items`}
       />
       <PackingList
         luggageId={luggage.id}

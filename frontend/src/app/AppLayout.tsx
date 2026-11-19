@@ -1,7 +1,8 @@
-import { Link, Outlet, useMatch } from 'react-router'
+import { Link, Outlet, useMatch, useMatches } from 'react-router'
 import { ChevronLeftIcon } from '@/shared/ui/icons/ChevronLeftIcon'
 import { Toaster } from '@/shared/ui/notifications/Toaster'
 import styles from './AppLayout.module.css'
+import { HOME_BACK_LINK, type RouteHandle } from './navigation'
 
 /**
  * Layout común a todas las pantallas: cabecera fija y, debajo, la ruta
@@ -15,6 +16,16 @@ import styles from './AppLayout.module.css'
 export function AppLayout() {
   // useMatch con end: true → solo coincide con "/" exactamente.
   const isHome = useMatch({ path: '/', end: true }) !== null
+  // La ruta más profunda que declare adónde volver manda; si ninguna lo
+  // hace, al inicio.
+  const back =
+    useMatches()
+      .map((match) => {
+        const handle = match.handle as RouteHandle | undefined
+        return handle?.back?.(match.params)
+      })
+      .filter((link) => link !== undefined)
+      .at(-1) ?? HOME_BACK_LINK
 
   return (
     <div className={styles.shell}>
@@ -31,13 +42,13 @@ export function AppLayout() {
             </Link>
           </>
         ) : (
-          // Navegación jerárquica ("up"): siempre al inicio, no a la página
-          // anterior del historial (navigate(-1)). Así es predecible y
-          // funciona aunque se haya entrado por un enlace directo, sin
-          // historial al que volver.
-          <Link to="/" className={styles.back}>
+          // Navegación jerárquica ("up"): al nivel superior (el inicio, o lo
+          // que declare la ruta en su handle), nunca a la página anterior
+          // del historial (navigate(-1)). Así es predecible y funciona
+          // aunque se haya entrado por un enlace directo, sin historial.
+          <Link to={back.to} className={styles.back}>
             <ChevronLeftIcon />
-            Mis maletas
+            {back.label}
           </Link>
         )}
       </header>

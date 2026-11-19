@@ -7,7 +7,8 @@ App para preparar maletas: listas de equipaje donde se marca lo que ya está gua
 - **Maletas**: crear en línea (escribir + Intro), renombrar tocando el título, descripción opcional con notas, duplicar (la copia empieza sin nada guardado, útil como plantilla) y borrar.
 - **Artículos**: añadir escribiendo, con sugerencias del catálogo; cantidades; un toque en el círculo guarda o saca el artículo; progreso por maleta ("3 de 5 listos").
 - **Compartimentos**: subgrupos dentro de la maleta (neceser, mochila…), plegables, con su propio progreso y su marca de "listo"; mover artículos entre ellos. En el progreso de la maleta, cada compartimento cuenta como un bloque.
-- **Catálogo de artículos**: listado con buscador para renombrar o borrar artículos (borrar uno lo quita de las maletas, con aviso previo).
+- **Catálogo de artículos**: un campo para buscar o crear; renombrar y borrar (borrar uno lo quita de las maletas, con aviso previo); seleccionar varios y añadirlos de golpe a una maleta.
+- **Añadir varios de golpe** también desde la propia maleta, sueltos o dentro de un compartimento; los que ya estaban se dejan como están.
 
 ## Stack
 
