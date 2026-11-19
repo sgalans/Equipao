@@ -3,24 +3,21 @@ import type { AppDb } from '@/shared/db/db'
 import { DuplicateError, EntityNotFoundError } from '@/shared/domain/errors'
 import { ItemSchema, NewItemSchema, type Item } from '../domain/item'
 import type { ItemRepository } from '../domain/itemRepository'
+import { compareItemNames, isSameItemName } from '../domain/itemName'
 
-// IndexedDB ordena por código Unicode ('Z' < 'a', 'Ñ' al final). Collator
-// ordena como espera una persona: sin distinguir mayúsculas ni tildes.
-// Se crea una vez y se reutiliza (crearlo en cada comparación es caro).
-const spanishCollator = new Intl.Collator('es', { sensitivity: 'base' })
+// IndexedDB ordena por código Unicode ('Z' < 'a', 'Ñ' al final): el orden y la
+// comparación de nombres se hacen en memoria con el criterio del dominio.
 
 const byName = (a: { name: string }, b: { name: string }) =>
-  spanishCollator.compare(a.name, b.name)
+  compareItemNames(a.name, b.name)
 
 /**
- * Busca por nombre en una lista ya cargada. El Collator con sensitivity
- * 'base' iguala mayúsculas y tildes pero distingue la ñ, porque en español
- * es otra letra. Lo comparten findByName y la comprobación de duplicados al
- * renombrar: un único criterio de "mismo nombre" en todo el catálogo.
+ * Busca por nombre en una lista ya cargada, con el criterio único del
+ * dominio (isSameItemName). Lo comparten findByName y la comprobación de
+ * duplicados al renombrar.
  */
 function findByNameIn(items: Item[], name: string): Item | undefined {
-  const needle = name.trim()
-  return items.find((item) => spanishCollator.compare(item.name, needle) === 0)
+  return items.find((item) => isSameItemName(item.name, name))
 }
 
 export function createDexieItemRepository(db: AppDb): ItemRepository {
@@ -49,7 +46,7 @@ export function createDexieItemRepository(db: AppDb): ItemRepository {
       return items.sort(byName).map((item) => ({
         ...item,
         luggageNames: (luggageNamesByItem.get(item.id) ?? []).sort(
-          spanishCollator.compare,
+          compareItemNames,
         ),
       }))
     },

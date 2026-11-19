@@ -51,6 +51,7 @@ export function InlineEditInput({
       enterKeyHint="done"
       // autoFocus aquí es correcto: el campo aparece porque el usuario
       // acaba de pedir editar, así que el foco debe ir a él.
+      // eslint-disable-next-line jsx-a11y/no-autofocus -- el campo aparece porque el usuario acaba de pedir editar
       autoFocus
       // Seleccionar todo: lo habitual al renombrar es reescribir el nombre.
       onFocus={(event) => event.currentTarget.select()}

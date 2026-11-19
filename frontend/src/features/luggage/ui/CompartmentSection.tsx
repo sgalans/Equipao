@@ -128,7 +128,7 @@ export function CompartmentSection({
                 onDuplicate={onDuplicate}
                 compartmentId={compartment.id}
                 label={`Añadir a ${compartment.name}`}
-                autoFocus
+                focusOnMount
                 onClose={() => setIsAdding(false)}
               />
             </div>

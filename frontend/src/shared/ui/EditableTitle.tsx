@@ -60,6 +60,7 @@ export function EditableTitle({
     <div className={styles.view}>
       {/* El clic en el texto es un atajo para ratón/dedo; la vía accesible
           (teclado, lector de pantalla) es el botón del lápiz. */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- atajo táctil; el botón del lápiz es la alternativa accesible */}
       <h1
         className={`${page.title} ${styles.title}`}
         onClick={() => setIsEditing(true)}

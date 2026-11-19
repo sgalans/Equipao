@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { normalizeForSearch } from '@/features/items/domain/search'
+import { isSameItemName } from '@/features/items/domain/itemName'
 import { useRepositories } from '@/shared/di/repositories'
 import { EditableTitle } from '@/shared/ui/EditableTitle'
 import page from '@/shared/ui/page.module.css'
@@ -70,9 +70,10 @@ export function LuggageDetailPage() {
 
   /** Resalta la fila del artículo que se ha intentado añadir de nuevo. */
   function highlightExisting(name: string) {
-    const needle = normalizeForSearch(name)
-    const existing = entries.find(
-      (entry) => normalizeForSearch(entry.itemName) === needle,
+    // MISMO criterio que el repositorio usa para decidir que es un
+    // duplicado: así se resalta exactamente la fila que lo ha provocado.
+    const existing = entries.find((entry) =>
+      isSameItemName(entry.itemName, name),
     )
     setHighlightedId(existing?.id ?? null)
   }
