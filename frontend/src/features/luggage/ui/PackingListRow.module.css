@@ -8,50 +8,6 @@
   gap: 0.5rem;
 }
 
-/* Círculo de empaquetar: 44px de zona táctil (el gesto más repetido). */
-.check {
-  flex: none;
-  width: 2.75rem;
-  height: 2.75rem;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--text-muted);
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-/* El círculo visible es más pequeño que la zona táctil: se dibuja con un
-   pseudo-elemento detrás del contenido (número o ✓). */
-.check::before {
-  content: '';
-  grid-area: 1 / 1;
-  width: 1.75rem;
-  height: 1.75rem;
-  border: 2px solid var(--border);
-  border-radius: 50%;
-}
-
-.check > * {
-  grid-area: 1 / 1;
-}
-
-.check[aria-checked='mixed']::before {
-  border-color: var(--success);
-}
-
-.check[aria-checked='true'] {
-  color: var(--on-accent);
-}
-
-.check[aria-checked='true']::before {
-  border-color: var(--success);
-  background: var(--success);
-}
-
 /* Toda la fila (salvo el círculo) despliega las opciones. */
 .details {
   flex: 1;

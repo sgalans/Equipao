@@ -2,7 +2,9 @@ import { useId, useState, type ReactNode } from 'react'
 import { useRepositories } from '@/shared/di/repositories'
 import { reportError } from '@/shared/ui/notifications/notificationStore'
 import buttons from '@/shared/ui/buttons.module.css'
+import checkCircle from '@/shared/ui/checkCircle.module.css'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
+import { CheckIcon } from '@/shared/ui/icons/CheckIcon'
 import { ChevronDownIcon } from '@/shared/ui/icons/ChevronDownIcon'
 import { MoreIcon } from '@/shared/ui/icons/MoreIcon'
 import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
@@ -18,7 +20,7 @@ import {
   useIsCollapsed,
 } from './collapsedCompartmentsStore'
 import styles from './CompartmentSection.module.css'
-import { compartmentProgressLabel } from './progressLabel'
+import { compartmentStatus } from './progressLabel'
 
 interface CompartmentSectionProps {
   compartment: Compartment
@@ -58,7 +60,19 @@ export function CompartmentSection({
   const contentId = useId()
 
   const { done, total } = itemsProgress(entries)
-  const progress = compartmentProgressLabel(done, total)
+  const status = compartmentStatus(done, total, compartment.isReady)
+  const collapse = useCollapsedCompartments((state) => state.collapse)
+
+  async function toggleReady() {
+    try {
+      const updated = await compartments.toggleReady(compartment.id)
+      // Decisión de producto: al marcarlo como listo se pliega solo, para
+      // que lo ya hecho deje de ocupar sitio. Al desmarcarlo no se toca.
+      if (updated.isReady) collapse(compartment.id)
+    } catch (error) {
+      reportError(error)
+    }
+  }
 
   async function rename(name: string | null) {
     setIsRenaming(false)
@@ -73,6 +87,18 @@ export function CompartmentSection({
   return (
     <section className={styles.section} aria-label={compartment.name}>
       <div className={styles.header}>
+        {/* Mismo círculo que los artículos (estilo compartido): "listo"
+            PROPIO del compartimento, independiente de sus artículos. */}
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={compartment.isReady}
+          aria-label={`${compartment.name} listo`}
+          className={checkCircle.check}
+          onClick={() => void toggleReady()}
+        >
+          {compartment.isReady && <CheckIcon />}
+        </button>
         <h2 className={styles.heading}>
           {isRenaming ? (
             <InlineEditInput
@@ -87,14 +113,14 @@ export function CompartmentSection({
               className={styles.toggle}
               aria-expanded={!isCollapsed}
               aria-controls={contentId}
-              aria-label={`${compartment.name}, ${progress}`}
+              aria-label={`${compartment.name}, ${status}`}
               onClick={() => toggle(compartment.id)}
             >
               <span className={styles.chevron}>
                 <ChevronDownIcon />
               </span>
               <span className={styles.name}>{compartment.name}</span>
-              <span className={styles.progress}>{progress}</span>
+              <span className={styles.progress}>{status}</span>
             </button>
           )}
         </h2>
