@@ -2,9 +2,21 @@
   border-bottom: 1px solid var(--border);
 }
 
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
 .heading {
+  flex: 1;
+  min-width: 0;
   margin: 0;
   font-size: 1rem;
+}
+
+.addForm {
+  padding-left: 2rem;
 }
 
 /* Toda la cabecera es el botón de plegar: zona táctil grande. */
@@ -80,8 +92,24 @@
   cursor: pointer;
 }
 
+/* "+" que se convierte en "×" al abrir el campo de añadir: el mismo
+   botón cierra. Girar el icono (en vez de cambiarlo por otro) deja claro
+   que es el MISMO control en otro estado. */
+.addToggle svg {
+  transition: transform 0.15s ease-out;
+}
+
+.addToggle[aria-expanded='true'] {
+  color: var(--accent);
+}
+
+.addToggle[aria-expanded='true'] svg {
+  transform: rotate(45deg);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .chevron {
+  .chevron,
+  .addToggle svg {
     transition: none;
   }
 }

@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { renderApp } from '@/test/render'
@@ -226,5 +226,168 @@ describe('Renombrar y borrar compartimentos', () => {
     expect(screen.getByRole('checkbox', { name: 'Pasta' })).toBeInTheDocument()
     const entries = await repositories.quantities.listByLuggage(luggage.id)
     expect(entries.every((e) => e.compartmentId === null)).toBe(true)
+  })
+})
+
+describe('Añadir dentro de un compartimento ("+")', () => {
+  /** <section aria-label="Neceser"> tiene el rol accesible "region". */
+  const region = (name: string) => screen.getByRole('region', { name })
+
+  it('"+" abre un campo dentro, ya enfocado; lo añadido entra en el compartimento', async () => {
+    const { user, repositories, luggage } = await openLuggage(
+      async (repos, luggageId) => {
+        await repos.compartments.create({ luggageId, name: 'Neceser' })
+      },
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Añadir a Neceser' }))
+    const input = within(region('Neceser')).getByRole('textbox', {
+      name: 'Añadir a Neceser',
+    })
+    expect(input).toHaveFocus()
+    await user.keyboard('Cepillo{Enter}')
+
+    expect(
+      await within(region('Neceser')).findByRole('checkbox', {
+        name: 'Cepillo',
+      }),
+    ).toBeInTheDocument()
+    // El campo sigue abierto y enfocado para añadir el siguiente.
+    expect(input).toHaveValue('')
+    expect(input).toHaveFocus()
+    const [kit] = await repositories.compartments.listByLuggage(luggage.id)
+    const [added] = await repositories.quantities.listByLuggage(luggage.id)
+    expect(added.compartmentId).toBe(kit.id)
+  })
+
+  it('"+" en un compartimento plegado lo despliega', async () => {
+    const { user } = await openLuggage(async (repos, luggageId) => {
+      await repos.compartments.create({ luggageId, name: 'Neceser' })
+    })
+    await user.click(screen.getByRole('button', { name: /^Neceser,/ }))
+    expect(screen.getByRole('button', { name: /^Neceser,/ })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Añadir a Neceser' }))
+
+    expect(screen.getByRole('button', { name: /^Neceser,/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
+    expect(
+      screen.getByRole('textbox', { name: 'Añadir a Neceser' }),
+    ).toHaveFocus()
+  })
+
+  it('al abrirse, el mismo botón pasa a "Dejar de añadir…" y lo cierra', async () => {
+    const { user } = await openLuggage(async (repos, luggageId) => {
+      await repos.compartments.create({ luggageId, name: 'Neceser' })
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Añadir a Neceser' }))
+    const closeButton = screen.getByRole('button', {
+      name: 'Dejar de añadir a Neceser',
+    })
+    expect(closeButton).toHaveAttribute('aria-expanded', 'true')
+
+    await user.click(closeButton)
+
+    expect(
+      screen.queryByRole('textbox', { name: 'Añadir a Neceser' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Añadir a Neceser' }),
+    ).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('Escape cierra el campo del compartimento', async () => {
+    const { user } = await openLuggage(async (repos, luggageId) => {
+      await repos.compartments.create({ luggageId, name: 'Neceser' })
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Añadir a Neceser' }))
+    await user.keyboard('{Escape}')
+
+    expect(
+      screen.queryByRole('textbox', { name: 'Añadir a Neceser' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('si el artículo ya está en la maleta (aunque sea suelto), avisa', async () => {
+    const { user } = await openLuggage(async (repos, luggageId) => {
+      await repos.compartments.create({ luggageId, name: 'Neceser' })
+      await addItem(repos, luggageId, 'Cepillo')
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Añadir a Neceser' }))
+    await user.keyboard('cepillo{Enter}')
+
+    expect(
+      await within(region('Neceser')).findByText(
+        '«cepillo» ya está en la maleta.',
+      ),
+    ).toBeInTheDocument()
+  })
+})
+
+describe('Mover a… (fila desplegada)', () => {
+  it('sin compartimentos no aparece el selector', async () => {
+    const { user } = await openLuggage(async (repos, luggageId) => {
+      await addItem(repos, luggageId, 'Cepillo')
+    })
+
+    await user.click(screen.getByRole('button', { name: /^Cepillo,/ }))
+
+    expect(
+      screen.queryByRole('combobox', { name: 'Mover a' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('mueve un artículo suelto a un compartimento y lo devuelve a sueltos', async () => {
+    const { user, repositories, luggage } = await openLuggage(
+      async (repos, luggageId) => {
+        await repos.compartments.create({ luggageId, name: 'Neceser' })
+        await addItem(repos, luggageId, 'Cepillo')
+      },
+    )
+    await user.click(screen.getByRole('button', { name: /^Cepillo,/ }))
+    const select = screen.getByRole('combobox', { name: 'Mover a' })
+    expect(select).toHaveDisplayValue('Suelto en la maleta')
+
+    await user.selectOptions(select, 'Neceser')
+
+    expect(
+      await within(screen.getByRole('region', { name: 'Neceser' })).findByRole(
+        'checkbox',
+        { name: 'Cepillo' },
+      ),
+    ).toBeInTheDocument()
+    const [kit] = await repositories.compartments.listByLuggage(luggage.id)
+    expect(
+      (await repositories.quantities.listByLuggage(luggage.id))[0],
+    ).toMatchObject({ compartmentId: kit.id })
+
+    // La fila sigue desplegada en su nuevo sitio: se puede devolver.
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Mover a' }),
+      'Suelto en la maleta',
+    )
+    // Primero esperamos a lo que VE el usuario (la UI se refresca un
+    // instante después de guardar) y después comprobamos los datos.
+    await waitFor(() =>
+      expect(
+        within(screen.getByRole('region', { name: 'Neceser' })).queryByRole(
+          'checkbox',
+        ),
+      ).not.toBeInTheDocument(),
+    )
+    expect(
+      screen.getByRole('checkbox', { name: 'Cepillo' }),
+    ).toBeInTheDocument()
+    expect(
+      (await repositories.quantities.listByLuggage(luggage.id))[0],
+    ).toMatchObject({ compartmentId: null })
   })
 })

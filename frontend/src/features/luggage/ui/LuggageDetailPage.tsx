@@ -67,6 +67,15 @@ export function LuggageDetailPage() {
 
   const { entries, compartmentList } = contents
 
+  /** Resalta la fila del artículo que se ha intentado añadir de nuevo. */
+  function highlightExisting(name: string) {
+    const needle = normalizeForSearch(name)
+    const existing = entries.find(
+      (entry) => normalizeForSearch(entry.itemName) === needle,
+    )
+    setHighlightedId(existing?.id ?? null)
+  }
+
   return (
     <section>
       <header className={page.header}>
@@ -92,19 +101,14 @@ export function LuggageDetailPage() {
       <AddItemForm
         luggageId={luggage.id}
         entries={entries}
-        onDuplicate={(name) => {
-          const needle = normalizeForSearch(name)
-          const existing = entries.find(
-            (entry) => normalizeForSearch(entry.itemName) === needle,
-          )
-          setHighlightedId(existing?.id ?? null)
-        }}
+        onDuplicate={highlightExisting}
       />
       <PackingList
         luggageId={luggage.id}
         entries={entries}
         compartments={compartmentList}
         highlightedId={highlightedId}
+        onDuplicate={highlightExisting}
       />
     </section>
   )

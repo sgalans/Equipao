@@ -12,6 +12,8 @@ interface PackingListProps {
   compartments: Compartment[]
   /** Fila a resaltar (p. ej. al intentar añadir algo que ya estaba). */
   highlightedId: string | null
+  /** Al intentar añadir algo que ya estaba (desde el "+" de un compartimento). */
+  onDuplicate: (itemName: string) => void
 }
 
 /**
@@ -24,6 +26,7 @@ export function PackingList({
   entries,
   compartments,
   highlightedId,
+  onDuplicate,
 }: PackingListProps) {
   // Acordeón: como mucho una fila desplegada EN TODA LA MALETA (también
   // entre compartimentos). Estado de UI local: nadie más lo necesita.
@@ -40,6 +43,7 @@ export function PackingList({
             entry={entry}
             isExpanded={expandedId === entry.id}
             isHighlighted={highlightedId === entry.id}
+            compartments={compartments}
             onToggleExpanded={() =>
               setExpandedId((current) =>
                 current === entry.id ? null : entry.id,
@@ -71,6 +75,8 @@ export function PackingList({
             (entry) => entry.compartmentId === compartment.id,
           )}
           renderRows={renderRows}
+          luggageEntries={entries}
+          onDuplicate={onDuplicate}
         />
       ))}
 

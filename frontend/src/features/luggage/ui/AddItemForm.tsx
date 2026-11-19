@@ -15,6 +15,14 @@ interface AddItemFormProps {
   entries: LuggageEntry[]
   /** Se llama si el artículo ya estaba: la página resalta su fila. */
   onDuplicate: (itemName: string) => void
+  /** Dónde se añade: suelto en la maleta (null, por defecto) o un compartimento. */
+  compartmentId?: string | null
+  /** Texto del campo y del botón; por defecto "Añadir a la maleta". */
+  label?: string
+  /** Enfocar al aparecer (el "+" de un compartimento abre este formulario). */
+  autoFocus?: boolean
+  /** Escape cierra el formulario (solo cuando se puede cerrar). */
+  onClose?: () => void
 }
 
 /**
@@ -25,6 +33,10 @@ export function AddItemForm({
   luggageId,
   entries,
   onDuplicate,
+  compartmentId = null,
+  label = 'Añadir a la maleta',
+  autoFocus = false,
+  onClose,
 }: AddItemFormProps) {
   const repositories = useRepositories()
   const [query, setQuery] = useState('')
@@ -50,7 +62,7 @@ export function AddItemForm({
     setIsSaving(true)
     setMessage(null)
     try {
-      await addItemByName(repositories, luggageId, name)
+      await addItemByName(repositories, luggageId, name, compartmentId)
       setQuery('')
     } catch (error) {
       if (error instanceof DuplicateError) {
@@ -80,7 +92,7 @@ export function AddItemForm({
         }}
       >
         <label htmlFor={inputId} className="visually-hidden">
-          Añadir a la maleta
+          {label}
         </label>
         <input
           ref={inputRef}
@@ -90,7 +102,7 @@ export function AddItemForm({
             setQuery(event.target.value)
             setMessage(null)
           }}
-          placeholder="Añadir a la maleta…"
+          placeholder={`${label}…`}
           autoComplete="off"
           // iOS: sin autocorrección (cambiaría "Neceser" por otra palabra) y
           // con la primera letra en mayúscula, como un nombre de lista.
@@ -98,12 +110,18 @@ export function AddItemForm({
           autoCapitalize="sentences"
           maxLength={100}
           enterKeyHint="done"
+          // Solo el formulario de un compartimento: aparece porque el usuario
+          // acaba de tocar su "+", así que el foco (y el teclado) van a él.
+          autoFocus={autoFocus}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') onClose?.()
+          }}
         />
         <button
           type="submit"
           className={buttons.iconPrimary}
-          aria-label="Añadir a la maleta"
-          title="Añadir a la maleta"
+          aria-label={label}
+          title={label}
           disabled={isSaving}
         >
           <PlusIcon />

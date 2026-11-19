@@ -16,6 +16,8 @@ interface CollapsedCompartmentsState {
   /** ids de compartimentos plegados (un Record serializa bien a JSON). */
   collapsed: Record<string, true>
   toggle: (compartmentId: string) => void
+  /** Despliega (p. ej. al tocar su "+": no se añade a algo que no se ve). */
+  expand: (compartmentId: string) => void
 }
 
 export const useCollapsedCompartments = create<CollapsedCompartmentsState>()(
@@ -29,6 +31,13 @@ export const useCollapsedCompartments = create<CollapsedCompartmentsState>()(
           const collapsed = { ...state.collapsed }
           if (collapsed[compartmentId]) delete collapsed[compartmentId]
           else collapsed[compartmentId] = true
+          return { collapsed }
+        }),
+      expand: (compartmentId) =>
+        set((state) => {
+          if (!state.collapsed[compartmentId]) return state // nada que cambiar
+          const collapsed = { ...state.collapsed }
+          delete collapsed[compartmentId]
           return { collapsed }
         }),
     }),
