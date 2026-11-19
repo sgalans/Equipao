@@ -23,6 +23,12 @@
   cursor: not-allowed;
 }
 
+.primary {
+  composes: button;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
 .secondary {
   composes: button;
   background: transparent;

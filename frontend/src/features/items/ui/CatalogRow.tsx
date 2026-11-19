@@ -2,7 +2,9 @@ import { useId, useState } from 'react'
 import { useRepositories } from '@/shared/di/repositories'
 import { DuplicateError } from '@/shared/domain/errors'
 import buttons from '@/shared/ui/buttons.module.css'
+import checkCircle from '@/shared/ui/checkCircle.module.css'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
+import { CheckIcon } from '@/shared/ui/icons/CheckIcon'
 import highlightStyles from '@/shared/ui/highlight.module.css'
 import { PencilIcon } from '@/shared/ui/icons/PencilIcon'
 import { TrashIcon } from '@/shared/ui/icons/TrashIcon'
@@ -28,6 +30,11 @@ interface CatalogRowProps {
   /** Recién creado (o ya existía al intentar crearlo): resalte breve. */
   isHighlighted?: boolean
   onToggleExpanded: () => void
+  /**
+   * Modo selección (añadir varios a una maleta): la fila entera es una
+   * casilla y no se despliegan acciones.
+   */
+  selection?: { isSelected: boolean; onToggle: () => void }
 }
 
 /**
@@ -39,6 +46,7 @@ export function CatalogRow({
   isExpanded,
   isHighlighted = false,
   onToggleExpanded,
+  selection,
 }: CatalogRowProps) {
   const { items } = useRepositories()
   const [isRenaming, setIsRenaming] = useState(false)
@@ -61,6 +69,29 @@ export function CatalogRow({
         setError('No se ha podido renombrar. Inténtalo de nuevo.')
       }
     }
+  }
+
+  if (selection) {
+    return (
+      <li className={styles.row}>
+        {/* Toda la fila es la casilla: zona táctil grande. role="checkbox":
+            VoiceOver dice "Calcetines, En 2 maletas, casilla, marcada". */}
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={selection.isSelected}
+          aria-label={`${item.name}, ${usage}`}
+          className={styles.selectable}
+          onClick={selection.onToggle}
+        >
+          <span className={checkCircle.check} aria-hidden="true">
+            {selection.isSelected && <CheckIcon />}
+          </span>
+          <span className={styles.name}>{item.name}</span>
+          <span className={styles.usage}>{usage}</span>
+        </button>
+      </li>
+    )
   }
 
   return (

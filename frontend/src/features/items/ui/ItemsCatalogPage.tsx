@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useId, useMemo, useRef, useState } from 'react'
+import { AddItemsDialog } from '@/features/luggage/ui/AddItemsDialog'
 import { useRepositories } from '@/shared/di/repositories'
 import { DuplicateError } from '@/shared/domain/errors'
 import buttons from '@/shared/ui/buttons.module.css'
@@ -33,6 +34,27 @@ export function ItemsCatalogPage() {
   const inputId = useId()
   // Artículo recién creado (o el que ya existía): se resalta un momento.
   const { highlightedId, highlight } = useTemporaryHighlight()
+  // Modo selección para añadir varios a una maleta. La selección es un Set
+  // de ids y se mantiene al buscar: se puede buscar "cepillo", marcarlo,
+  // buscar "pasta", marcarla… y añadirlo todo junto.
+  const [isSelecting, setIsSelecting] = useState(false)
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
+  const [isChoosingDestination, setIsChoosingDestination] = useState(false)
+
+  function toggleSelected(itemId: string) {
+    // Inmutable: un Set NUEVO, para que React detecte el cambio.
+    setSelected((current) => {
+      const next = new Set(current)
+      if (next.has(itemId)) next.delete(itemId)
+      else next.add(itemId)
+      return next
+    })
+  }
+
+  function exitSelection() {
+    setIsSelecting(false)
+    setSelected(new Set())
+  }
 
   const name = query.trim()
 
@@ -90,6 +112,21 @@ export function ItemsCatalogPage() {
     <section>
       <header className={page.header}>
         <h1 className={page.title}>Artículos</h1>
+        {catalog.length > 0 && (
+          <button
+            type="button"
+            className={styles.selectToggle}
+            onClick={() => {
+              if (isSelecting) exitSelection()
+              else {
+                setIsSelecting(true)
+                setExpandedId(null)
+              }
+            }}
+          >
+            {isSelecting ? 'Cancelar' : 'Seleccionar'}
+          </button>
+        )}
       </header>
 
       <form
@@ -162,10 +199,45 @@ export function ItemsCatalogPage() {
                   current === item.id ? null : item.id,
                 )
               }
+              selection={
+                isSelecting
+                  ? {
+                      isSelected: selected.has(item.id),
+                      onToggle: () => toggleSelected(item.id),
+                    }
+                  : undefined
+              }
             />
           ))}
         </ul>
       )}
+
+      {isSelecting && (
+        // Barra fija abajo: el botón queda al alcance del pulgar aunque la
+        // lista sea larga.
+        <div className={styles.selectionBar}>
+          <button
+            type="button"
+            className={buttons.primary}
+            disabled={selected.size === 0}
+            onClick={() => setIsChoosingDestination(true)}
+          >
+            {selected.size === 0
+              ? 'Selecciona artículos'
+              : `Añadir ${selected.size} a una maleta…`}
+          </button>
+        </div>
+      )}
+
+      <AddItemsDialog
+        open={isChoosingDestination}
+        itemIds={[...selected]}
+        onCancel={() => setIsChoosingDestination(false)}
+        onAdded={() => {
+          setIsChoosingDestination(false)
+          exitSelection()
+        }}
+      />
     </section>
   )
 }
