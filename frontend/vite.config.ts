@@ -60,6 +60,13 @@ export default defineConfig({
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
   test: {
+    // El módulo virtual de vite-plugin-pwa solo existe al construir la app:
+    // en los tests se sustituye por una versión falsa (sin service worker).
+    alias: {
+      'virtual:pwa-register/react': fileURLToPath(
+        new URL('./src/test/mocks/pwaRegister.ts', import.meta.url),
+      ),
+    },
     // Dos "proyectos" de test con distinto entorno. Arrancar jsdom (navegador
     // simulado) es lo más caro de cada fichero de test, así que solo lo pagan
     // los tests que de verdad renderizan componentes.
