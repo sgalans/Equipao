@@ -20,7 +20,13 @@ export default defineConfig({
       registerType: 'prompt',
       // Iconos generados a partir de public/icon.svg (pwa-assets.config.ts):
       // los añade al manifest y los <link> de iOS al index.html.
-      pwaAssets: { config: true, overrideManifestIcons: true },
+      pwaAssets: {
+        config: true,
+        overrideManifestIcons: true,
+        // El theme-color lo pone index.html (claro y oscuro): que el plugin
+        // no añada otro sin modo oscuro. Una sola fuente para ese dato.
+        injectThemeColor: false,
+      },
       manifest: {
         // El mismo nombre completo y bajo el icono (cabe: iOS muestra ~12
         // caracteres). Sale de APP_NAME: un único sitio para el nombre.
@@ -33,7 +39,9 @@ export default defineConfig({
         // standalone: se abre a pantalla completa, sin la barra de Safari.
         display: 'standalone',
         background_color: '#ffffff',
-        theme_color: '#2f6fde',
+        // Igual que el fondo de la app (ver theme-color en index.html, que
+        // además distingue modo claro y oscuro).
+        theme_color: '#ffffff',
       },
       workbox: {
         // Todo lo que se publica se guarda en el dispositivo (precaché):
