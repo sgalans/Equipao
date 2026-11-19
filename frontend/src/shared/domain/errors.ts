@@ -39,21 +39,6 @@ export class DuplicateError extends DomainError {
   }
 }
 
-/** Borrado impedido porque otras filas lo referencian (ON DELETE RESTRICT). */
-export class InUseError extends DomainError {
-  readonly entity: string
-  readonly id: string
-  readonly usages: number
-
-  constructor(entity: string, id: string, usages: number) {
-    super(`${entity} con id ${id} está en uso en ${usages} sitio(s)`)
-    this.name = 'InUseError'
-    this.entity = entity
-    this.id = id
-    this.usages = usages
-  }
-}
-
 /**
  * Los datos violarían una invariante entre entidades, p. ej. meter un
  * artículo en un compartimento de OTRA maleta. Es un error de programación

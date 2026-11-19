@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { InUseError } from '@/shared/domain/errors'
 import { createTestRepositories } from '@/test/repositories'
 
 describe('DexieItemRepository', () => {
@@ -37,8 +36,8 @@ describe('DexieItemRepository', () => {
     expect(updated).toMatchObject({ id: item.id, name: 'Cargador USB-C' })
   })
 
-  describe('remove (ON DELETE RESTRICT)', () => {
-    it('borra un ítem que no está en ninguna maleta', async () => {
+  describe('remove (ON DELETE CASCADE)', () => {
+    it('borra un artículo que no está en ninguna maleta', async () => {
       const { items } = createTestRepositories()
       const item = await items.create({ name: 'Cargador' })
 
@@ -47,25 +46,91 @@ describe('DexieItemRepository', () => {
       expect(await items.getById(item.id)).toBeUndefined()
     })
 
-    it('impide borrar un ítem en uso e indica en cuántas maletas está', async () => {
+    it('borra un artículo en uso y lo quita de todas las maletas', async () => {
       const { items, luggages, quantities } = createTestRepositories()
       const socks = await items.create({ name: 'Calcetines' })
+      const towel = await items.create({ name: 'Toalla' })
+      const luggageIds: string[] = []
       for (const name of ['Grande', 'Mochila']) {
         const luggage = await luggages.create({ name })
-        await quantities.add({
-          luggageId: luggage.id,
-          itemId: socks.id,
-          num: 1,
-          nAlreadyPacked: 0,
-        })
+        luggageIds.push(luggage.id)
+        for (const item of [socks, towel]) {
+          await quantities.add({
+            luggageId: luggage.id,
+            itemId: item.id,
+            num: 1,
+            nAlreadyPacked: 0,
+          })
+        }
       }
 
-      const error = await items.remove(socks.id).catch((e: unknown) => e)
+      await items.remove(socks.id)
 
-      expect(error).toBeInstanceOf(InUseError)
-      expect(error).toMatchObject({ usages: 2 })
-      expect(await items.getById(socks.id)).toEqual(socks)
+      expect(await items.getById(socks.id)).toBeUndefined()
+      // En cada maleta queda solo la toalla: nada huérfano, nada de más.
+      for (const luggageId of luggageIds) {
+        const left = await quantities.listByLuggage(luggageId)
+        expect(left.map((q) => q.itemId)).toEqual([towel.id])
+      }
     })
+
+    it('es idempotente: borrar un artículo inexistente no falla', async () => {
+      const { items } = createTestRepositories()
+
+      await expect(
+        items.remove('0190a0a0-0000-7000-8000-000000000000'),
+      ).resolves.toBeUndefined()
+    })
+  })
+})
+
+describe('DexieItemRepository.update: sin duplicados en el catálogo', () => {
+  it('no permite renombrar con el nombre de OTRO artículo (aunque cambien mayúsculas o tildes)', async () => {
+    const { items } = createTestRepositories()
+    await items.create({ name: 'Calcetines' })
+    const typo = await items.create({ name: 'Calcetnes' })
+
+    await expect(
+      items.update(typo.id, { name: 'CALCETINES' }),
+    ).rejects.toMatchObject({
+      name: 'DuplicateError',
+      message: 'Ya existe un artículo llamado «Calcetines»',
+    })
+    expect(await items.getById(typo.id)).toEqual(typo)
+  })
+
+  it('el MISMO artículo sí puede cambiar mayúsculas o tildes', async () => {
+    const { items } = createTestRepositories()
+    const camera = await items.create({ name: 'camara' })
+
+    expect(await items.update(camera.id, { name: 'Cámara' })).toMatchObject({
+      id: camera.id,
+      name: 'Cámara',
+    })
+  })
+})
+
+describe('DexieItemRepository.listWithUsage', () => {
+  it('añade a cada artículo las maletas donde está, en orden alfabético', async () => {
+    const { items, luggages, quantities } = createTestRepositories()
+    const socks = await items.create({ name: 'Calcetines' })
+    const unused = await items.create({ name: 'Abrigo' })
+    for (const name of ['Mochila', 'Grande']) {
+      const luggage = await luggages.create({ name })
+      await quantities.add({
+        luggageId: luggage.id,
+        itemId: socks.id,
+        num: 1,
+        nAlreadyPacked: 0,
+      })
+    }
+
+    const summaries = await items.listWithUsage()
+
+    expect(summaries).toEqual([
+      { ...unused, luggageNames: [] },
+      { ...socks, luggageNames: ['Grande', 'Mochila'] },
+    ])
   })
 })
 
