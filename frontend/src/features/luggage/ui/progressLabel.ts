@@ -12,3 +12,10 @@ export function progressLabel(done: number, total: number): string {
   if (done === total) return '¡Maleta lista!'
   return `${done} de ${total} listos`
 }
+
+/** Variante para un compartimento ("Listo", no "¡Maleta lista!"). */
+export function compartmentProgressLabel(done: number, total: number): string {
+  if (total === 0) return 'Vacío'
+  if (done === total) return 'Listo'
+  return `${done} de ${total}`
+}

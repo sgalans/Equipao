@@ -59,14 +59,14 @@ Se descartó React Native/Expo (dependería del ordenador sin pagar los 99 $/añ
 Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 
 - `Luggage` (maleta, entidad principal): id (uuid), name, createdAt, updatedAt
-- `Compartment` (compartimento, **iteración 5**): id (uuid), luggageId → Luggage, name, createdAt, updatedAt. Un solo nivel (no se anidan).
+- `Compartment` (compartimento): id (uuid), luggageId → Luggage, name, createdAt, updatedAt. Un solo nivel (no se anidan).
 - `Item` (catálogo global): id (uuid), name, createdAt, updatedAt
-- `ItemQuantity` (junction table): id (uuid), luggageId → Luggage, compartmentId? → Compartment (null = suelto; iteración 5), itemId → Item, num, nAlreadyPacked, createdAt, updatedAt
+- `ItemQuantity` (junction table): id (uuid), luggageId → Luggage, compartmentId → Compartment (`null` explícito = suelto), itemId → Item, num, nAlreadyPacked, createdAt, updatedAt
 - **Eliminados**: `Trip` (tras la iteración 2: añadía navegación sin aportar al caso de uso) y `Item.color` (YAGNI). Sin fechas en la maleta por ahora.
 
 ### Vocabulario de la interfaz (lenguaje ubicuo)
 
-- **Maleta** = `Luggage`. **Compartimento** = `Compartment`. Texto de ayuda acordado: *"Un compartimento es un subgrupo de objetos dentro de tu maleta: el neceser, la mochila de mano, el maletín del portátil… Un espacio donde agrupar los objetos que van juntos."*
+- **Maleta** = `Luggage`. **Compartimento** = `Compartment`. Texto de ayuda acordado: *"Contenedor para meter artículos, como un neceser, una mochila o un maletín."*
 - `Item` en la interfaz: **"artículo"** (confirmado; descartados "ítem", "objeto", "cosa" y "elemento"). Además, preferir microcopy que no necesite el sustantivo ("Añadir a la maleta…", "3 de 12 guardados").
 
 ## 6. Decisiones cerradas
@@ -85,7 +85,8 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 - **IDs: UUID v7** con la librería `uuid` (ordenables y sin depender de `crypto.randomUUID`, que solo existe en HTTPS/localhost).
 - **Timestamps**: `createdAt`/`updatedAt` como ISO 8601 UTC (`toISOString()`). Si en el futuro hay fechas de calendario, guardarlas como `'YYYY-MM-DD'` y formatear en UTC (evita el bug de zona horaria).
 - **Repositorios: ports & adapters.** La interfaz (`XRepository`) vive en `features/<f>/domain/` y la implementación (`createDexieXRepository(db)`, patrón factory + inyección de dependencias) en `features/<f>/data/`. Los repositorios validan con Zod, rellenan id/timestamps y traducen errores técnicos a errores de dominio (`src/shared/domain/errors.ts`).
-- **Integridad referencial** (en Architecture.md): borrar Luggage → CASCADE (su contenido; en la iteración 5 también sus compartimentos); borrar Item en uso → RESTRICT (`InUseError`); `UNIQUE (luggageId, itemId)` → `DuplicateError`. Al crear se comprueba que las FK existen (`EntityNotFoundError`). Los borrados son idempotentes.
+- **Integridad referencial** (en Architecture.md): borrar Luggage → CASCADE (su contenido y sus compartimentos); borrar Compartment → SET NULL (sus artículos pasan a sueltos); invariante "el compartimento es de la misma maleta" → `ConsistencyError`; borrar Item en uso → RESTRICT (`InUseError`); `UNIQUE (luggageId, itemId)` → `DuplicateError`. Al crear se comprueba que las FK existen (`EntityNotFoundError`). Los borrados son idempotentes.
+- **Migraciones de Dexie**: la `version(1)` está congelada (hay datos reales en navegadores). Cada cambio de esquema = nueva versión (`SCHEMA_Vn` exportado en `src/shared/db/db.ts`) con `upgrade()` si hay que transformar datos, y un test que crea una BD con la versión anterior, la migra y comprueba el resultado (`db.migration.test.ts`). v2 = compartimentos.
 - **Nombres de errores propios**: nunca coinciden con los de DOMException/IndexedDB (p. ej. `NotFoundError`), porque Dexie los convierte en sus propios errores al salir de una transacción.
 - **UI**: React Router (rutas en `src/app/routes.ts`, layout `AppLayout`), React Hook Form + `zodResolver` con los esquemas Zod existentes, CSS Modules (`X.module.css` junto al componente) y variables CSS globales en `index.css`.
 - **Inyección de repositorios en la UI con React Context**: `RepositoriesContext` y `useRepositories()` en `src/shared/di/` (solo conocen las interfaces); la composition root (`src/app/compositionRoot.ts`) es el único sitio que crea implementaciones concretas. Lecturas reactivas con `useLiveQuery(() => repo.list(), [repo])`.
@@ -101,15 +102,15 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 - **YAGNI**: backend, entidades de usuario y login se posponen hasta que hagan falta de verdad.
 - **Single source of truth**: los valores derivados se calculan, no se guardan redundantes.
 - **Offline-first**: todos los datos del MVP viven en IndexedDB; la sincronización se difiere.
-- Sin backend no hay "usuario" real: un login local sería teatro. Como mucho, "perfiles locales" (opcional, solo si varias personas comparten navegador).
-- Generar un **UUID local de dispositivo** desde el principio para facilitar el sync futuro.
+- Sin backend no hay "usuario" real (y no se quiere: ver sección 8): un login local sería teatro. Como mucho, "perfiles locales" (opcional, solo si varias personas comparten navegador).
+- Hay un **UUID local de dispositivo** (`getDeviceId`) por si algún día hay sincronización; no se usa todavía.
 
-## 8. Fase 2 (futuro, no implementar aún)
+## 8. Backend: descartado por ahora (decisión del usuario)
 
-- Backend: FastAPI + Pydantic + SQLAlchemy + Alembic, con Postgres y Docker Compose.
-- Autenticación (JWT, refresh tokens, OAuth) y sistema de usuarios.
-- API de sincronización offline-first (resolución de conflictos por timestamps; valorar "última escritura gana" vs merge).
-- Tests con `pytest`; despliegue del backend en Railway o Fly.io.
+- **No habrá backend ni usuarios mientras el usuario no lo decida.** Motivo de producto: un backend centralizado obliga a tener cuentas para separar los datos de cada persona, y el login añade pasos que chocan con la prioridad "lo más simple de usar posible".
+- La arquitectura deja la puerta abierta sin coste: repositorios (ports & adapters), UUID v7, `createdAt`/`updatedAt` y `deviceId`. No construir nada "por si acaso" para el backend (YAGNI).
+- Las necesidades que suele cubrir un backend (copia de seguridad, cambiar de móvil, compartir una maleta) se resuelven sin servidor, p. ej. exportar/importar un archivo.
+- Si algún día se retoma: FastAPI + Pydantic + SQLAlchemy + Alembic, Postgres y Docker Compose; sincronización offline-first por timestamps.
 
 ## 9. Pendiente de decidir (pregunta antes de asumir)
 
@@ -118,21 +119,21 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 
 ## 10. Estado actual
 
-- Fase: **iteración 4 (artículos y empaquetado) terminada** en la rama `crud/items`, pendiente de PR a `develop`: dominio (`packing.ts`, `search.ts`), repositorios (`findByName`, `togglePacked`, `resize`, `listEntriesByLuggage`, `listSummaries`), caso de uso `addItemByName`, UI del detalle (`AddItemForm`, `PackingList`, `PackingListRow`, `PackingProgress`) y progreso en las tarjetas del inicio (`aria-label` "Nombre, 3 de 5 listos"). 110 tests. Verificado en iPhone: el teclado se mantiene abierto al añadir con OK y al tocar sugerencias. Siguiente: iteración 5 (compartimentos).
+- Fase: **iteración 5 (compartimentos) terminada** en la rama `crud/compartments`, pendiente de PR a `develop`: migración v2 con test, `CompartmentRepository` (SET NULL al borrar), invariante y `moveTo`; UI con secciones plegables (Zustand persistido), "+" por compartimento (reutiliza `AddItemForm` con `compartmentId`/`label`/`autoFocus`/`onClose`), "Mover a…" con `<select>` nativo en la fila desplegada, crear/renombrar/borrar, texto de ayuda en cursiva. Contenido y compartimentos en un solo `useLiveQuery` (evita *tearing*). 139 tests. Siguiente: iteración 6 (duplicar maleta).
+- Iteración 4 (artículos y empaquetado + navegación "‹ Mis maletas") mergeada en `develop`.
 - Iteración 3 (maleta como entidad principal: crear en línea, detalle, `EditableTitle`, borrar) mergeada en `develop`.
 - Iteración 2 (CRUD de viajes) mergeada en `develop` (PR #3); después se decidió eliminar los viajes. Se reutilizan sus piezas: router, DI por Context, `FormField`, `ConfirmDialog`, estilos y `renderApp`.
 - **Riesgo conocido**: sin desplegar ni instalar como PWA, Safari de iOS puede borrar IndexedDB tras 7 días sin visitar la web. Usar solo datos de prueba hasta la iteración de PWA (el usuario decidió no adelantar el despliegue).
 - Pendientes técnicos: el bundle supera 500 kB (157 kB gzip) → code splitting en la iteración de PWA; en el despliegue hará falta un rewrite de todas las rutas a `index.html`.
-- Backlog: "Deshacer" al borrar (snapshot + reinserción + toast con Zustand), script `npm run check`, tests E2E con Playwright (casos que jsdom no reproduce: foco atrapado y Escape en `<dialog>`, blur al desmontar en `EditableTitle`).
-- Pendiente de decidir (iteración 5): al borrar un compartimento, ¿sus ítems se borran o pasan a sueltos?
+- Backlog: **arrastrar artículos para ordenar y moverlos entre compartimentos** (idea del usuario, aplazada; si se hace: dnd-kit, asa de arrastre ≡ en cada fila, orden manual con campo `position` + migración v3 y *fractional indexing*, mantener "Mover a…" como alternativa accesible por WCAG 2.2 SC 2.5.7, y probar el gesto con Playwright). "Deshacer" al borrar (snapshot + reinserción + toast con Zustand), tests E2E con Playwright (casos que jsdom no reproduce: foco atrapado y Escape en `<dialog>`, blur al desmontar en `EditableTitle`).
 - Iteración 1 (capa de datos) mergeada en `develop` (PR #2).
 - Setup (iteración 0) mergeado en `develop` (PR #1).
 - Entorno instalado y verificado: Git 2.55.0, nvm-windows 2.0.1, Node.js 26.13.1 LTS y npm 11.20.0. Versión de Node registrada en `.nvmrc`.
 - Identidad de Git configurada para este repositorio. Remoto `origin`: https://github.com/sgalans/LugGAge.git.
 - Ramas: `main`, `develop` y una rama por iteración que sale de `develop`.
-- ESLint y Prettier configurados. Comandos disponibles en `frontend/`: `dev`, `build`, `lint`, `format`, `format:check`, `preview`, `test` (watch), `test:run` y `typecheck`.
+- ESLint y Prettier configurados. Comandos disponibles en `frontend/`: `dev`, `build`, `lint`, `format`, `format:check`, `preview`, `test` (watch), `test:run`, `typecheck` y **`check`** (typecheck + lint + formato + tests; ejecutarlo antes de cada commit y antes de dar un paso por terminado).
 - TypeScript se mantiene en la línea 6.0 por compatibilidad con `typescript-eslint`; la plantilla original incluía TypeScript 7 y Oxlint.
-- Roadmap del MVP (una rama/PR por iteración): 0) setup ✅ · 1) capa de datos ✅ · 2) CRUD de viajes ✅ (después eliminado) · 3) refactor: maleta como entidad principal · 4) ítems y empaquetado (añadir escribiendo con autocompletado del catálogo, cantidades, un toque = empaquetar, progreso) · 5) compartimentos (plegables, estado en Zustand) · 6) duplicar maleta · 7) PWA/offline · 8) CI y despliegue.
+- Roadmap del MVP (una rama/PR por iteración): 0) setup ✅ · 1) capa de datos ✅ · 2) CRUD de viajes ✅ (después eliminado) · 3) maleta como entidad principal ✅ · 4) artículos y empaquetado ✅ · 5) compartimentos ✅ · 6) duplicar maleta · 7) PWA/offline + despliegue · 8) CI con GitHub Actions.
 - `npm audit` detecta 9 avisos moderados procedentes de `minimatch`, dependencia transitiva de las herramientas de lint. Pendiente de actualización compatible; no se ha aplicado `audit fix --force`.
-- Instalados: Dexie, Zod, uuid, Vitest, Testing Library y fake-indexeddb. Pendientes: PWA y Zustand. El MVP no necesita `venv` porque no incluye backend Python.
+- Instalados: Dexie, Zod, uuid, Zustand, React Router, React Hook Form, Vitest, Testing Library y fake-indexeddb. Pendiente: `vite-plugin-pwa`. El MVP no necesita `venv` porque no incluye backend Python.
 - Actualiza esta sección conforme avance el proyecto.

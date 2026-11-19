@@ -17,6 +17,7 @@ export interface ItemQuantityRepository {
    * Añade un ítem a una maleta.
    * Lanza EntityNotFoundError si la maleta o el ítem no existen (FOREIGN KEY) y
    * DuplicateError si el ítem ya está en esa maleta (UNIQUE).
+   * Si se indica compartmentId, debe ser de la misma maleta (ConsistencyError).
    */
   add(input: NewItemQuantity): Promise<ItemQuantity>
   /** Cambia cantidades; valida 0 <= nAlreadyPacked <= num con los valores finales. */
@@ -28,6 +29,12 @@ export interface ItemQuantityRepository {
   togglePacked(id: string): Promise<ItemQuantity>
   /** Cambia la cantidad total ajustando lo ya guardado (ver packing.ts). */
   resize(id: string, num: number): Promise<ItemQuantity>
+  /**
+   * Mueve el artículo a un compartimento de SU maleta, o a sueltos (null).
+   * Lanza EntityNotFoundError si no existe y ConsistencyError si el
+   * compartimento es de otra maleta.
+   */
+  moveTo(id: string, compartmentId: string | null): Promise<ItemQuantity>
   /** Quita el ítem de la maleta. Idempotente. */
   remove(id: string): Promise<void>
 }

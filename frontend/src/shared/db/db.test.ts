@@ -9,6 +9,7 @@ function makeQuantity(overrides: Partial<ItemQuantity> = {}): ItemQuantity {
     id: uuidv7(),
     luggageId: uuidv7(),
     itemId: uuidv7(),
+    compartmentId: null,
     num: 2,
     nAlreadyPacked: 0,
     createdAt: TEST_TIMESTAMP,

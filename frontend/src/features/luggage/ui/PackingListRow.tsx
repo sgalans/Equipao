@@ -5,6 +5,7 @@ import { CheckIcon } from '@/shared/ui/icons/CheckIcon'
 import { MinusIcon } from '@/shared/ui/icons/MinusIcon'
 import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
 import { TrashIcon } from '@/shared/ui/icons/TrashIcon'
+import type { Compartment } from '../domain/compartment'
 import type { LuggageEntry } from '../domain/itemQuantityRepository'
 import { isFullyPacked } from '../domain/packing'
 import styles from './PackingListRow.module.css'
@@ -15,8 +16,13 @@ interface PackingListRowProps {
   entry: LuggageEntry
   isExpanded: boolean
   isHighlighted: boolean
+  /** Compartimentos de la maleta, para "Mover a…". */
+  compartments: Compartment[]
   onToggleExpanded: () => void
 }
+
+/** Valor del <select> para "suelto": los <option> solo admiten strings. */
+const LOOSE = ''
 
 const units = (n: number) => `${n} ${n === 1 ? 'unidad' : 'unidades'}`
 
@@ -24,15 +30,18 @@ const units = (n: number) => `${n} ${n === 1 ? 'unidad' : 'unidades'}`
  * Una línea de la maleta:
  *   [círculo]  Nombre ×N        ← tocar el círculo = guardar/sacar
  *              − N +   🗑       ← tocar el nombre despliega esto
+ *              Mover a [Neceser ▾]   (si hay compartimentos)
  */
 export function PackingListRow({
   entry,
   isExpanded,
   isHighlighted,
+  compartments,
   onToggleExpanded,
 }: PackingListRowProps) {
   const { quantities } = useRepositories()
   const panelId = useId()
+  const moveId = useId()
   const isDone = isFullyPacked(entry)
   const isPartial = !isDone && entry.nAlreadyPacked > 0
 
@@ -82,42 +91,71 @@ export function PackingListRow({
 
       {isExpanded && (
         <div id={panelId} className={styles.panel}>
-          <div className={styles.stepper}>
+          <div className={styles.panelRow}>
+            <div className={styles.stepper}>
+              <button
+                type="button"
+                className={buttons.icon}
+                aria-label={`Una unidad menos de ${entry.itemName}`}
+                // Mínimo 1: para "ninguna", se quita el artículo (papelera).
+                disabled={entry.num <= 1}
+                onClick={() => run(quantities.resize(entry.id, entry.num - 1))}
+              >
+                <MinusIcon />
+              </button>
+              {/* aria-live: al pulsar + o −, se anuncia la nueva cantidad. */}
+              <span className={styles.count} aria-live="polite">
+                {units(entry.num)}
+              </span>
+              <button
+                type="button"
+                className={buttons.icon}
+                aria-label={`Una unidad más de ${entry.itemName}`}
+                disabled={entry.num >= MAX_UNITS}
+                onClick={() => run(quantities.resize(entry.id, entry.num + 1))}
+              >
+                <PlusIcon />
+              </button>
+            </div>
             <button
               type="button"
               className={buttons.icon}
-              aria-label={`Una unidad menos de ${entry.itemName}`}
-              // Mínimo 1: para "ninguna", se quita el artículo (papelera).
-              disabled={entry.num <= 1}
-              onClick={() => run(quantities.resize(entry.id, entry.num - 1))}
+              aria-label={`Quitar ${entry.itemName} de la maleta`}
+              title="Quitar de la maleta"
+              // Sin confirmación (decisión de producto): quitar una línea es
+              // poco grave y volver a añadirla cuesta un segundo.
+              onClick={() => run(quantities.remove(entry.id))}
             >
-              <MinusIcon />
-            </button>
-            {/* aria-live: al pulsar + o −, se anuncia la nueva cantidad. */}
-            <span className={styles.count} aria-live="polite">
-              {units(entry.num)}
-            </span>
-            <button
-              type="button"
-              className={buttons.icon}
-              aria-label={`Una unidad más de ${entry.itemName}`}
-              disabled={entry.num >= MAX_UNITS}
-              onClick={() => run(quantities.resize(entry.id, entry.num + 1))}
-            >
-              <PlusIcon />
+              <TrashIcon />
             </button>
           </div>
-          <button
-            type="button"
-            className={buttons.icon}
-            aria-label={`Quitar ${entry.itemName} de la maleta`}
-            title="Quitar de la maleta"
-            // Sin confirmación (decisión de producto): quitar una línea es
-            // poco grave y volver a añadirla cuesta un segundo.
-            onClick={() => run(quantities.remove(entry.id))}
-          >
-            <TrashIcon />
-          </button>
+
+          {compartments.length > 0 && (
+            <div className={styles.move}>
+              <label htmlFor={moveId}>Mover a</label>
+              {/* <select> nativo: en el iPhone abre el selector de rueda de
+                  iOS. Accesible y adaptado al dedo sin construir nada. */}
+              <select
+                id={moveId}
+                value={entry.compartmentId ?? LOOSE}
+                onChange={(event) =>
+                  run(
+                    quantities.moveTo(
+                      entry.id,
+                      event.target.value === LOOSE ? null : event.target.value,
+                    ),
+                  )
+                }
+              >
+                <option value={LOOSE}>Suelto en la maleta</option>
+                {compartments.map((compartment) => (
+                  <option key={compartment.id} value={compartment.id}>
+                    {compartment.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       )}
     </li>

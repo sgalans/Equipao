@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react'
 import type { ItemRepository } from '@/features/items/domain/itemRepository'
+import type { CompartmentRepository } from '@/features/luggage/domain/compartmentRepository'
 import type { ItemQuantityRepository } from '@/features/luggage/domain/itemQuantityRepository'
 import type { LuggageRepository } from '@/features/luggage/domain/luggageRepository'
 
@@ -10,6 +11,7 @@ import type { LuggageRepository } from '@/features/luggage/domain/luggageReposit
 export interface Repositories {
   luggages: LuggageRepository
   quantities: ItemQuantityRepository
+  compartments: CompartmentRepository
   items: ItemRepository
 }
 

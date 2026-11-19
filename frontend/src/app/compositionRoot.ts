@@ -1,4 +1,5 @@
 import { createDexieItemRepository } from '@/features/items/data/dexieItemRepository'
+import { createDexieCompartmentRepository } from '@/features/luggage/data/dexieCompartmentRepository'
 import { createDexieItemQuantityRepository } from '@/features/luggage/data/dexieItemQuantityRepository'
 import { createDexieLuggageRepository } from '@/features/luggage/data/dexieLuggageRepository'
 import type { AppDb } from '@/shared/db/db'
@@ -13,6 +14,7 @@ export function createDexieRepositories(db: AppDb): Repositories {
   return {
     luggages: createDexieLuggageRepository(db),
     quantities: createDexieItemQuantityRepository(db),
+    compartments: createDexieCompartmentRepository(db),
     items: createDexieItemRepository(db),
   }
 }

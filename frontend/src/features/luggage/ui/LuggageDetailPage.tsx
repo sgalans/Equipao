@@ -16,7 +16,7 @@ const HIGHLIGHT_MS = 2000
 /** Pantalla /luggages/:luggageId: la lista de artículos de una maleta. */
 export function LuggageDetailPage() {
   const { luggageId = '' } = useParams<{ luggageId: string }>()
-  const { luggages, quantities } = useRepositories()
+  const { luggages, quantities, compartments } = useRepositories()
   const navigate = useNavigate()
 
   // Tres estados distinguibles (getById devuelve undefined si no existe,
@@ -26,10 +26,18 @@ export function LuggageDetailPage() {
     async () => (await luggages.getById(luggageId)) ?? null,
     [luggages, luggageId],
   )
-  const entries = useLiveQuery(
-    () => quantities.listEntriesByLuggage(luggageId),
-    [quantities, luggageId],
-  )
+  // Contenido y compartimentos en UN SOLO useLiveQuery. Con dos separados,
+  // cada uno se refresca por su cuenta y, al borrar un compartimento, habría
+  // un instante incoherente ("tearing"): el compartimento ya no está pero
+  // sus artículos aún no aparecen como sueltos (un parpadeo en pantalla).
+  // Juntos, siempre llegan de la misma instantánea de los datos.
+  const contents = useLiveQuery(async () => {
+    const [entries, compartmentList] = await Promise.all([
+      quantities.listEntriesByLuggage(luggageId),
+      compartments.listByLuggage(luggageId),
+    ])
+    return { entries, compartmentList }
+  }, [quantities, compartments, luggageId])
 
   // Fila resaltada brevemente (al intentar añadir algo que ya estaba).
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
@@ -43,7 +51,7 @@ export function LuggageDetailPage() {
 
   // OJO: todos los hooks van ANTES de los `return` tempranos. Las reglas de
   // los hooks exigen llamarlos siempre en el mismo orden en cada render.
-  if (luggage === undefined || entries === undefined) {
+  if (luggage === undefined || contents === undefined) {
     return <p aria-busy="true">Cargando maleta…</p>
   }
 
@@ -55,6 +63,17 @@ export function LuggageDetailPage() {
         <Link to="/">Volver a mis maletas</Link>
       </section>
     )
+  }
+
+  const { entries, compartmentList } = contents
+
+  /** Resalta la fila del artículo que se ha intentado añadir de nuevo. */
+  function highlightExisting(name: string) {
+    const needle = normalizeForSearch(name)
+    const existing = entries.find(
+      (entry) => normalizeForSearch(entry.itemName) === needle,
+    )
+    setHighlightedId(existing?.id ?? null)
   }
 
   return (
@@ -82,15 +101,15 @@ export function LuggageDetailPage() {
       <AddItemForm
         luggageId={luggage.id}
         entries={entries}
-        onDuplicate={(name) => {
-          const needle = normalizeForSearch(name)
-          const existing = entries.find(
-            (entry) => normalizeForSearch(entry.itemName) === needle,
-          )
-          setHighlightedId(existing?.id ?? null)
-        }}
+        onDuplicate={highlightExisting}
       />
-      <PackingList entries={entries} highlightedId={highlightedId} />
+      <PackingList
+        luggageId={luggage.id}
+        entries={entries}
+        compartments={compartmentList}
+        highlightedId={highlightedId}
+        onDuplicate={highlightExisting}
+      />
     </section>
   )
 }

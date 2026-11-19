@@ -1,6 +1,10 @@
 import { newEntityBase, nowIso } from '@/shared/data/entityBase'
 import type { AppDb } from '@/shared/db/db'
-import { DuplicateError, EntityNotFoundError } from '@/shared/domain/errors'
+import {
+  ConsistencyError,
+  DuplicateError,
+  EntityNotFoundError,
+} from '@/shared/domain/errors'
 import {
   ItemQuantitySchema,
   NewItemQuantitySchema,
@@ -43,6 +47,26 @@ export function createDexieItemQuantityRepository(
     })
   }
 
+  /**
+   * Invariante: un artículo solo puede ir en un compartimento de SU maleta.
+   * IndexedDB no sabe expresar esta regla (no hay FOREIGN KEY compuestas ni
+   * CHECK entre tablas), así que la comprobamos aquí. Debe llamarse dentro
+   * de una transacción que incluya la tabla compartments.
+   */
+  async function assertCompartmentBelongsTo(
+    compartmentId: string | null,
+    luggageId: string,
+  ) {
+    if (compartmentId === null) return // suelto: siempre válido
+    const compartment = await db.compartments.get(compartmentId)
+    if (!compartment) {
+      throw new EntityNotFoundError('Compartment', compartmentId)
+    }
+    if (compartment.luggageId !== luggageId) {
+      throw new ConsistencyError('El compartimento pertenece a otra maleta')
+    }
+  }
+
   // Función local (no `this.listByLuggage`): `this` dentro de un objeto
   // literal se pierde si alguien desestructura el método, y fallaría.
   function listByLuggage(luggageId: string) {
@@ -76,7 +100,7 @@ export function createDexieItemQuantityRepository(
       try {
         return await db.transaction(
           'rw',
-          [db.itemQuantities, db.luggages, db.items],
+          [db.itemQuantities, db.luggages, db.items, db.compartments],
           async () => {
             // FOREIGN KEY (luggageId) y FOREIGN KEY (itemId)
             if (!(await db.luggages.get(data.luggageId))) {
@@ -85,6 +109,7 @@ export function createDexieItemQuantityRepository(
             if (!(await db.items.get(data.itemId))) {
               throw new EntityNotFoundError('Item', data.itemId)
             }
+            await assertCompartmentBelongsTo(data.compartmentId, data.luggageId)
             const quantity = { ...newEntityBase(), ...data }
             await db.itemQuantities.add(quantity)
             return quantity
@@ -118,6 +143,22 @@ export function createDexieItemQuantityRepository(
         num,
         nAlreadyPacked: packedCountAfterResize(current, num),
       }))
+    },
+
+    moveTo(id, compartmentId) {
+      return db.transaction(
+        'rw',
+        [db.itemQuantities, db.compartments],
+        async () => {
+          const current = await db.itemQuantities.get(id)
+          if (!current) throw new EntityNotFoundError('ItemQuantity', id)
+          await assertCompartmentBelongsTo(compartmentId, current.luggageId)
+
+          const updated = { ...current, compartmentId, updatedAt: nowIso() }
+          await db.itemQuantities.put(updated)
+          return updated
+        },
+      )
     },
 
     async remove(id) {

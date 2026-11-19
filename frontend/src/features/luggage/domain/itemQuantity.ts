@@ -14,6 +14,11 @@ import { entityBaseShape, IdSchema } from '@/shared/domain/schemas'
 const itemQuantityFields = {
   luggageId: IdSchema,
   itemId: IdSchema,
+  // Compartimento donde va el artículo; null = suelto en la maleta.
+  // null explícito (no campo ausente): "suelto" es un estado con significado.
+  // Invariante (la comprueba el repositorio): el compartimento pertenece a
+  // la MISMA maleta que luggageId.
+  compartmentId: IdSchema.nullable(),
   // z.int() rechaza decimales (2.5 calcetines) y valores no finitos.
   num: z.int().min(0),
   nAlreadyPacked: z.int().min(0),
@@ -32,8 +37,14 @@ export const ItemQuantitySchema = z
   .refine(packedWithinTotal, packedWithinTotalError)
 
 export const NewItemQuantitySchema = z
-  .object(itemQuantityFields)
+  .object({
+    ...itemQuantityFields,
+    // Al crear, si no se indica compartimento, el artículo va suelto.
+    compartmentId: IdSchema.nullable().default(null),
+  })
   .refine(packedWithinTotal, packedWithinTotalError)
 
 export type ItemQuantity = z.infer<typeof ItemQuantitySchema>
-export type NewItemQuantity = z.infer<typeof NewItemQuantitySchema>
+// z.input (lo que se PUEDE pasar): compartmentId es opcional al crear.
+// z.infer sería la salida tras aplicar el default (siempre presente).
+export type NewItemQuantity = z.input<typeof NewItemQuantitySchema>

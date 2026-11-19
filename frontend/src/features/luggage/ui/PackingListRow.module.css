@@ -88,9 +88,36 @@
 
 .panel {
   display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 0 0.75rem 3.25rem;
+}
+
+.panelRow {
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 0 0.75rem 3.25rem;
+}
+
+.move {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+/* Mismo aspecto que los inputs; 16px para que iOS no haga zoom. */
+.move select {
+  flex: 1;
+  min-height: 2.75rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: max(1rem, 16px);
 }
 
 .stepper {
