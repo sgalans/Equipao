@@ -1,5 +1,6 @@
 import { useId, useState, type ReactNode } from 'react'
 import { useRepositories } from '@/shared/di/repositories'
+import { reportError } from '@/shared/ui/notifications/notificationStore'
 import buttons from '@/shared/ui/buttons.module.css'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { ChevronDownIcon } from '@/shared/ui/icons/ChevronDownIcon'
@@ -60,7 +61,7 @@ export function CompartmentSection({
     try {
       await compartments.update(compartment.id, { name })
     } catch (error) {
-      console.error(error)
+      reportError(error)
     }
   }
 

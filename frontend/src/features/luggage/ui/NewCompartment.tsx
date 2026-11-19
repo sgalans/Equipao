@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useRepositories } from '@/shared/di/repositories'
+import { reportError } from '@/shared/ui/notifications/notificationStore'
 import buttons from '@/shared/ui/buttons.module.css'
 import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
 import { InlineEditInput } from '@/shared/ui/InlineEditInput'
@@ -23,7 +24,7 @@ export function NewCompartment({ luggageId, showHelp }: NewCompartmentProps) {
     try {
       await compartments.create({ luggageId, name })
     } catch (error) {
-      console.error(error)
+      reportError(error)
     }
   }
 

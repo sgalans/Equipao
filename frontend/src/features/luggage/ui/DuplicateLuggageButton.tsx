@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useRepositories } from '@/shared/di/repositories'
+import { reportError } from '@/shared/ui/notifications/notificationStore'
 import buttons from '@/shared/ui/buttons.module.css'
 import { CopyIcon } from '@/shared/ui/icons/CopyIcon'
 import type { Luggage } from '../domain/luggage'
@@ -28,7 +29,7 @@ export function DuplicateLuggageButton({
     try {
       onDuplicated(await luggages.duplicate(luggage.id))
     } catch (error) {
-      console.error(error)
+      reportError(error)
     } finally {
       setIsDuplicating(false)
     }

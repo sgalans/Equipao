@@ -1,5 +1,6 @@
 import { Link, Outlet, useMatch } from 'react-router'
 import { ChevronLeftIcon } from '@/shared/ui/icons/ChevronLeftIcon'
+import { Toaster } from '@/shared/ui/notifications/Toaster'
 import styles from './AppLayout.module.css'
 
 /**
@@ -43,6 +44,8 @@ export function AppLayout() {
       <main className={styles.main}>
         <Outlet />
       </main>
+      {/* Aviso global (p. ej. "No se ha podido guardar"), una sola vez. */}
+      <Toaster />
     </div>
   )
 }

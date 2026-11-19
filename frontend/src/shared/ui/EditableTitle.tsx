@@ -3,6 +3,7 @@ import buttons from './buttons.module.css'
 import styles from './EditableTitle.module.css'
 import { PencilIcon } from './icons/PencilIcon'
 import { InlineEditInput } from './InlineEditInput'
+import { reportError } from './notifications/notificationStore'
 import page from './page.module.css'
 
 interface EditableTitleProps {
@@ -39,8 +40,8 @@ export function EditableTitle({
       await onSave(next)
     } catch (error) {
       // Si falla, el título sigue mostrando el valor guardado (la verdad de
-      // la base de datos); lo registramos para depurar.
-      console.error(error)
+      // la base de datos) y se avisa al usuario.
+      reportError(error)
     }
   }
 
