@@ -1,6 +1,8 @@
 import { useId } from 'react'
 import { useRepositories } from '@/shared/di/repositories'
+import { reportError } from '@/shared/ui/notifications/notificationStore'
 import buttons from '@/shared/ui/buttons.module.css'
+import checkCircle from '@/shared/ui/checkCircle.module.css'
 import { CheckIcon } from '@/shared/ui/icons/CheckIcon'
 import { MinusIcon } from '@/shared/ui/icons/MinusIcon'
 import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
@@ -48,8 +50,9 @@ export function PackingListRow({
   /** Lanza una operación del repositorio sin bloquear la UI. */
   function run(operation: Promise<unknown>) {
     // No hay nada que actualizar a mano al terminar: useLiveQuery refresca
-    // la lista sola. Solo registramos un posible error.
-    operation.catch((error: unknown) => console.error(error))
+    // la lista sola. Si falla, se avisa (antes solo iba a la consola y el
+    // usuario tocaba sin que pasara nada).
+    operation.catch(reportError)
   }
 
   return (
@@ -68,7 +71,7 @@ export function PackingListRow({
           role="checkbox"
           aria-checked={isDone ? true : isPartial ? 'mixed' : false}
           aria-label={entry.itemName}
-          className={styles.check}
+          className={checkCircle.check}
           onClick={() => run(quantities.togglePacked(entry.id))}
         >
           {isDone ? <CheckIcon /> : isPartial ? entry.nAlreadyPacked : null}

@@ -102,14 +102,15 @@ describe('Secciones', () => {
     const names = screen
       .getAllByRole('checkbox')
       .map((checkbox) => checkbox.getAttribute('aria-label'))
-    expect(names).toEqual(['Pasaporte', 'Cepillo', 'Pasta'])
+    // El compartimento tiene su propio círculo ("Neceser listo").
+    expect(names).toEqual(['Pasaporte', 'Neceser listo', 'Cepillo', 'Pasta'])
 
     expect(
       screen.getByRole('button', { name: 'Neceser, 1 de 2' }),
     ).toBeInTheDocument()
   })
 
-  it('un compartimento completo dice "Listo"', async () => {
+  it('tener todos sus artículos guardados NO lo marca como listo: solo la marca lo hace', async () => {
     await openLuggage(async (repos, luggageId) => {
       const kit = await repos.compartments.create({
         luggageId,
@@ -122,8 +123,11 @@ describe('Secciones', () => {
     })
 
     expect(
-      screen.getByRole('button', { name: 'Neceser, Listo' }),
+      screen.getByRole('button', { name: 'Neceser, 1 de 1' }),
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole('checkbox', { name: 'Neceser listo' }),
+    ).not.toBeChecked()
   })
 })
 
@@ -176,11 +180,55 @@ describe('Plegar (estado de UI persistido con Zustand)', () => {
 })
 
 describe('Renombrar y borrar compartimentos', () => {
+  it('las acciones están ocultas hasta tocar ⋯, y otro toque las oculta', async () => {
+    const { user } = await openLuggage(async (repos, luggageId) => {
+      await repos.compartments.create({ luggageId, name: 'Neceser' })
+    })
+    const more = screen.getByRole('button', {
+      name: 'Más acciones de Neceser',
+    })
+    expect(
+      screen.queryByRole('button', { name: 'Renombrar' }),
+    ).not.toBeInTheDocument()
+
+    await user.click(more)
+    expect(more).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('button', { name: 'Renombrar' })).toBeVisible()
+    expect(
+      screen.getByRole('button', { name: 'Borrar compartimento' }),
+    ).toBeVisible()
+
+    await user.click(more)
+    expect(
+      screen.queryByRole('button', { name: 'Renombrar' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('se puede renombrar sin desplegar el compartimento', async () => {
+    const { user } = await openLuggage(async (repos, luggageId) => {
+      await repos.compartments.create({ luggageId, name: 'Neceser' })
+    })
+    await user.click(screen.getByRole('button', { name: /^Neceser,/ }))
+
+    await user.click(
+      screen.getByRole('button', { name: 'Más acciones de Neceser' }),
+    )
+    await user.click(screen.getByRole('button', { name: 'Renombrar' }))
+    await user.keyboard('Aseo{Enter}')
+
+    expect(
+      await screen.findByRole('button', { name: 'Aseo, Vacío' }),
+    ).toHaveAttribute('aria-expanded', 'false')
+  })
+
   it('"Renombrar" → escribir → OK cambia el nombre', async () => {
     const { user } = await openLuggage(async (repos, luggageId) => {
       await repos.compartments.create({ luggageId, name: 'Neceser' })
     })
 
+    await user.click(
+      screen.getByRole('button', { name: 'Más acciones de Neceser' }),
+    )
     await user.click(screen.getByRole('button', { name: 'Renombrar' }))
     const input = screen.getByRole('textbox', {
       name: 'Nombre del compartimento',
@@ -205,6 +253,9 @@ describe('Renombrar y borrar compartimentos', () => {
       },
     )
 
+    await user.click(
+      screen.getByRole('button', { name: 'Más acciones de Neceser' }),
+    )
     await user.click(
       screen.getByRole('button', { name: 'Borrar compartimento' }),
     )
@@ -380,6 +431,7 @@ describe('Mover a… (fila desplegada)', () => {
       expect(
         within(screen.getByRole('region', { name: 'Neceser' })).queryByRole(
           'checkbox',
+          { name: 'Cepillo' },
         ),
       ).not.toBeInTheDocument(),
     )
@@ -389,5 +441,98 @@ describe('Mover a… (fila desplegada)', () => {
     expect(
       (await repositories.quantities.listByLuggage(luggage.id))[0],
     ).toMatchObject({ compartmentId: null })
+  })
+})
+
+describe('Compartimento "listo" (estado propio)', () => {
+  it('el círculo lo marca como listo, se pliega solo y cuenta como un bloque', async () => {
+    const { user } = await openLuggage(async (repos, luggageId) => {
+      const kit = await repos.compartments.create({
+        luggageId,
+        name: 'Neceser',
+      })
+      await addItem(repos, luggageId, 'Cepillo', {
+        compartmentId: kit.id,
+        packed: true,
+      })
+      await addItem(repos, luggageId, 'Pasaporte')
+    })
+    // Bloques: Pasaporte (suelto, sin guardar) + Neceser (sin marcar).
+    expect(screen.getByText('0 de 2 listos')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('checkbox', { name: 'Neceser listo' }))
+
+    // waitFor y no findByRole: el checkbox YA existía (sin marcar), así que
+    // findByRole lo devolvía al instante y a veces se comprobaba antes de
+    // que cambiara (test intermitente). Hay que esperar al CAMBIO.
+    await waitFor(() =>
+      expect(
+        screen.getByRole('checkbox', { name: 'Neceser listo' }),
+      ).toBeChecked(),
+    )
+    // Se pliega solo: sus artículos dejan de verse.
+    expect(
+      screen.getByRole('button', { name: 'Neceser, Listo' }),
+    ).toHaveAttribute('aria-expanded', 'false')
+    expect(
+      screen.queryByRole('checkbox', { name: 'Cepillo' }),
+    ).not.toBeInTheDocument()
+    // Y el progreso de la maleta lo cuenta como un bloque hecho.
+    expect(screen.getByText('1 de 2 listos')).toBeInTheDocument()
+  })
+
+  it('se puede marcar con artículos sin guardar: sigue viéndose su progreso, sin mensaje', async () => {
+    const { user } = await openLuggage(async (repos, luggageId) => {
+      const kit = await repos.compartments.create({
+        luggageId,
+        name: 'Neceser',
+      })
+      await addItem(repos, luggageId, 'Cepillo', { compartmentId: kit.id })
+      await addItem(repos, luggageId, 'Pasta', { compartmentId: kit.id })
+    })
+
+    await user.click(screen.getByRole('checkbox', { name: 'Neceser listo' }))
+
+    // waitFor: el checkbox ya existía (sin marcar); hay que esperar a que
+    // CAMBIE, no a que aparezca.
+    await waitFor(() =>
+      expect(
+        screen.getByRole('checkbox', { name: 'Neceser listo' }),
+      ).toBeChecked(),
+    )
+    // Decisión de producto: nada de "sin guardar", solo su progreso.
+    expect(
+      screen.getByRole('button', { name: 'Neceser, 0 de 2' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/sin guardar/)).not.toBeInTheDocument()
+    // Cuenta como bloque hecho igualmente (decisión de producto).
+    expect(screen.getByText('¡Maleta lista!')).toBeInTheDocument()
+  })
+
+  it('desmarcarlo no lo despliega ni toca sus artículos', async () => {
+    const { user, repositories, luggage } = await openLuggage(
+      async (repos, luggageId) => {
+        const kit = await repos.compartments.create({
+          luggageId,
+          name: 'Neceser',
+        })
+        await addItem(repos, luggageId, 'Cepillo', { compartmentId: kit.id })
+      },
+    )
+    const check = screen.getByRole('checkbox', { name: 'Neceser listo' })
+    await user.click(check)
+    await waitFor(() =>
+      expect(
+        screen.getByRole('checkbox', { name: 'Neceser listo' }),
+      ).toBeChecked(),
+    )
+
+    await user.click(screen.getByRole('checkbox', { name: 'Neceser listo' }))
+
+    expect(
+      await screen.findByRole('button', { name: 'Neceser, 0 de 1' }),
+    ).toHaveAttribute('aria-expanded', 'false')
+    const [cepillo] = await repositories.quantities.listByLuggage(luggage.id)
+    expect(cepillo.nAlreadyPacked).toBe(0)
   })
 })

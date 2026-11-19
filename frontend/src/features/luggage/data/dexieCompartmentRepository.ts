@@ -28,6 +28,23 @@ export function createDexieCompartmentRepository(
       })
     },
 
+    toggleReady(id) {
+      // Leer + invertir + guardar en una transacción: dos toques rápidos no
+      // se pisan (mismo motivo que togglePacked en los artículos).
+      return db.transaction('rw', db.compartments, async () => {
+        const current = await db.compartments.get(id)
+        if (!current) throw new EntityNotFoundError('Compartment', id)
+
+        const updated = CompartmentSchema.parse({
+          ...current,
+          isReady: !current.isReady,
+          updatedAt: nowIso(),
+        })
+        await db.compartments.put(updated)
+        return updated
+      })
+    },
+
     update(id, changes) {
       return db.transaction('rw', db.compartments, async () => {
         const current = await db.compartments.get(id)

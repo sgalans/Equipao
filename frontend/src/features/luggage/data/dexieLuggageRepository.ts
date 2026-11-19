@@ -4,7 +4,7 @@ import { EntityNotFoundError } from '@/shared/domain/errors'
 import { LuggageSchema, NewLuggageSchema } from '../domain/luggage'
 import type { LuggageRepository } from '../domain/luggageRepository'
 import { copyName } from '../domain/copyName'
-import { luggageProgress } from '../domain/packing'
+import { packingProgress } from '../domain/packing'
 
 /**
  * Adapter: implementación de LuggageRepository sobre Dexie.
@@ -13,6 +13,17 @@ import { luggageProgress } from '../domain/packing'
  * devuelve un objeto que cumple la interfaz. Es inyección de dependencias sin
  * framework: la app le pasa `db` y los tests una base de datos aislada.
  */
+/** Agrupa una lista por clave en un Map (para cruzar tablas en memoria). */
+function groupBy<T>(rows: T[], key: (row: T) => string): Map<string, T[]> {
+  const groups = new Map<string, T[]>()
+  for (const row of rows) {
+    const group = groups.get(key(row)) ?? []
+    group.push(row)
+    groups.set(key(row), group)
+  }
+  return groups
+}
+
 export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
   // Función local (no `this.list`): ver la nota en dexieItemQuantityRepository.
   function list() {
@@ -29,23 +40,23 @@ export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
       // maleta: eso sería el problema N+1). Con el volumen de una app de
       // equipaje, leer todas las cantidades y agrupar en memoria es
       // instantáneo.
-      const [luggages, quantities] = await Promise.all([
+      const [luggages, quantities, compartments] = await Promise.all([
         list(),
         db.itemQuantities.toArray(),
+        db.compartments.toArray(),
       ])
 
-      // Agrupamos por maleta en un Map (búsqueda O(1) por id).
-      const byLuggage = new Map<string, typeof quantities>()
-      for (const quantity of quantities) {
-        const group = byLuggage.get(quantity.luggageId) ?? []
-        group.push(quantity)
-        byLuggage.set(quantity.luggageId, group)
-      }
+      // Agrupamos por maleta en Maps (búsqueda O(1) por id).
+      const quantitiesByLuggage = groupBy(quantities, (q) => q.luggageId)
+      const compartmentsByLuggage = groupBy(compartments, (c) => c.luggageId)
 
       // La regla de progreso es la MISMA que en el detalle (packing.ts).
       return luggages.map((luggage) => ({
         ...luggage,
-        ...luggageProgress(byLuggage.get(luggage.id) ?? []),
+        ...packingProgress(
+          quantitiesByLuggage.get(luggage.id) ?? [],
+          compartmentsByLuggage.get(luggage.id) ?? [],
+        ),
       }))
     },
 
@@ -73,6 +84,8 @@ export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
           const copy = LuggageSchema.parse({
             ...newEntityBase(),
             name: copyName(source.name),
+            // La descripción es parte de la "plantilla": se copia.
+            description: source.description,
           })
 
           // Los compartimentos de la copia tienen ids NUEVOS. Este mapa
@@ -87,7 +100,13 @@ export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
           ).map((compartment) => {
             const base = newEntityBase()
             compartmentIdMap.set(compartment.id, base.id)
-            return { ...compartment, ...base, luggageId: copy.id }
+            // Como los artículos, la copia empieza sin nada hecho.
+            return {
+              ...compartment,
+              ...base,
+              luggageId: copy.id,
+              isReady: false,
+            }
           })
 
           // Se copian en el mismo orden: los UUID v7 nuevos se generan en
@@ -127,8 +146,9 @@ export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
 
         const updated = LuggageSchema.parse({
           ...current,
-          // Solo copiamos el campo permitido (no un spread de `changes`).
+          // Solo copiamos los campos permitidos (no un spread de `changes`).
           name: changes.name ?? current.name,
+          description: changes.description ?? current.description,
           updatedAt: nowIso(),
         })
         await db.luggages.put(updated)

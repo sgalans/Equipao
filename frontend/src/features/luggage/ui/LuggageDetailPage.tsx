@@ -1,13 +1,14 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { normalizeForSearch } from '@/features/items/domain/search'
+import { isSameItemName } from '@/features/items/domain/itemName'
 import { useRepositories } from '@/shared/di/repositories'
 import { EditableTitle } from '@/shared/ui/EditableTitle'
 import page from '@/shared/ui/page.module.css'
-import { luggageProgress } from '../domain/packing'
+import { packingProgress } from '../domain/packing'
 import { AddItemForm } from './AddItemForm'
 import { DeleteLuggageButton } from './DeleteLuggageButton'
+import { LuggageDescription } from './LuggageDescription'
 import { PackingList } from './PackingList'
 import styles from './LuggageDetailPage.module.css'
 import { PackingProgress } from './PackingProgress'
@@ -70,9 +71,10 @@ export function LuggageDetailPage() {
 
   /** Resalta la fila del artículo que se ha intentado añadir de nuevo. */
   function highlightExisting(name: string) {
-    const needle = normalizeForSearch(name)
-    const existing = entries.find(
-      (entry) => normalizeForSearch(entry.itemName) === needle,
+    // MISMO criterio que el repositorio usa para decidir que es un
+    // duplicado: así se resalta exactamente la fila que lo ha provocado.
+    const existing = entries.find((entry) =>
+      isSameItemName(entry.itemName, name),
     )
     setHighlightedId(existing?.id ?? null)
   }
@@ -91,8 +93,16 @@ export function LuggageDetailPage() {
           }}
         />
       </header>
+      <LuggageDescription
+        // key: si cambia de maleta, el editor empieza de cero.
+        key={luggage.id}
+        value={luggage.description}
+        onSave={async (description) => {
+          await luggages.update(luggage.id, { description })
+        }}
+      />
 
-      <PackingProgress {...luggageProgress(entries)} />
+      <PackingProgress {...packingProgress(entries, compartmentList)} />
       <AddItemForm
         luggageId={luggage.id}
         entries={entries}

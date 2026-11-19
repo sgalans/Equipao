@@ -20,7 +20,7 @@ interface AddItemFormProps {
   /** Texto del campo y del botón; por defecto "Añadir a la maleta". */
   label?: string
   /** Enfocar al aparecer (el "+" de un compartimento abre este formulario). */
-  autoFocus?: boolean
+  focusOnMount?: boolean
   /** Escape cierra el formulario (solo cuando se puede cerrar). */
   onClose?: () => void
 }
@@ -35,7 +35,7 @@ export function AddItemForm({
   onDuplicate,
   compartmentId = null,
   label = 'Añadir a la maleta',
-  autoFocus = false,
+  focusOnMount = false,
   onClose,
 }: AddItemFormProps) {
   const repositories = useRepositories()
@@ -112,7 +112,8 @@ export function AddItemForm({
           enterKeyHint="done"
           // Solo el formulario de un compartimento: aparece porque el usuario
           // acaba de tocar su "+", así que el foco (y el teclado) van a él.
-          autoFocus={autoFocus}
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- el campo aparece porque el usuario lo acaba de pedir: mover ahí el foco es lo esperado (y abre el teclado en iOS)
+          autoFocus={focusOnMount}
           onKeyDown={(event) => {
             if (event.key === 'Escape') onClose?.()
           }}

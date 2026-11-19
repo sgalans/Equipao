@@ -3,6 +3,7 @@ import buttons from './buttons.module.css'
 import styles from './EditableTitle.module.css'
 import { PencilIcon } from './icons/PencilIcon'
 import { InlineEditInput } from './InlineEditInput'
+import { reportError } from './notifications/notificationStore'
 import page from './page.module.css'
 
 interface EditableTitleProps {
@@ -39,8 +40,8 @@ export function EditableTitle({
       await onSave(next)
     } catch (error) {
       // Si falla, el título sigue mostrando el valor guardado (la verdad de
-      // la base de datos); lo registramos para depurar.
-      console.error(error)
+      // la base de datos) y se avisa al usuario.
+      reportError(error)
     }
   }
 
@@ -59,6 +60,7 @@ export function EditableTitle({
     <div className={styles.view}>
       {/* El clic en el texto es un atajo para ratón/dedo; la vía accesible
           (teclado, lector de pantalla) es el botón del lápiz. */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- atajo táctil; el botón del lápiz es la alternativa accesible */}
       <h1
         className={`${page.title} ${styles.title}`}
         onClick={() => setIsEditing(true)}

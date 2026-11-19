@@ -1,22 +1,26 @@
 import { useId, useState, type ReactNode } from 'react'
 import { useRepositories } from '@/shared/di/repositories'
+import { reportError } from '@/shared/ui/notifications/notificationStore'
 import buttons from '@/shared/ui/buttons.module.css'
+import checkCircle from '@/shared/ui/checkCircle.module.css'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
+import { CheckIcon } from '@/shared/ui/icons/CheckIcon'
 import { ChevronDownIcon } from '@/shared/ui/icons/ChevronDownIcon'
+import { MoreIcon } from '@/shared/ui/icons/MoreIcon'
 import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
 import { PencilIcon } from '@/shared/ui/icons/PencilIcon'
 import { TrashIcon } from '@/shared/ui/icons/TrashIcon'
 import { InlineEditInput } from '@/shared/ui/InlineEditInput'
 import type { Compartment } from '../domain/compartment'
 import type { LuggageEntry } from '../domain/itemQuantityRepository'
-import { luggageProgress } from '../domain/packing'
+import { itemsProgress } from '../domain/packing'
 import { AddItemForm } from './AddItemForm'
 import {
   useCollapsedCompartments,
   useIsCollapsed,
 } from './collapsedCompartmentsStore'
 import styles from './CompartmentSection.module.css'
-import { compartmentProgressLabel } from './progressLabel'
+import { compartmentStatus } from './progressLabel'
 
 interface CompartmentSectionProps {
   compartment: Compartment
@@ -31,9 +35,9 @@ interface CompartmentSectionProps {
 
 /**
  * Un compartimento dentro de la maleta:
- *   ▾ Neceser · 2 de 3     [+]  ← tocar = plegar/desplegar; + = añadir dentro
+ *   ▾ Neceser · 2 de 3   [+] [⋯]  ← tocar = plegar; + = añadir; ⋯ = acciones
+ *     ✎ Renombrar   🗑 Borrar       ← solo tras tocar ⋯
  *     (filas de artículos)
- *     ✎ Renombrar   🗑 Borrar   ← acciones poco frecuentes, al final
  */
 export function CompartmentSection({
   compartment,
@@ -48,11 +52,27 @@ export function CompartmentSection({
   const expand = useCollapsedCompartments((state) => state.expand)
   const [isAdding, setIsAdding] = useState(false)
   const [isRenaming, setIsRenaming] = useState(false)
+  // Acciones poco frecuentes (renombrar, borrar) ocultas tras "⋯": los
+  // compartimentos suelen estar desplegados y no deben llenarse de botones.
+  const [showActions, setShowActions] = useState(false)
+  const actionsId = useId()
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
   const contentId = useId()
 
-  const { done, total } = luggageProgress(entries)
-  const progress = compartmentProgressLabel(done, total)
+  const { done, total } = itemsProgress(entries)
+  const status = compartmentStatus(done, total, compartment.isReady)
+  const collapse = useCollapsedCompartments((state) => state.collapse)
+
+  async function toggleReady() {
+    try {
+      const updated = await compartments.toggleReady(compartment.id)
+      // Decisión de producto: al marcarlo como listo se pliega solo, para
+      // que lo ya hecho deje de ocupar sitio. Al desmarcarlo no se toca.
+      if (updated.isReady) collapse(compartment.id)
+    } catch (error) {
+      reportError(error)
+    }
+  }
 
   async function rename(name: string | null) {
     setIsRenaming(false)
@@ -60,13 +80,25 @@ export function CompartmentSection({
     try {
       await compartments.update(compartment.id, { name })
     } catch (error) {
-      console.error(error)
+      reportError(error)
     }
   }
 
   return (
     <section className={styles.section} aria-label={compartment.name}>
       <div className={styles.header}>
+        {/* Mismo círculo que los artículos (estilo compartido): "listo"
+            PROPIO del compartimento, independiente de sus artículos. */}
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={compartment.isReady}
+          aria-label={`${compartment.name} listo`}
+          className={checkCircle.check}
+          onClick={() => void toggleReady()}
+        >
+          {compartment.isReady && <CheckIcon />}
+        </button>
         <h2 className={styles.heading}>
           {isRenaming ? (
             <InlineEditInput
@@ -81,20 +113,20 @@ export function CompartmentSection({
               className={styles.toggle}
               aria-expanded={!isCollapsed}
               aria-controls={contentId}
-              aria-label={`${compartment.name}, ${progress}`}
+              aria-label={`${compartment.name}, ${status}`}
               onClick={() => toggle(compartment.id)}
             >
               <span className={styles.chevron}>
                 <ChevronDownIcon />
               </span>
               <span className={styles.name}>{compartment.name}</span>
-              <span className={styles.progress}>{progress}</span>
+              <span className={styles.progress}>{status}</span>
             </button>
           )}
         </h2>
         <button
           type="button"
-          className={`${buttons.iconGhost} ${styles.addToggle}`}
+          className={`${buttons.iconGhost} ${styles.headerButton} ${styles.addToggle}`}
           // El mismo botón abre y cierra: al abrirse, el "+" gira y se ve
           // como "×" (ver CSS), y el nombre accesible cambia con él para
           // que VoiceOver también anuncie que ahora cierra.
@@ -113,12 +145,52 @@ export function CompartmentSection({
         >
           <PlusIcon />
         </button>
+        <button
+          type="button"
+          className={`${buttons.iconGhost} ${styles.headerButton}`}
+          aria-label={`Más acciones de ${compartment.name}`}
+          title="Más acciones"
+          aria-expanded={showActions}
+          aria-controls={actionsId}
+          onClick={() => setShowActions((current) => !current)}
+        >
+          <MoreIcon />
+        </button>
       </div>
+
+      {/* Fuera del contenido plegable: se puede renombrar o borrar un
+          compartimento sin desplegarlo. */}
+      {showActions && (
+        <div id={actionsId} className={styles.actions}>
+          <button
+            type="button"
+            className={buttons.textAction}
+            onClick={() => {
+              setShowActions(false)
+              setIsRenaming(true)
+            }}
+          >
+            <PencilIcon />
+            Renombrar
+          </button>
+          <button
+            type="button"
+            className={buttons.textAction}
+            onClick={() => {
+              setShowActions(false)
+              setIsConfirmingDelete(true)
+            }}
+          >
+            <TrashIcon />
+            Borrar compartimento
+          </button>
+        </div>
+      )}
 
       {/* Plegado = no se pinta el contenido (ni ocupa sitio ni lo lee el
           lector de pantalla). aria-expanded en el botón anuncia el estado. */}
       {!isCollapsed && (
-        <div id={contentId}>
+        <div id={contentId} className={styles.content}>
           {isAdding && (
             <div className={styles.addForm}>
               <AddItemForm
@@ -127,7 +199,7 @@ export function CompartmentSection({
                 onDuplicate={onDuplicate}
                 compartmentId={compartment.id}
                 label={`Añadir a ${compartment.name}`}
-                autoFocus
+                focusOnMount
                 onClose={() => setIsAdding(false)}
               />
             </div>
@@ -137,24 +209,6 @@ export function CompartmentSection({
           ) : (
             <p className={styles.empty}>Este compartimento está vacío.</p>
           )}
-          <div className={styles.actions}>
-            <button
-              type="button"
-              className={buttons.textAction}
-              onClick={() => setIsRenaming(true)}
-            >
-              <PencilIcon />
-              Renombrar
-            </button>
-            <button
-              type="button"
-              className={buttons.textAction}
-              onClick={() => setIsConfirmingDelete(true)}
-            >
-              <TrashIcon />
-              Borrar compartimento
-            </button>
-          </div>
         </div>
       )}
 

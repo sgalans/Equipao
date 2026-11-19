@@ -2,7 +2,7 @@ import { Dexie } from 'dexie'
 import { v7 as uuidv7 } from 'uuid'
 import { describe, expect, it, onTestFinished } from 'vitest'
 import { TEST_TIMESTAMP } from '@/test/db'
-import { AppDb, SCHEMA_V1 } from './db'
+import { AppDb, SCHEMA_V1, SCHEMA_V2 } from './db'
 
 /**
  * Test de migración: reproduce lo que pasará en el navegador de alguien que
@@ -12,7 +12,7 @@ import { AppDb, SCHEMA_V1 } from './db'
  *   3. Abrirla con AppDb actual → Dexie ejecuta upgrade() de la v2.
  *   4. Comprobar que los datos siguen ahí y con la forma nueva.
  */
-describe('Migración v1 → v2 (compartimentos)', () => {
+describe('Migración v1 → actual (cadena completa v1 → v2 → v3)', () => {
   it('conserva los datos y deja los artículos existentes como sueltos', async () => {
     const name = `test-migration-${uuidv7()}`
     const base = { createdAt: TEST_TIMESTAMP, updatedAt: TEST_TIMESTAMP }
@@ -36,13 +36,16 @@ describe('Migración v1 → v2 (compartimentos)', () => {
     })
     v1.close()
 
-    // 3. La app nueva abre la misma base de datos → migra a la v2.
+    // 3. La app nueva abre la misma base de datos → migra v1 → v2 → v3.
     const db = new AppDb(name)
     onTestFinished(() => db.delete())
 
     // 4. Datos intactos y con la forma nueva.
-    expect(db.verno).toBe(2)
-    expect(await db.luggages.get(luggageId)).toMatchObject({ name: 'Grande' })
+    expect(db.verno).toBe(3)
+    expect(await db.luggages.get(luggageId)).toMatchObject({
+      name: 'Grande',
+      description: '', // ← v3
+    })
     expect(await db.itemQuantities.get(quantityId)).toEqual({
       id: quantityId,
       luggageId,
@@ -83,5 +86,42 @@ describe('Migración v1 → v2 (compartimentos)', () => {
         .equals(compartmentId)
         .count(),
     ).toBe(1)
+  })
+})
+
+describe('Migración v2 → v3 (descripción y compartimentos "listos")', () => {
+  it('añade description vacía a las maletas e isReady = false a los compartimentos', async () => {
+    const name = `test-migration-${uuidv7()}`
+    const base = { createdAt: TEST_TIMESTAMP, updatedAt: TEST_TIMESTAMP }
+    const luggageId = uuidv7()
+    const compartmentId = uuidv7()
+
+    // Base de datos en la v2, como la de quien ya usaba compartimentos.
+    const v2 = new Dexie(name)
+    v2.version(1).stores(SCHEMA_V1)
+    v2.version(2).stores(SCHEMA_V2)
+    await v2.table('luggages').add({ id: luggageId, name: 'Grande', ...base })
+    await v2
+      .table('compartments')
+      .add({ id: compartmentId, luggageId, name: 'Neceser', ...base })
+    v2.close()
+
+    const db = new AppDb(name)
+    onTestFinished(() => db.delete())
+
+    expect(db.verno).toBe(3)
+    expect(await db.luggages.get(luggageId)).toEqual({
+      id: luggageId,
+      name: 'Grande',
+      description: '',
+      ...base,
+    })
+    expect(await db.compartments.get(compartmentId)).toEqual({
+      id: compartmentId,
+      luggageId,
+      name: 'Neceser',
+      isReady: false,
+      ...base,
+    })
   })
 })

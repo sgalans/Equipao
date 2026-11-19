@@ -1,51 +1,61 @@
 ﻿# LugGAge — frontend
 
-Base de React + TypeScript creada con la plantilla oficial de Vite. De momento muestra la página de ejemplo; las funciones de equipaje y el soporte offline llegarán en iteraciones posteriores.
+Guía de desarrollo. Qué es la app y su arquitectura: [README del repositorio](../README.md).
 
 ## Puesta en marcha
 
-Desde la raíz del repositorio, en PowerShell:
+En PowerShell, desde la raíz del repositorio:
 
 ```powershell
-nvm use 26.13.1
+nvm use        # versión de Node indicada en .nvmrc
 cd frontend
-npm ci
+npm ci         # instala exactamente las versiones de package-lock.json
 npm run dev
 ```
 
-Abre la dirección indicada por Vite. Detén el servidor con `Ctrl+C`.
+`npm ci` reproduce el lockfile; para añadir o actualizar dependencias se usa `npm install`, que lo modifica. El lockfile se guarda en Git; `node_modules`, no.
 
-`npm ci` reproduce las versiones de `package-lock.json`. Al añadir o actualizar dependencias se usa `npm install`, que actualiza ese archivo. El lockfile se guarda en Git; `node_modules` no.
+## Scripts
 
-## Comprobaciones
+| Script            | Para qué                                                         |
+| ----------------- | ---------------------------------------------------------------- |
+| `npm run dev`     | Servidor de desarrollo (`-- --host` para abrirlo desde el móvil) |
+| `npm test`        | Tests en modo _watch_: se repiten al guardar                     |
+| `npm run check`   | **Antes de cada commit**: typecheck + lint + formato + tests     |
+| `npm run build`   | Versión de producción en `dist/`                                 |
+| `npm run preview` | Sirve `dist/` para revisarla                                     |
+| `npm run format`  | Aplica Prettier                                                  |
 
-Dentro de `frontend/`:
+`check` agrupa `typecheck`, `lint`, `format:check` y `test:run`, de la más rápida a la más lenta, y se detiene en el primer fallo. Cada una detecta cosas que las otras no: Vitest no comprueba tipos, y el lint encuentra problemas que ni los tests ni `tsc` ven.
 
-```powershell
-npm run lint
-npm run format:check
-npm run build
+## Estructura
+
+```
+src/
+  app/                composition root, rutas, layout y páginas generales
+  features/<feature>/
+    domain/           esquemas Zod, reglas puras y ports (interfaces)
+    application/      casos de uso entre varios repositorios
+    data/             adapters Dexie (+ sus tests de integración)
+    ui/               componentes, pantallas y estilos (*.module.css)
+  shared/
+    db/               esquema de Dexie y migraciones
+    di/               RepositoriesContext + useRepositories()
+    domain/           errores de dominio y esquemas comunes
+    ui/               componentes y estilos reutilizables
+  test/               helpers de tests (BD aislada, renderApp…)
 ```
 
-- `lint`: ESLint busca problemas de código, incluidas reglas de TypeScript y React Hooks.
-- `format:check`: Prettier comprueba el formato sin modificar archivos.
-- `format`: aplica el formato de Prettier.
-- `build`: comprueba los tipos y genera la versión de producción en `dist/`.
-- `preview`: sirve localmente la versión ya compilada para revisarla.
+Imports con alias: `@/` = `src/`.
 
-ESLint y Prettier tienen responsabilidades distintas. `eslint-config-prettier` desactiva las reglas de estilo que podrían entrar en conflicto con el formateador.
+## Tests
 
-## Archivos principales
+- `*.test.ts` se ejecuta en Node (dominio y repositorios) y `*.test.tsx` en jsdom (componentes). Son dos proyectos de Vitest, para que la lógica pura no pague el arranque del DOM simulado.
+- Los repositorios se prueban contra una IndexedDB en memoria (`fake-indexeddb`): cada test crea una base de datos propia con `createTestRepositories()`.
+- Las pantallas se prueban de punta a punta con `renderApp(ruta, repositorios)`, que monta las rutas reales. Los elementos se buscan por rol y nombre accesible, como lo haría un usuario o un lector de pantalla.
+- Lo que jsdom no puede reproducir (gestos táctiles, foco atrapado en `<dialog>`) se deja para tests E2E en un navegador real.
 
-- `index.html`: documento HTML que carga la aplicación.
-- `src/main.tsx`: monta React en el elemento `root` del HTML.
-- `src/App.tsx`: componente de ejemplo de Vite.
-- `vite.config.ts`: configuración del servidor y de la compilación.
-- `tsconfig*.json`: configuración de TypeScript para la aplicación y las herramientas.
-- `eslint.config.js` y `.prettierrc.json`: reglas de calidad y formato.
+## Avisos conocidos
 
-TypeScript se mantiene en la línea 6.0 porque la versión instalada de `typescript-eslint` todavía no admite TypeScript 7. La arquitectura interna, los tests y la configuración PWA siguen pendientes.
-
-## Avisos de dependencias
-
-Al preparar el entorno, `npm audit` detectó diez avisos moderados derivados de `minimatch`, dependencia transitiva de las herramientas de lint. Se mantiene pendiente una actualización compatible: la corrección automática propuesta retrocede herramientas a versiones anteriores. No se ha aplicado `npm audit fix --force`.
+- `npm audit` muestra avisos moderados de `minimatch`, dependencia transitiva de las herramientas de lint (no llega a la app). La corrección automática (`audit fix --force`) degradaría esas herramientas, así que no se ha aplicado.
+- TypeScript se mantiene en la línea 6.0 por compatibilidad con `typescript-eslint`.

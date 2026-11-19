@@ -18,6 +18,8 @@ interface CollapsedCompartmentsState {
   toggle: (compartmentId: string) => void
   /** Despliega (p. ej. al tocar su "+": no se añade a algo que no se ve). */
   expand: (compartmentId: string) => void
+  /** Pliega (p. ej. al marcarlo como listo: lo hecho deja de ocupar sitio). */
+  collapse: (compartmentId: string) => void
 }
 
 export const useCollapsedCompartments = create<CollapsedCompartmentsState>()(
@@ -40,6 +42,12 @@ export const useCollapsedCompartments = create<CollapsedCompartmentsState>()(
           delete collapsed[compartmentId]
           return { collapsed }
         }),
+      collapse: (compartmentId) =>
+        set((state) =>
+          state.collapsed[compartmentId]
+            ? state // ya plegado: nada que cambiar
+            : { collapsed: { ...state.collapsed, [compartmentId]: true } },
+        ),
     }),
     {
       // Clave en localStorage. Con prefijo para no chocar con otras apps
