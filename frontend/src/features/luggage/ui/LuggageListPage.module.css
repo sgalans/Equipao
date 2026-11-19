@@ -1,0 +1,62 @@
+.empty {
+  color: var(--text-muted);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/*
+ * La FILA es el rectángulo visible (borde y esquinas). Dentro van, uno al
+ * lado del otro, el enlace (casi todo el ancho) y el botón ⧉. Así el botón
+ * se ve DENTRO de la tarjeta sin estar dentro del enlace (HTML no permite
+ * anidar elementos interactivos).
+ */
+.row {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  /* Respiro a la derecha para que el ⧉ no toque el borde. */
+  padding-right: 0.25rem;
+}
+
+/* :has() = "la fila que contiene un enlace con hover/foco": el borde de
+   TODA la tarjeta se ilumina al tocar el enlace, como antes. */
+.row:has(.card:hover),
+.row:has(.card:focus-visible) {
+  border-color: var(--accent);
+}
+
+.card {
+  flex: 1;
+  min-width: 0;
+  display: block;
+  padding: 0.75rem 1rem;
+  /* Esquinas redondeadas también aquí: el anillo de foco del teclado
+     sigue la forma de la tarjeta. */
+  border-radius: 0.5rem;
+  color: var(--text);
+  text-decoration: none;
+  /* Un nombre largo se parte en líneas en vez de desbordar la tarjeta. */
+  overflow-wrap: anywhere;
+}
+
+.name {
+  font-weight: 600;
+}
+
+/* Primera línea de la descripción, recortada con "…" si no cabe. */
+.description {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}

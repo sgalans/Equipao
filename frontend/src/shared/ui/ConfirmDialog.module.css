@@ -1,0 +1,35 @@
+.dialog {
+  /* El <dialog> trae colores por defecto del navegador (blanco y negro):
+     los forzamos para que respete el modo oscuro. */
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  width: min(100% - 2rem, 26rem);
+}
+
+/* ::backdrop es la capa que oscurece la página detrás de un diálogo modal. */
+.dialog::backdrop {
+  background: rgb(0 0 0 / 0.5);
+}
+
+.title {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+}
+
+.body {
+  color: var(--text-muted);
+}
+
+.error {
+  color: var(--danger);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}

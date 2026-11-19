@@ -1,0 +1,69 @@
+/*
+ * CSS Module: Vite convierte cada clase en un nombre único
+ * (p. ej. "header" → "_header_1x2y3"), así que no chocan con las de otros
+ * componentes. En el JSX se usan como styles.header.
+ */
+.shell {
+  min-height: 100dvh;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* sticky: la cabecera se queda arriba al hacer scroll en el móvil. */
+  position: sticky;
+  top: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  /* Safe areas del iPhone (con viewport-fit=cover): arriba, el notch o la
+     isla dinámica; a los lados, el notch en horizontal. max() mantiene el
+     margen normal cuando el dispositivo no tiene esas zonas (insets = 0). */
+  padding: calc(0.75rem + env(safe-area-inset-top))
+    max(1rem, env(safe-area-inset-right)) 0.75rem
+    max(1rem, env(safe-area-inset-left));
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 1.125rem;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.navLink {
+  display: inline-flex;
+  align-items: center;
+  /* 44px de zona táctil; el margen negativo lo compensa visualmente. */
+  min-height: 2.75rem;
+  margin: -0.5rem -0.5rem -0.5rem 0;
+  padding: 0 0.5rem;
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  /* Zona táctil de 44px aunque el texto sea pequeño; el margen negativo
+     compensa el padding para que el icono quede alineado con el contenido. */
+  min-height: 2.75rem;
+  margin: -0.5rem 0 -0.5rem -0.5rem;
+  padding: 0 0.5rem;
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* Mobile-first: ancho completo en el móvil, columna centrada en pantallas grandes. */
+.main {
+  max-width: 40rem;
+  margin: 0 auto;
+  /* Laterales y abajo respetan las safe areas: el contenido no queda bajo
+     el notch en horizontal ni bajo la barra de inicio del iPhone. */
+  padding: 1rem max(1rem, env(safe-area-inset-right))
+    calc(1rem + env(safe-area-inset-bottom))
+    max(1rem, env(safe-area-inset-left));
+}

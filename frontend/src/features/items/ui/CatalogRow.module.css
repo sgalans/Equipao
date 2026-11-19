@@ -1,0 +1,58 @@
+.row {
+  border-bottom: 1px solid var(--border);
+}
+
+/* Toda la fila es el botón que despliega las acciones. */
+.details {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 0.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.usage {
+  flex: none;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.renameInput {
+  margin: 0.25rem 0;
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  padding-bottom: 0.5rem;
+}
+
+.error {
+  margin: 0 0 0.5rem;
+  color: var(--danger);
+  font-size: 0.875rem;
+}
+
+/* Fila en modo selección: el círculo de casilla + nombre + uso. */
+.selectable {
+  composes: details;
+  justify-content: flex-start;
+  padding-left: 0;
+}
+
+.selectable .usage {
+  margin-left: auto;
+}

@@ -1,0 +1,35 @@
+.view {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+  margin: -0.5rem 0 1rem;
+}
+
+.text {
+  flex: 1;
+  margin: 0.625rem 0 0;
+  color: var(--text-muted);
+  /* pre-line: respeta los saltos de línea que escribió el usuario. */
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  cursor: text;
+}
+
+.add {
+  margin: -0.5rem 0 0.5rem -0.5rem;
+}
+
+/* Mismo aspecto que los inputs (16px: iOS no hace zoom al enfocarlo). */
+.textarea {
+  display: block;
+  width: 100%;
+  margin: -0.5rem 0 1rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: max(1rem, 16px);
+  resize: vertical;
+}

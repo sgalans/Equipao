@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!--
+    Icono original (ilustración plana): maleta rígida azul tumbada que NO
+    cierra, con una cámara, la manga de una sudadera y unas gafas de sol
+    saliendo entre las dos mitades. Pocos elementos y grandes: debe leerse a
+    60px en la pantalla de inicio. Lo importante, dentro de la zona segura
+    central (iOS y Android recortan los bordes).
+  -->
+
+  <!-- Fondo a sangre, claro y azulado (contrasta con la maleta azul). -->
+  <rect width="512" height="512" fill="#e8eef9"/>
+
+  <!-- Ruedas (derecha). -->
+  <circle cx="414" cy="152" r="24" fill="#1f1d24"/>
+  <circle cx="414" cy="152" r="9" fill="#ffffff"/>
+  <circle cx="414" cy="362" r="24" fill="#1f1d24"/>
+  <circle cx="414" cy="362" r="9" fill="#ffffff"/>
+
+  <!-- Las dos mitades de la maleta, separadas: no cierra. Azul de la app. -->
+  <rect x="84" y="128" width="324" height="96" rx="28" fill="#2f6fde"/>
+  <rect x="84" y="284" width="324" height="96" rx="28" fill="#2f6fde"/>
+
+  <!-- Nervaduras de la carcasa. -->
+  <g stroke="#2457b8" stroke-width="10" stroke-linecap="round">
+    <path d="M136 146v60M184 146v60M232 146v60M280 146v60M328 146v60M376 146v60"/>
+    <path d="M136 304v40M376 304v40"/>
+  </g>
+
+  <!-- Asa de la mitad inferior. -->
+  <rect x="208" y="334" width="96" height="18" rx="9" fill="#1f1d24"/>
+
+  <!-- Bordes de las dos mitades (cremallera abierta), DETRÁS del contenido. -->
+  <path d="M100 224h292M100 284h292" stroke="#1f1d24" stroke-width="7" stroke-linecap="round"/>
+
+  <!-- Prenda de la derecha (crema): abulta por arriba y por abajo. -->
+  <path d="M244 258c-2-26 24-40 62-36 34 3 58-4 78 0 20 4 26 20 18 38l-8 34H250z"
+        fill="#f4dcc0"/>
+  <path d="M290 244c20 6 46 6 74 0" fill="none" stroke="#dcbf9c" stroke-width="6"
+        stroke-linecap="round"/>
+
+  <!-- Sudadera naranja (izquierda): el bulto del que sale la manga. -->
+  <path d="M96 262c-6-30 34-48 78-44 44 4 76-2 92 14 12 12 8 36-2 60H104z"
+        fill="#f2994a"/>
+  <!-- Pliegue de la tela: que se lea como una prenda arrugada. -->
+  <path d="M122 242c26 10 62 12 100 4" fill="none" stroke="#d9822f" stroke-width="6"
+        stroke-linecap="round"/>
+  <!-- La manga sale DE la sudadera (mismo color) y cuelga por fuera. -->
+  <path d="M138 252c-34 6-60 24-74 50l-10 20 34 16 10-20c10-18 28-30 52-36z"
+        fill="#f2994a"/>
+  <!-- Puño de la manga. -->
+  <path d="M52 318l34 16-10 20-34-16z" fill="#c9702a"/>
+
+  <!-- Cámara, un poco a la izquierda del centro, asomando por arriba. -->
+  <g transform="rotate(-8 222 236)">
+    <rect x="170" y="200" width="104" height="70" rx="12" fill="#1f1d24"/>
+    <rect x="186" y="188" width="30" height="16" rx="4" fill="#1f1d24"/>
+    <circle cx="222" cy="236" r="24" fill="#5b6475"/>
+    <circle cx="222" cy="236" r="13" fill="#1f1d24"/>
+    <circle cx="216" cy="230" r="4" fill="#ffffff"/>
+    <rect x="252" y="210" width="12" height="8" rx="2" fill="#f4dcc0"/>
+  </g>
+
+  <!-- Gafas de sol, más a la derecha y separadas de la cámara. -->
+  <g transform="rotate(10 358 262)">
+    <path d="M340 258h36" stroke="#1f1d24" stroke-width="7" stroke-linecap="round"/>
+    <ellipse cx="330" cy="264" rx="21" ry="16" fill="#1f1d24"/>
+    <ellipse cx="386" cy="264" rx="21" ry="16" fill="#1f1d24"/>
+    <path d="M320 258l10-6M376 258l10-6" stroke="#ffffff" stroke-width="4"
+          stroke-linecap="round"/>
+  </g>
+</svg>

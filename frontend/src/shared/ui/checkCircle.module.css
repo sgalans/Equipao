@@ -1,0 +1,47 @@
+/*
+ * Círculo de "guardado/listo" (role="checkbox"): lo comparten las filas de
+ * artículos y las cabeceras de compartimento, para que se vean IGUAL.
+ * Zona táctil de 44px (el gesto más repetido de la app); el círculo visible
+ * es más pequeño y se dibuja con ::before detrás del contenido (número o ✓).
+ * Los estados salen de aria-checked: el estilo sigue a la semántica.
+ */
+.check {
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.check::before {
+  content: '';
+  grid-area: 1 / 1;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+}
+
+.check > * {
+  grid-area: 1 / 1;
+}
+
+.check[aria-checked='mixed']::before {
+  border-color: var(--success);
+}
+
+.check[aria-checked='true'] {
+  color: var(--on-accent);
+}
+
+.check[aria-checked='true']::before {
+  border-color: var(--success);
+  background: var(--success);
+}
