@@ -95,16 +95,19 @@ issue → rama desde develop → commits → PR a develop → PR de release deve
 4. **PR a `develop`**:
    ```powershell
    git push -u origin feature/14-compartir-texto
-   gh pr create --base develop --fill
+   gh pr create --fill     # va a develop: es la rama por defecto del repositorio
    ```
    En la descripción, **`Closes #14`**: enlaza la PR con el issue.
-5. **Probar la vista previa** de Vercel (enlace en la PR), también en el iPhone. **Autorrevisar** el diff en la pestaña *Files changed* y mergear.
-6. **Release** (cuando haya algo que publicar):
+5. **Esperar al CI** (GitHub Actions, `.github/workflows/ci.yml`): repite `npm run check` y el build. Con el CI en rojo no se puede mergear. Para verlo: la pestaña *Checks* de la PR o `gh pr checks --watch`.
+6. **Probar la vista previa** de Vercel (enlace en la PR), también en el iPhone. **Autorrevisar** el diff en la pestaña *Files changed* y mergear.
+7. **Release** (cuando haya algo que publicar):
    ```powershell
    gh pr create --base main --head develop --title "release: v1.1.0"
    ```
-   Al mergearla, Vercel publica `main` y GitHub cierra los issues con `Closes #…` (solo cierra al llegar a `main`, la rama por defecto: "cerrado" = "en producción").
-7. **Tag** con versionado semántico (`MAYOR.MENOR.PARCHE`):
+   Al mergearla, Vercel publica `main`.
+
+   > **Cuándo se cierra el issue**: GitHub cierra los `Closes #…` al mergear en la **rama por defecto** del repositorio, que es `develop`. Así que un issue cerrado significa "hecho e integrado", **no** "en producción": lo que está en producción lo dicen los *tags*.
+8. **Tag** con versionado semántico (`MAYOR.MENOR.PARCHE`):
    ```powershell
    git switch main
    git pull
@@ -126,7 +129,7 @@ git switch develop; git pull
 git switch -c fix/offline-precache
 # … arreglo + npm run check + commit "fix: …"
 git push -u origin fix/offline-precache
-gh pr create --base develop --fill      # y después la PR de release develop → main
+gh pr create --fill      # a develop; y después la PR de release develop → main
 ```
 
 Tag de PARCHE (`v1.0.1`). Si en `develop` hubiera cosas a medias que no deben salir todavía, la alternativa es sacar la rama de `main` y mergearla en `main` **y** en `develop` (el *hotfix* clásico de git-flow).

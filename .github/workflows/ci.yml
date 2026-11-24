@@ -1,0 +1,59 @@
+# CI: comprueba cada PR (y lo que llega a develop/main) con lo mismo que
+# `npm run check` en local + el build de producción. Si falla, la PR no se
+# puede mergear (regla de protección de ramas en GitHub).
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  # También al llegar a las ramas principales: detecta un merge que, aun con
+  # sus PRs en verde, rompa algo al combinarse con otra.
+  push:
+    branches: [develop, main]
+  # Botón "Run workflow" en la pestaña Actions, para lanzarlo a mano.
+  workflow_dispatch:
+
+# Si subes otro commit a la misma PR, se cancela la ejecución anterior: solo
+# importa el resultado del último commit (y no se gastan minutos de más).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Mínimo privilegio: el workflow solo necesita leer el código.
+permissions:
+  contents: read
+
+jobs:
+  check:
+    # Este nombre es el que se marca como "obligatorio" en la protección de
+    # ramas: si se cambia, hay que actualizar también la regla.
+    name: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        # La app vive en frontend/ (igual que el Root Directory de Vercel).
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          # La misma versión de Node que en local (.nvmrc) y en Vercel (26.x):
+          # paridad entre entornos, una sola fuente de verdad.
+          node-version-file: .nvmrc
+          # Cachea la descarga de paquetes de npm entre ejecuciones (más
+          # rápido); se invalida sola cuando cambia el package-lock.json.
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # `npm ci` (no `npm install`): instala EXACTAMENTE lo del lockfile y
+      # falla si package.json y package-lock.json no cuadran. Reproducible.
+      - run: npm ci
+
+      # typecheck + lint + formato + tests: lo mismo que en local.
+      - run: npm run check
+
+      # El build de producción puede fallar aunque pase todo lo anterior
+      # (p. ej. la configuración de Vite o del service worker).
+      - run: npm run build

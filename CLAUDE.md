@@ -126,7 +126,7 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 - **PWA** (iteración 10): `vite-plugin-pwa` con `registerType: 'prompt'` (manifest, precaché y `navigateFallback`); icono `public/icon.svg` → `@vite-pwa/assets-generator`; ajustes de iOS (safe areas, barra de estado `default`, `theme-color` claro/oscuro); `requestPersistentStorage()`; avisos de actualización (`AppUpdates`/`UpdateBanner`); chunk `vendor` + rutas secundarias con `lazy`.
 - **Vercel**: Root Directory `frontend`, producción = `main`, Node 26.x, vistas previas por PR protegidas (Deployment Protection). `frontend/vercel.json`: rewrite a `index.html` y sin caché para `sw.js`/`index.html`/manifest.
 - **Datos**: viven solo en cada dispositivo. En iOS, la app instalada y Safari NO comparten datos. Con la PWA instalada + almacenamiento persistente no aplica la limpieza de 7 días de Safari; la red de seguridad pendiente es compartir/importar como texto (backlog).
-- **Flujo de Git**: `main` (producción) y `develop`; una rama por tarea que sale de `develop` → PR a `develop` → PR de *release* `develop` → `main` (Vercel publica `main`) → *tag* `vX.Y.Z` (versionado semántico). Probar antes en la vista previa de la PR. Remoto: https://github.com/sgalans/Equipao.
+- **Flujo de Git**: `main` (producción) y `develop` (**rama por defecto en GitHub**: las PRs van a `develop` por defecto y `Closes #n` cierra el issue al mergear en `develop`, no al publicar); una rama por tarea que sale de `develop` → PR a `develop` → PR de *release* `develop` → `main` (Vercel publica `main`) → *tag* `vX.Y.Z` (versionado semántico). Probar antes en la vista previa de la PR. Remoto: https://github.com/sgalans/Equipao.
 
 ### Backlog: GitHub Issues
 
@@ -138,6 +138,7 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 
 - Git 2.55, nvm-windows 2.0.1, Node.js 26 LTS (`.nvmrc`), npm 11. GitHub CLI (`gh`) para issues y PRs.
 - Comandos en `frontend/`: `dev`, `build`, `lint`, `format`, `format:check`, `preview`, `test` (watch), `test:run`, `typecheck` y **`check`** (typecheck + lint + formato + tests; ejecutarlo antes de cada commit y antes de dar un paso por terminado).
+- **CI** (GitHub Actions, `.github/workflows/ci.yml`): un único job `check` (`npm ci` + `npm run check` + `npm run build`, Node desde `.nvmrc`) en cada PR a `develop`/`main` y en cada push a ellas. Si se renombra el job, actualizar la regla de protección de ramas que lo exige.
 - TypeScript en la línea 6.0 por compatibilidad con `typescript-eslint`.
 - `npm audit`: 9 avisos moderados de `minimatch` solo en herramientas de lint (`npm audit --omit=dev` = 0). No aplicar `npm audit fix --force` (degradaría las herramientas); revisar cuando ESLint actualice.
 - Historial (una rama/PR por iteración): 0) setup · 1) capa de datos · 2) viajes (después eliminados) · 3) maleta como entidad principal · 4) artículos y empaquetado · 5) compartimentos · 6) duplicar maleta · 7) catálogo · 8) revisión general · 9) crear desde el catálogo, añadir varios, datos por defecto · 10) PWA y despliegue → **v1.0.0**.
