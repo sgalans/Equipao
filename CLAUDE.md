@@ -130,7 +130,7 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 
 ### Backlog: GitHub Issues
 
-- El backlog vive en **GitHub Issues** (https://github.com/sgalans/Equipao/issues), no aquí. Consultarlo con `gh issue list` / `gh issue view <n>`.
+- El backlog vive en **GitHub Issues** (https://github.com/sgalans/Equipao/issues), no aquí, ordenado en el tablero **GitHub Projects** (https://github.com/users/sgalans/projects/1; columnas Todo / In Progress / Done). Consultarlo con `gh issue list` / `gh issue view <n>` / `gh project item-list 1 --owner sgalans`. Guía de uso para el usuario: `docs/GUIA.md` (mantenerla al día si cambia el flujo).
 - Etiquetas: prioridad (`prioridad: alta|media|baja`), tipo (`feature`, `tech`) y `a decidir` (hay que acordar el alcance con el usuario antes de empezar).
 - Antes de empezar cualquier issue, acordar el alcance con el usuario. La PR que lo resuelve lleva `Closes #<n>` en la descripción.
 
