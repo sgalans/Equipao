@@ -59,6 +59,8 @@ Para probarla en el móvil en la misma red WiFi: `npm run dev -- --host` y abrir
 
 Guía de desarrollo (scripts, estructura y tests): [`frontend/README.md`](frontend/README.md).
 
+Cómo se trabaja en el proyecto (backlog, ramas y releases, probar en el iPhone, migraciones): [`docs/GUIA.md`](docs/GUIA.md).
+
 ## Despliegue
 
 En **Vercel**, conectado a este repositorio:

@@ -46,7 +46,13 @@ export default defineConfig({
       workbox: {
         // Todo lo que se publica se guarda en el dispositivo (precaché):
         // así la app arranca y funciona sin conexión.
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+        // SIN `webmanifest`: vite-plugin-pwa ya mete el manifest en la
+        // precaché. Si el patrón también lo recoge, sale dos veces con
+        // revisiones distintas y Workbox lanza
+        // `add-to-cache-list-conflicting-entries` al arrancar el service
+        // worker: no se instala y la app NO funciona sin conexión (fallo real
+        // de la v1.0.0).
+        globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
         // SPA sin conexión: cualquier ruta (/luggages/123…) sirve index.html
         // desde la caché y React Router hace el resto.
         navigateFallback: 'index.html',
