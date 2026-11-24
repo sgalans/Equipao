@@ -98,7 +98,7 @@ issue → rama desde develop → commits → PR a develop → PR de release deve
    gh pr create --fill     # va a develop: es la rama por defecto del repositorio
    ```
    En la descripción, **`Closes #14`**: enlaza la PR con el issue.
-5. **Esperar al CI** (GitHub Actions, `.github/workflows/ci.yml`): repite `npm run check` y el build. Con el CI en rojo no se puede mergear. Para verlo: la pestaña *Checks* de la PR o `gh pr checks --watch`.
+5. **Esperar al CI** (GitHub Actions, `.github/workflows/ci.yml`): repite `npm run check` y el build. Con el CI en rojo no se puede mergear (regla *Proteger main y develop*, en **Settings → Rules → Rulesets**, que además obliga a pasar siempre por PR: no se puede hacer push directo a `develop` ni a `main`). Para verlo: la pestaña *Checks* de la PR o `gh pr checks --watch`.
 6. **Probar la vista previa** de Vercel (enlace en la PR), también en el iPhone. **Autorrevisar** el diff en la pestaña *Files changed* y mergear.
 7. **Release** (cuando haya algo que publicar):
    ```powershell

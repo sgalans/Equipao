@@ -42,14 +42,29 @@ jobs:
           # La misma versión de Node que en local (.nvmrc) y en Vercel (26.x):
           # paridad entre entornos, una sola fuente de verdad.
           node-version-file: .nvmrc
-          # Cachea la descarga de paquetes de npm entre ejecuciones (más
-          # rápido); se invalida sola cuando cambia el package-lock.json.
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          # Sin la caché de npm de setup-node: cachearía solo las DESCARGAS
+          # (~/.npm) y `npm ci` seguiría tardando ~35 s en instalar. Abajo se
+          # cachea directamente node_modules ya instalado.
+          package-manager-cache: false
+
+      # Caché de node_modules. La clave identifica exactamente lo instalado:
+      # sistema operativo + versión de Node (.nvmrc) + package-lock.json. Si
+      # cualquiera cambia, la clave es otra y se instala desde cero; si no,
+      # se restaura tal cual en unos segundos. (Sin `restore-keys` a
+      # propósito: un node_modules "parecido" de otra versión del lockfile
+      # podría dar un CI en verde que no se corresponde con el lockfile.)
+      - uses: actions/cache@v6
+        id: deps
+        with:
+          path: frontend/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc', 'frontend/package-lock.json') }}
 
       # `npm ci` (no `npm install`): instala EXACTAMENTE lo del lockfile y
       # falla si package.json y package-lock.json no cuadran. Reproducible.
-      - run: npm ci
+      # Solo si no había caché. Sin auditoría ni avisos de financiación: en
+      # el CI no los lee nadie y cuestan segundos (npm audit se revisa aparte).
+      - if: steps.deps.outputs.cache-hit != 'true'
+        run: npm ci --no-audit --no-fund
 
       # typecheck + lint + formato + tests: lo mismo que en local.
       - run: npm run check
