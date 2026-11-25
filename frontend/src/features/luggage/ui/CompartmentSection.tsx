@@ -24,8 +24,10 @@ import { compartmentStatus } from './progressLabel'
 
 interface CompartmentSectionProps {
   compartment: Compartment
-  /** Artículos de ESTE compartimento. */
+  /** Artículos de ESTE compartimento (todos: para su progreso). */
   entries: LuggageEntry[]
+  /** Los que se pintan (sin los listos ocultos con "Ocultar listos"). */
+  visibleEntries: LuggageEntry[]
   /** Pinta la lista de filas (la comparte con los artículos sueltos). */
   renderRows: (entries: LuggageEntry[]) => ReactNode
   /** TODAS las líneas de la maleta: el formulario no sugiere lo que ya está. */
@@ -47,6 +49,7 @@ interface CompartmentSectionProps {
 export function CompartmentSection({
   compartment,
   entries,
+  visibleEntries,
   renderRows,
   luggageEntries,
   onDuplicate,
@@ -216,10 +219,14 @@ export function CompartmentSection({
               />
             </div>
           )}
-          {entries.length > 0 ? (
-            renderRows(entries)
-          ) : (
+          {entries.length === 0 ? (
             <p className={styles.empty}>Este compartimento está vacío.</p>
+          ) : visibleEntries.length > 0 ? (
+            renderRows(visibleEntries)
+          ) : (
+            // Todo listo y oculto: la cabecera se queda (nada salta) y se
+            // dice por qué no se ve nada.
+            <p className={styles.empty}>Todo listo (oculto).</p>
           )}
         </div>
       )}

@@ -18,3 +18,18 @@
 .selectionBar button {
   flex: 1;
 }
+
+/* Barra justo encima de la lista: ocultar/mostrar listos y "Seleccionar". */
+.listToolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+/* Ocultar/mostrar listos: color de acento (es una acción, como
+   "Seleccionar"), no el gris de los iconos secundarios. */
+.visibility {
+  color: var(--accent);
+}

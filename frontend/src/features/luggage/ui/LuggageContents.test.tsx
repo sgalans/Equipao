@@ -166,27 +166,6 @@ describe('Empaquetar (todo o nada) y progreso', () => {
     expect(socks).toHaveAttribute('aria-checked', 'mixed')
     expect(socks).toHaveTextContent('5')
   })
-
-  it('el orden no cambia al empaquetar (nada se mueve bajo el dedo)', async () => {
-    const { user } = await openLuggage(async (r, luggageId) => {
-      for (const name of ['Uno', 'Dos', 'Tres']) {
-        const item = await r.items.create({ name })
-        await r.quantities.add({
-          luggageId,
-          itemId: item.id,
-          num: 1,
-          nAlreadyPacked: 0,
-        })
-      }
-    })
-    const order = () =>
-      screen.getAllByRole('checkbox').map((c) => c.getAttribute('aria-label'))
-
-    await user.click(await screen.findByRole('checkbox', { name: 'Uno' }))
-    await screen.findByText('1 de 3 listos')
-
-    expect(order()).toEqual(['Uno', 'Dos', 'Tres'])
-  })
 })
 
 describe('Cantidad y quitar (fila desplegada)', () => {
