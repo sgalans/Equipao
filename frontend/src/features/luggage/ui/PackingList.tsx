@@ -3,6 +3,11 @@ import type { Compartment } from '../domain/compartment'
 import type { LuggageEntry } from '../domain/itemQuantityRepository'
 import { CompartmentSection } from './CompartmentSection'
 import { NewCompartment } from './NewCompartment'
+import {
+  isHiddenCompartment,
+  isHiddenEntry,
+  type HiddenSnapshot,
+} from './packingOrderStore'
 import styles from './PackingList.module.css'
 import { PackingListRow } from './PackingListRow'
 
@@ -10,6 +15,8 @@ interface PackingListProps {
   luggageId: string
   entries: LuggageEntry[]
   compartments: Compartment[]
+  /** Artículos listos ocultos (ver packingOrderStore); undefined = ninguno. */
+  hidden: HiddenSnapshot | undefined
   /** Fila a resaltar (p. ej. al intentar añadir algo que ya estaba). */
   highlightedId: string | null
   /** Al intentar añadir algo que ya estaba (desde el "+" de un compartimento). */
@@ -22,14 +29,17 @@ interface PackingListProps {
 }
 
 /**
- * Contenido de la maleta: primero los artículos sueltos (sin cabecera, justo
- * bajo el campo de añadir), después cada compartimento como sección
- * plegable y al final "Nuevo compartimento". Orden fijo: el de añadido.
+ * Contenido de la maleta, SIEMPRE en el orden del usuario (hoy, el de
+ * añadido): artículos sueltos, compartimentos y "Nuevo compartimento". Nada
+ * cambia de sitio: "Ocultar listos" solo deja de pintar los artículos listos
+ * y los compartimentos completos (un compartimento a medias se queda con su
+ * cabecera y solo oculta sus artículos listos).
  */
 export function PackingList({
   luggageId,
   entries,
   compartments,
+  hidden,
   highlightedId,
   onDuplicate,
   selection,
@@ -38,7 +48,10 @@ export function PackingList({
   // entre compartimentos). Estado de UI local: nadie más lo necesita.
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  const loose = entries.filter((entry) => entry.compartmentId === null)
+  const isShown = (entry: LuggageEntry) => !isHiddenEntry(entry, hidden)
+  const loose = entries.filter(
+    (entry) => entry.compartmentId === null && isShown(entry),
+  )
 
   function renderRows(rows: LuggageEntry[]) {
     return (
@@ -79,19 +92,27 @@ export function PackingList({
 
       {loose.length > 0 && renderRows(loose)}
 
-      {compartments.map((compartment) => (
-        <CompartmentSection
-          key={compartment.id}
-          compartment={compartment}
-          entries={entries.filter(
+      {compartments
+        .filter((c) => !isHiddenCompartment(c, entries, hidden))
+        .map((compartment) => {
+          const own = entries.filter(
             (entry) => entry.compartmentId === compartment.id,
-          )}
-          renderRows={renderRows}
-          luggageEntries={entries}
-          onDuplicate={onDuplicate}
-          isSelecting={selection !== undefined}
-        />
-      ))}
+          )
+          return (
+            <CompartmentSection
+              key={compartment.id}
+              compartment={compartment}
+              // TODAS sus líneas: el progreso del compartimento ("2 de 3")
+              // cuenta también lo oculto.
+              entries={own}
+              visibleEntries={own.filter(isShown)}
+              renderRows={renderRows}
+              luggageEntries={entries}
+              onDuplicate={onDuplicate}
+              isSelecting={selection !== undefined}
+            />
+          )
+        })}
 
       {selection === undefined && (
         <NewCompartment

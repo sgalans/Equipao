@@ -2,8 +2,8 @@
 
 Cómo se hacen las cosas habituales en este proyecto. Los comandos son para **PowerShell** y se ejecutan desde la raíz del repositorio, salvo que se diga otra cosa.
 
-- [1. Backlog: Issues y tablero](#1-backlog-issues-y-tablero)
-- [2. De un issue a producción](#2-de-un-issue-a-producción)
+- [1. Backlog](#1-backlog)
+- [2. De una tarea a producción](#2-de-una-tarea-a-producción)
 - [3. Hotfix: arreglar algo urgente en producción](#3-hotfix-arreglar-algo-urgente-en-producción)
 - [4. Comandos del día a día](#4-comandos-del-día-a-día)
 - [5. Probar en el iPhone](#5-probar-en-el-iphone)
@@ -12,80 +12,31 @@ Cómo se hacen las cosas habituales en este proyecto. Los comandos son para **Po
 
 ---
 
-## 1. Backlog: Issues y tablero
+## 1. Backlog
 
-El backlog son los **issues** de GitHub; el **tablero** (GitHub Projects) los ordena y muestra en qué estado está cada uno.
+El backlog está en [`CLAUDE.md`](../CLAUDE.md), apartado **10 → Backlog**: una lista priorizada (en curso, alta, media, baja). Se probó con GitHub Issues + Projects y se descartó: para un proyecto de una persona, con Claude programando, era más ceremonia que ayuda.
 
-- Issues: https://github.com/sgalans/Equipao/issues
-- Tablero: https://github.com/users/sgalans/projects/1
-
-### Etiquetas
-
-| Etiqueta | Para qué |
-|---|---|
-| `prioridad: alta` / `media` / `baja` | Cuándo se hace |
-| `feature` | Algo que nota quien usa la app |
-| `tech` | Herramientas, calidad, rendimiento |
-| `a decidir` | Hay que acordar el alcance antes de empezar |
-
-### Ver
-
-- **Web**: la lista de issues; filtra pulsando una etiqueta o con el buscador: `is:open label:"prioridad: alta"`.
-- **iPhone**: app **GitHub Mobile** (ideal para apuntar una idea en el momento).
-- **VS Code**: extensión **GitHub Pull Requests**.
-- **Terminal**:
-  ```powershell
-  gh issue list                            # abiertos
-  gh issue list --label "prioridad: alta"  # filtrados
-  gh issue view 14                         # detalle
-  gh issue view 14 --web                   # abrir en el navegador
-  ```
-
-### Añadir, editar, quitar
-
-| Acción | Web | Terminal |
-|---|---|---|
-| Añadir | **New issue** | `gh issue create` (te pregunta título, texto y etiquetas) |
-| Cambiar prioridad | etiquetas, en la columna derecha | `gh issue edit 14 --add-label "prioridad: media" --remove-label "prioridad: alta"` |
-| Editar el texto | lápiz junto al texto | `gh issue edit 14 --body-file nota.md` |
-| Descartar | **Close issue → Close as not planned** | `gh issue close 30 --reason "not planned"` |
-| Recuperar | **Reopen issue** | `gh issue reopen 30` |
-
-- **No se borra, se cierra.** Cerrar como *not planned* deja constancia de que se descartó y por qué; si la idea vuelve, ya está la decisión tomada. Borrar (**Delete issue**) solo para duplicados o errores.
-- **Las decisiones van en comentarios del issue** (p. ej. "vamos con la opción A porque…"): quedan junto a la tarea.
-- Los issues nuevos **no entran solos en el tablero** salvo que actives el *auto-add* (ver abajo); si no, desde el issue: columna derecha → **Projects → Equipao**.
-
-### El tablero
-
-- Columnas: **Todo** (por hacer) → **In Progress** (en curso) → **Done** (hecho).
-- **Arrastra** las tarjetas para ordenarlas: lo de arriba de "Todo" es lo siguiente. Es el orden fino que las etiquetas de prioridad no dan.
-- Al empezar una tarea, muévela a **In Progress** (una o dos a la vez como mucho: limitar el trabajo en curso es una idea de Kanban).
-- Al cerrarse el issue, pasa sola a **Done** (automatización *Item closed*).
-
-**Configuración que solo se puede hacer en la web** (una vez):
-
-1. Vista de tablero: en el tablero, la pestaña de la vista → **Layout: Board**.
-2. Automatizaciones: menú **⋯ → Workflows**:
-   - *Item closed* y *Pull request merged* → **Done** (vienen activadas; comprobarlo).
-   - *Auto-add to project*: activar con el filtro `is:issue` para que cada issue nuevo entre en el tablero.
+- **Ver**: abre `CLAUDE.md` o pregunta "¿qué hay en el backlog?".
+- **Añadir, quitar, repriorizar**: edítalo a mano o pídelo ("añade al backlog…", "sube X a prioridad alta").
+- **Al terminar** un punto, sale del backlog y pasa al historial (último punto del apartado 10).
+- **Las decisiones** de alcance se apuntan en el propio punto ("A decidir: …" → la decisión tomada).
 
 ---
 
-## 2. De un issue a producción
+## 2. De una tarea a producción
 
 ```
-issue → rama desde develop → commits → PR a develop → PR de release develop → main → tag
+tarea(s) → rama desde develop → commits → PR a develop → PR de release develop → main → tag
 ```
 
-1. **Acordar el alcance** del issue (con Claude o en un comentario del issue).
-2. **Rama** desde `develop`, con el número del issue:
+1. **Acordar el alcance** con Claude.
+2. **Rama** desde `develop`. Una rama puede llevar **varias tareas relacionadas** (p. ej. `feature/packing`); una migración de la BD o algo arriesgado, mejor en su propia rama:
    ```powershell
    git switch develop
    git pull
-   git switch -c feature/14-compartir-texto     # fix/… para arreglos, chore/… para mantenimiento
+   git switch -c feature/share-text     # fix/… para arreglos, chore/… para mantenimiento
    ```
-   Mueve la tarjeta a **In Progress**.
-3. **Commits pequeños** con Conventional Commits, comprobando antes:
+3. **Commits pequeños** (uno o varios por tarea) con Conventional Commits, comprobando antes:
    ```powershell
    cd frontend; npm run check; cd ..
    git add <ficheros>
@@ -94,19 +45,18 @@ issue → rama desde develop → commits → PR a develop → PR de release deve
    Tipos: `feat` (funcionalidad), `fix` (arreglo), `docs`, `test`, `refactor`, `perf`, `chore` (mantenimiento).
 4. **PR a `develop`**:
    ```powershell
-   git push -u origin feature/14-compartir-texto
-   gh pr create --fill     # va a develop: es la rama por defecto del repositorio
+   git push -u origin feature/share-text
+   gh pr create --fill                           # va a develop: es la rama por defecto
+   gh pr merge --auto --merge --delete-branch    # se mergea sola cuando el CI pase
    ```
-   En la descripción, **`Closes #14`**: enlaza la PR con el issue.
+   Si aún no está terminada: `gh pr create --draft` (el CI se ejecuta, pero el auto-merge espera) y `gh pr ready` al acabar.
 5. **Esperar al CI** (GitHub Actions, `.github/workflows/ci.yml`): repite `npm run check` y el build. Con el CI en rojo no se puede mergear (regla *Proteger main y develop*, en **Settings → Rules → Rulesets**, que además obliga a pasar siempre por PR: no se puede hacer push directo a `develop` ni a `main`). Para verlo: la pestaña *Checks* de la PR o `gh pr checks --watch`.
-6. **Probar la vista previa** de Vercel (enlace en la PR), también en el iPhone. **Autorrevisar** el diff en la pestaña *Files changed* y mergear.
+6. **Probar la vista previa** de Vercel (enlace en la PR), también en el iPhone. **Autorrevisar** el diff en la pestaña *Files changed* (con el auto-merge, si ves algo mal, desactívalo en la PR antes de que pase el CI).
 7. **Release** (cuando haya algo que publicar):
    ```powershell
    gh pr create --base main --head develop --title "release: v1.1.0"
    ```
    Al mergearla, Vercel publica `main`.
-
-   > **Cuándo se cierra el issue**: GitHub cierra los `Closes #…` al mergear en la **rama por defecto** del repositorio, que es `develop`. Así que un issue cerrado significa "hecho e integrado", **no** "en producción": lo que está en producción lo dicen los *tags*.
 8. **Tag** con versionado semántico (`MAYOR.MENOR.PARCHE`):
    ```powershell
    git switch main

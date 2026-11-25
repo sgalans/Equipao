@@ -22,6 +22,21 @@
   height: 0.25rem;
 }
 
+/* El texto como botón (abre "Listos"): mismo aspecto que el texto, con
+   zona táctil de 44px y alineado a la izquierda. */
+.open {
+  align-self: flex-start;
+  min-height: 2.75rem;
+  margin: -0.5rem 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .done {
   color: var(--success);
   font-weight: 600;
