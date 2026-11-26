@@ -96,9 +96,35 @@ describe('Un solo nivel', () => {
     })
     const bag = await items.create({ name: 'Mochila', isContainer: true })
 
-    await expect(quantities.addMany(big.id, [bag.id], kit.id)).rejects.toThrow(
-      ConsistencyError,
-    )
+    await expect(
+      quantities.add({
+        luggageId: big.id,
+        itemId: bag.id,
+        compartmentId: kit.id,
+        num: 1,
+        nAlreadyPacked: 0,
+      }),
+    ).rejects.toThrow(ConsistencyError)
+  })
+
+  it('addMany con contenedores los deja como compartimentos de primer nivel', async () => {
+    const { compartments, items, quantities, big } = await setup()
+    const kit = await compartments.create({
+      luggageId: big.id,
+      name: 'Neceser',
+    })
+    const bag = await items.create({ name: 'Mochila', isContainer: true })
+    const brush = await items.create({ name: 'Cepillo' })
+
+    // "Añadir estos al Neceser" con una Mochila en medio: la Mochila va
+    // como compartimento de la maleta; el Cepillo, dentro del Neceser.
+    await quantities.addMany(big.id, [bag.id, brush.id], kit.id)
+
+    expect(
+      (await compartments.listByLuggage(big.id)).map((c) => c.name),
+    ).toEqual(['Neceser', 'Mochila'])
+    const [brushLine] = await quantities.listByLuggage(big.id)
+    expect(brushLine?.compartmentId).toBe(kit.id)
   })
 
   it('un artículo normal no es un compartimento válido para meter cosas', async () => {

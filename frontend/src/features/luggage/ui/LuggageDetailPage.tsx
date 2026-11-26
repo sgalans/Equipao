@@ -217,7 +217,6 @@ export function LuggageDetailPage() {
         </div>
       )}
       <PackingList
-        luggageId={luggage.id}
         entries={entries}
         compartments={compartmentList}
         hidden={hidden}

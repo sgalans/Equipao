@@ -10,6 +10,8 @@ import { useTemporaryHighlight } from '@/shared/ui/useTemporaryHighlight'
 import { isSameItemName } from '../domain/itemName'
 import { normalizeForSearch } from '../domain/search'
 import { CatalogRow } from './CatalogRow'
+import { CatalogSections } from './CatalogSections'
+import { CreateAsCompartment } from './CreateAsCompartment'
 import styles from './ItemsCatalogPage.module.css'
 
 /** Evita que tocar un botón quite el foco al campo (el teclado de iOS no se cierra). */
@@ -75,7 +77,7 @@ export function ItemsCatalogPage() {
   )
   const canCreate = name !== '' && !exactMatch
 
-  async function create() {
+  async function create(isContainer = false) {
     if (!canCreate) {
       // Ya existe: se señala en vez de crear un duplicado.
       if (exactMatch) {
@@ -86,7 +88,7 @@ export function ItemsCatalogPage() {
     }
     setError(null)
     try {
-      const item = await items.create({ name })
+      const item = await items.create({ name, isContainer })
       // Se vacía el campo (y con él el filtro), así el nuevo artículo se ve.
       setQuery('')
       setMessage(null)
@@ -176,6 +178,9 @@ export function ItemsCatalogPage() {
       <p role="status" className={styles.message}>
         {message}
       </p>
+      {canCreate && !isSelecting && (
+        <CreateAsCompartment name={name} onCreate={() => void create(true)} />
+      )}
 
       {catalog.length === 0 && name === '' ? (
         <p className={styles.empty}>
@@ -187,8 +192,9 @@ export function ItemsCatalogPage() {
           <p className={styles.empty}>Ningún artículo coincide con «{name}».</p>
         )
       ) : (
-        <ul className={styles.list}>
-          {visible.map((item) => (
+        <CatalogSections
+          items={visible}
+          renderRow={(item) => (
             <CatalogRow
               key={item.id}
               item={item}
@@ -208,8 +214,8 @@ export function ItemsCatalogPage() {
                   : undefined
               }
             />
-          ))}
-        </ul>
+          )}
+        />
       )}
 
       {isSelecting && (

@@ -36,68 +36,15 @@ async function addItem(
 }
 
 describe('Crear compartimentos', () => {
-  it('sin compartimentos, explica qué son', async () => {
+  it('la maleta ya no tiene "Nuevo compartimento": se añaden desde "Añadir artículos"', async () => {
     await openLuggage()
 
     expect(
-      screen.getByText(
-        'Contenedor para meter artículos, como un neceser, una mochila o un maletín.',
-      ),
-    ).toBeInTheDocument()
-  })
-
-  it('"Nuevo compartimento" → escribir → OK lo crea; la ayuda desaparece', async () => {
-    const { user, repositories, luggage } = await openLuggage()
-
-    await user.click(
-      screen.getByRole('button', { name: 'Nuevo compartimento' }),
-    )
-    await user.keyboard('Neceser{Enter}')
-
-    expect(
-      await screen.findByRole('button', { name: 'Neceser, Vacío' }),
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByText(
-        'Contenedor para meter artículos, como un neceser, una mochila o un maletín.',
-      ),
+      screen.queryByRole('button', { name: 'Nuevo compartimento' }),
     ).not.toBeInTheDocument()
     expect(
-      await repositories.compartments.listByLuggage(luggage.id),
-    ).toHaveLength(1)
-  })
-
-  it('si ya hay uno igual en la maleta, lo explica junto al botón (no un aviso genérico)', async () => {
-    const { user } = await openLuggage(async (repos, luggageId) => {
-      await repos.compartments.create({ luggageId, name: 'Neceser' })
-    })
-
-    await user.click(
-      screen.getByRole('button', { name: 'Nuevo compartimento' }),
-    )
-    await user.keyboard('neceser{Enter}')
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Ya hay un «Neceser» en esta maleta.',
-    )
-    expect(
-      screen.queryByText(/No se ha podido guardar/),
-    ).not.toBeInTheDocument()
-  })
-
-  it('Escape o un nombre vacío no crean nada', async () => {
-    const { user, repositories, luggage } = await openLuggage()
-    const newButton = () =>
-      screen.getByRole('button', { name: 'Nuevo compartimento' })
-
-    await user.click(newButton())
-    await user.keyboard('Neceser{Escape}')
-    await user.click(newButton())
-    await user.keyboard('   {Enter}')
-
-    expect(await repositories.compartments.listByLuggage(luggage.id)).toEqual(
-      [],
-    )
+      screen.getByRole('link', { name: 'Añadir artículos' }),
+    ).toBeInTheDocument()
   })
 })
 
@@ -287,11 +234,11 @@ describe('Renombrar y borrar compartimentos', () => {
     )
     await user.click(within(dialog).getByRole('button', { name: 'Quitar' }))
 
-    expect(
-      await screen.findByText(
-        'Contenedor para meter artículos, como un neceser, una mochila o un maletín.',
-      ),
-    ).toBeInTheDocument()
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('button', { name: /^Neceser,/ }),
+      ).not.toBeInTheDocument(),
+    )
     // Los artículos siguen en la maleta, ahora sueltos.
     expect(
       screen.getByRole('checkbox', { name: 'Cepillo' }),

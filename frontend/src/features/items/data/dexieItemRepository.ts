@@ -86,7 +86,7 @@ export function createDexieItemRepository(db: AppDb): ItemRepository {
     },
 
     update(id, changes) {
-      return db.transaction('rw', db.items, async () => {
+      return db.transaction('rw', [db.items, db.itemQuantities], async () => {
         const items = await db.items.toArray()
         const current = items.find((item) => item.id === id)
         if (!current) throw new EntityNotFoundError('Item', id)
@@ -103,6 +103,21 @@ export function createDexieItemRepository(db: AppDb): ItemRepository {
         // puede cambiar mayúsculas o tildes ("calcetines" → "Calcetines").
         const clash = findByNameIn(items, updated.name)
         if (clash && clash.id !== id) throw duplicateNameError(clash.name)
+        // Convertir en compartimento (o al revés) solo si no está en ninguna
+        // maleta (decisión del usuario, opción A): si no, habría que
+        // reorganizarlas (sacar lo de dentro, sacarlo de otro compartimento…)
+        // sin que se vea. La UI lo explica; aquí se garantiza.
+        if (updated.isContainer !== current.isContainer) {
+          const inUse = await db.itemQuantities
+            .where('itemId')
+            .equals(id)
+            .count()
+          if (inUse > 0) {
+            throw new ConsistencyError(
+              'Solo se puede cambiar si no está en ninguna maleta',
+            )
+          }
+        }
         await db.items.put(updated)
         return updated
       })

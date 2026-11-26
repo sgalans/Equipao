@@ -11,7 +11,7 @@ async function openCatalog(arrange?: (repos: Repos) => Promise<void>) {
   const repositories = createTestRepositories()
   await arrange?.(repositories)
   const rendered = renderApp('/items', repositories)
-  await screen.findByRole('heading', { name: 'Artículos' })
+  await screen.findByRole('heading', { name: 'Artículos', level: 1 })
   return { ...rendered, repositories, user: userEvent.setup() }
 }
 
@@ -38,7 +38,7 @@ describe('Acceso al catálogo', () => {
     // demanda (code splitting) y React Router no cambia de pantalla ni de URL
     // hasta tenerlo descargado (así nunca hay una pantalla en blanco).
     expect(
-      await screen.findByRole('heading', { name: 'Artículos' }),
+      await screen.findByRole('heading', { name: 'Artículos', level: 1 }),
     ).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/items')
 
@@ -208,7 +208,8 @@ describe('Campo único "Buscar o crear"', () => {
       screen.getByText('Ningún artículo coincide con «zzz».'),
     ).toBeInTheDocument()
     // Sin fila "Crear «X»" (decisión de producto): se crea con el "+".
-    expect(screen.queryByText(/Crear «/)).not.toBeInTheDocument()
+    // (Solo "Crear «X» como compartimento", que es otra cosa.)
+    expect(screen.queryByText(/^Crear «zzz»$/)).not.toBeInTheDocument()
   })
 
   it('"+" crea el artículo, vacía el campo y mantiene el foco', async () => {
@@ -254,5 +255,92 @@ describe('Campo único "Buscar o crear"', () => {
     await openCatalog()
 
     expect(createButton()).toBeDisabled()
+  })
+})
+
+describe('Compartimentos en el catálogo', () => {
+  it('los contenedores salen en su sección, arriba', async () => {
+    await openCatalog(async (repos) => {
+      await repos.items.create({ name: 'Bañador' })
+      await repos.items.create({ name: 'Neceser', isContainer: true })
+    })
+
+    const [containers, regular] = screen.getAllByRole('list')
+    expect(
+      screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent),
+    ).toEqual(['Compartimentos', 'Artículos'])
+    expect(within(containers!).getByText('Neceser')).toBeInTheDocument()
+    expect(within(regular!).getByText('Bañador')).toBeInTheDocument()
+  })
+
+  it('sin contenedores, una sola lista sin cabeceras', async () => {
+    await openCatalog(async (repos) => {
+      await repos.items.create({ name: 'Bañador' })
+    })
+
+    expect(screen.queryByRole('heading', { level: 2 })).not.toBeInTheDocument()
+  })
+
+  it('"Crear «X» como compartimento" crea un contenedor', async () => {
+    const { user, repositories } = await openCatalog()
+
+    await user.type(screen.getByRole('searchbox'), 'Mochila')
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Crear «Mochila» como compartimento',
+      }),
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: 'Compartimentos' }),
+    ).toBeInTheDocument()
+    expect((await repositories.items.findByName('Mochila'))?.isContainer).toBe(
+      true,
+    )
+  })
+
+  it('sin usar, "Convertir en compartimento" lo marca (y se puede deshacer)', async () => {
+    const { user, repositories } = await openCatalog(async (repos) => {
+      await repos.items.create({ name: 'Mochila' })
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Mochila, Sin usar' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Convertir en compartimento' }),
+    )
+    expect(
+      await screen.findByRole('button', { name: 'Convertir en artículo' }),
+    ).toBeInTheDocument()
+    expect((await repositories.items.findByName('Mochila'))?.isContainer).toBe(
+      true,
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: 'Convertir en artículo' }),
+    )
+    expect(
+      await screen.findByRole('button', { name: 'Convertir en compartimento' }),
+    ).toBeInTheDocument()
+  })
+
+  it('si está en alguna maleta, explica qué hacer y no lo cambia (opción A)', async () => {
+    const { user, repositories } = await openCatalog(async (repos) => {
+      const bag = await repos.items.create({ name: 'Mochila' })
+      await useInLuggage(repos, bag.id, 'Grande')
+    })
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Mochila, En 1 maleta' }),
+    )
+    await user.click(
+      screen.getByRole('button', { name: 'Convertir en compartimento' }),
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Para convertirlo, quítalo antes de la maleta Grande.',
+    )
+    expect((await repositories.items.findByName('Mochila'))?.isContainer).toBe(
+      false,
+    )
   })
 })

@@ -278,3 +278,122 @@ it('maleta inexistente → "no encontrada"', async () => {
     }),
   ).toBeInTheDocument()
 })
+
+describe('Compartimentos en "Añadir artículos"', () => {
+  /** Catálogo con dos contenedores: Neceser y Mochila de mano. */
+  async function withContainers(repos: Repos) {
+    await repos.items.create({ name: 'Neceser', isContainer: true })
+    await repos.items.create({ name: 'Mochila de mano', isContainer: true })
+  }
+
+  it('los contenedores salen en su sección, arriba, y elegirlos los añade como compartimentos', async () => {
+    const { user, repositories, luggage } = await setup(addPage, withContainers)
+
+    const headings = await screen.findAllByRole('heading', { level: 2 })
+    expect(headings.map((h) => h.textContent)).toEqual([
+      'Compartimentos',
+      'Artículos',
+    ])
+    await user.click(screen.getByRole('checkbox', { name: /^Neceser,/ }))
+    await user.click(screen.getByRole('checkbox', { name: /^Toalla,/ }))
+    await user.click(
+      screen.getByRole('button', { name: 'Añadir 2 a la maleta' }),
+    )
+
+    // Sin compartimentos previos, no pregunta dónde: la Toalla, suelta.
+    await screen.findByRole('heading', { name: 'Mochila', level: 1 })
+    expect(
+      (await repositories.compartments.listByLuggage(luggage.id)).map(
+        (c) => c.name,
+      ),
+    ).toEqual(['Neceser'])
+    const [towel] = await repositories.quantities.listByLuggage(luggage.id)
+    expect(towel?.compartmentId).toBeNull()
+  })
+
+  it('un compartimento que ya está en la maleta sale como "Ya en la maleta"', async () => {
+    await setup(addPage, async (repos, luggageId) => {
+      await repos.compartments.create({ luggageId, name: 'Neceser' })
+    })
+
+    expect(
+      await screen.findByRole('checkbox', { name: 'Neceser, Ya en la maleta' }),
+    ).toBeDisabled()
+  })
+
+  it('solo compartimentos elegidos: no pregunta dónde aunque la maleta tenga compartimentos', async () => {
+    const { user, repositories, luggage } = await setup(
+      addPage,
+      async (repos, luggageId) => {
+        await withContainers(repos)
+        await repos.compartments.create({ luggageId, name: 'Neceser' })
+      },
+    )
+
+    await user.click(
+      await screen.findByRole('checkbox', { name: /^Mochila de mano,/ }),
+    )
+    await user.click(
+      screen.getByRole('button', { name: 'Añadir 1 a la maleta' }),
+    )
+
+    await screen.findByRole('heading', { name: 'Mochila', level: 1 })
+    expect(
+      (await repositories.compartments.listByLuggage(luggage.id)).map(
+        (c) => c.name,
+      ),
+    ).toEqual(['Neceser', 'Mochila de mano'])
+  })
+
+  it('"Crear «X» como compartimento" lo crea y lo añade; se queda aquí', async () => {
+    const { user, repositories, luggage } = await setup(addPage)
+
+    await user.type(await screen.findByRole('searchbox'), 'Riñonera')
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Crear «Riñonera» como compartimento',
+      }),
+    )
+
+    expect(
+      await screen.findByText(
+        '«Riñonera» creado y añadido como compartimento.',
+      ),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByRole('checkbox', {
+        name: 'Riñonera, Ya en la maleta',
+      }),
+    ).toBeDisabled()
+    const [compartment] = await repositories.compartments.listByLuggage(
+      luggage.id,
+    )
+    expect(compartment?.name).toBe('Riñonera')
+    const item = await repositories.items.getById(compartment?.itemId ?? '')
+    expect(item?.isContainer).toBe(true)
+  })
+
+  it('desde un compartimento: los contenedores no se pueden elegir y no se ofrece crear compartimentos', async () => {
+    let kitId = ''
+    const { user } = await setup(
+      // setup llama a path() DESPUÉS de arrange: kitId ya tiene valor.
+      (id) => `${addPage(id)}?compartment=${kitId}`,
+      async (repos, luggageId) => {
+        await withContainers(repos)
+        kitId = (
+          await repos.compartments.create({ luggageId, name: 'Neceser' })
+        ).id
+      },
+    )
+
+    expect(
+      await screen.findByRole('checkbox', {
+        name: 'Mochila de mano, Es un compartimento',
+      }),
+    ).toBeDisabled()
+    await user.type(field(), 'Riñonera')
+    expect(
+      screen.queryByRole('button', { name: /como compartimento/ }),
+    ).not.toBeInTheDocument()
+  })
+})

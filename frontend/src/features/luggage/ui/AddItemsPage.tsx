@@ -4,6 +4,8 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { isSameItemName } from '@/features/items/domain/itemName'
 import { normalizeForSearch } from '@/features/items/domain/search'
 import { CatalogRow } from '@/features/items/ui/CatalogRow'
+import { CatalogSections } from '@/features/items/ui/CatalogSections'
+import { CreateAsCompartment } from '@/features/items/ui/CreateAsCompartment'
 import { useRepositories } from '@/shared/di/repositories'
 import { DuplicateError } from '@/shared/domain/errors'
 import buttons from '@/shared/ui/buttons.module.css'
@@ -30,6 +32,11 @@ export const COMPARTMENT_PARAM = 'compartment'
  *
  * ?compartment=<id> (desde el "+" de un compartimento): se añade ahí, sin
  * preguntar el destino.
+ *
+ * También es el único sitio para añadir COMPARTIMENTOS (decisión del
+ * usuario: se quitó "Nuevo compartimento" de la maleta): los contenedores
+ * del catálogo salen en su sección, arriba, y elegirlos los añade como
+ * compartimentos; uno nuevo se crea con "Crear «X» como compartimento".
  */
 export function AddItemsPage() {
   const { luggageId = '' } = useParams<{ luggageId: string }>()
@@ -58,7 +65,12 @@ export function AddItemsPage() {
     return {
       luggage: luggage ?? null,
       catalog,
-      inLuggage: new Set(entries.map((entry) => entry.itemId)),
+      // listByLuggage no incluye las líneas contenedor: se suman los
+      // compartimentos (su itemId es el del contenedor del catálogo).
+      inLuggage: new Set([
+        ...entries.map((entry) => entry.itemId),
+        ...compartmentList.map((compartment) => compartment.itemId),
+      ]),
       compartmentList,
     }
   }, [luggages, items, quantities, compartments, luggageId])
@@ -131,6 +143,12 @@ export function AddItemsPage() {
           setMessage(`«${exactMatch.name}» ya está en esta maleta.`)
           return
         }
+        if (exactMatch.isContainer && targetCompartment) {
+          setMessage(
+            `«${exactMatch.name}» es un compartimento: no puede ir dentro de otro.`,
+          )
+          return
+        }
         select(exactMatch.id)
         setMessage(`«${exactMatch.name}» ya estaba en tu catálogo: marcado.`)
       } else {
@@ -157,10 +175,37 @@ export function AddItemsPage() {
     }
   }
 
+  /** "Crear «X» como compartimento": crea el contenedor y lo añade ya. */
+  async function createCompartment() {
+    if (name === '') return
+    try {
+      await compartments.create({ luggageId: luggage.id, name })
+      setMessage(`«${name}» creado y añadido como compartimento.`)
+      setQuery('')
+    } catch (error) {
+      if (error instanceof DuplicateError) setMessage(`${error.message}.`)
+      else reportError(error)
+    } finally {
+      inputRef.current?.focus()
+    }
+  }
+
+  // Elegidos que son artículos normales (los contenedores no van "dentro"
+  // de nada: addMany los deja siempre como compartimentos de la maleta).
+  const catalogById = new Map(data.catalog.map((item) => [item.id, item]))
+  const hasRegularSelected = [...selected].some(
+    (id) => catalogById.get(id)?.isContainer === false,
+  )
+
   async function add() {
     // Sin destino fijo y con compartimentos, se pregunta "¿dónde?". Sin
     // compartimentos sería un paso inútil: van sueltos.
-    if (!targetCompartment && data?.compartmentList.length) {
+    // Solo compartimentos elegidos: tampoco hay nada que preguntar.
+    if (
+      !targetCompartment &&
+      hasRegularSelected &&
+      data?.compartmentList.length
+    ) {
       setIsChoosingDestination(true)
       return
     }
@@ -236,6 +281,13 @@ export function AddItemsPage() {
       <p role="status" className={styles.message}>
         {message}
       </p>
+      {/* Desde un compartimento no: uno no puede ir dentro de otro. */}
+      {name !== '' && !exactMatch && !targetCompartment && (
+        <CreateAsCompartment
+          name={name}
+          onCreate={() => void createCompartment()}
+        />
+      )}
 
       {data.catalog.length === 0 ? (
         <p className={styles.empty}>
@@ -247,8 +299,9 @@ export function AddItemsPage() {
           Ningún artículo coincide con «{name}». Toca + para crearlo.
         </p>
       ) : (
-        <ul className={styles.list}>
-          {visible.map((item) => (
+        <CatalogSections
+          items={visible}
+          renderRow={(item) => (
             // Misma fila con casilla que el modo selección del catálogo. Lo
             // que ya está en la maleta se ve (orienta al buscar) pero no se
             // puede elegir.
@@ -262,11 +315,15 @@ export function AddItemsPage() {
                 onToggle: () => toggleSelected(item.id),
                 disabledReason: data.inLuggage.has(item.id)
                   ? 'Ya en la maleta'
-                  : undefined,
+                  : // Desde el "Añadir" de un compartimento: otro
+                    // compartimento no puede ir dentro.
+                    item.isContainer && targetCompartment
+                    ? 'Es un compartimento'
+                    : undefined,
               }}
             />
-          ))}
-        </ul>
+          )}
+        />
       )}
 
       <div className={styles.bar}>

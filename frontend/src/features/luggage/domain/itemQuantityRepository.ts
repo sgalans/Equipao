@@ -35,6 +35,11 @@ export interface ItemQuantityRepository {
    * una transacción. Lanza EntityNotFoundError si la maleta, algún artículo
    * o el compartimento no existen, y ConsistencyError si el compartimento es
    * de otra maleta.
+   *
+   * Los CONTENEDORES de la lista (Mochila, Neceser…) se añaden siempre como
+   * compartimentos de la maleta (de primer nivel), aunque se indique un
+   * compartimento: uno no puede ir dentro de otro, y así "añadir estos a la
+   * maleta" funciona con una mezcla de artículos y compartimentos.
    */
   addMany(
     luggageId: string,

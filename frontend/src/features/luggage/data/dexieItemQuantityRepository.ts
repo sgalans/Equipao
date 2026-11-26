@@ -151,10 +151,12 @@ export function createDexieItemQuantityRepository(
           const items = await db.items.bulkGet(uniqueItemIds)
           const missing = uniqueItemIds.find((_, index) => !items[index])
           if (missing) throw new EntityNotFoundError('Item', missing)
+          const containers = new Set(
+            items.flatMap((item) => (item?.isContainer ? [item.id] : [])),
+          )
 
           // Lo que ya está en la maleta se salta (decisión de producto: ni
           // se vuelve a añadir ni se suma cantidad).
-          await assertNotNested(db, uniqueItemIds, compartmentId)
           const current = await allLinesOf(luggageId)
           const alreadyIn = new Set(current.map((q) => q.itemId))
           const toAdd = uniqueItemIds.filter((itemId) => !alreadyIn.has(itemId))
@@ -165,7 +167,8 @@ export function createDexieItemQuantityRepository(
               ...newEntityBase(),
               luggageId,
               itemId,
-              compartmentId,
+              // Un contenedor es un compartimento: siempre de primer nivel.
+              compartmentId: containers.has(itemId) ? null : compartmentId,
               num: 1,
               nAlreadyPacked: 0,
               position: positions[index],

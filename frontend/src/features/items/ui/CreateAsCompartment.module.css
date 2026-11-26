@@ -1,0 +1,20 @@
+.wrapper {
+  margin: 0 0 0.5rem;
+}
+
+.wrapper button {
+  /* Nombres largos: que el texto pase a otra línea en vez de salirse. */
+  overflow-wrap: anywhere;
+  text-align: left;
+  /* Es una acción de crear: color de acento, no el apagado de textAction. */
+  color: var(--accent);
+  padding-left: 0;
+}
+
+.help {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  /* Cursiva como estilo visual (texto de ayuda), no como énfasis. */
+  font-style: italic;
+}

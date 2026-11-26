@@ -25,8 +25,10 @@ export interface ItemRepository {
    */
   create(input: NewItem): Promise<Item>
   /**
-   * Renombra. Lanza EntityNotFoundError si no existe y DuplicateError si ya
-   * hay OTRO artículo con ese nombre (mismo criterio que findByName).
+   * Renombra o cambia si es un contenedor. Lanza EntityNotFoundError si no
+   * existe, DuplicateError si ya hay OTRO artículo con ese nombre (mismo
+   * criterio que findByName) y ConsistencyError si cambia `isContainer`
+   * estando en alguna maleta.
    */
   update(id: string, changes: Partial<NewItem>): Promise<Item>
   /**

@@ -2,6 +2,7 @@ Luggage(id: uuid, name, description)              -- description: '' = sin descr
     createdAt, updatedAt
 
 Item(id: uuid, name, isContainer)                  -- isContainer: Neceser, Mochila… (se marca; no cualquier artículo)
+    invariant isContainer solo cambia si no está en ninguna maleta  -- ConsistencyError (opción A)
     unique (name)                                -- sin distinguir mayúsculas ni tildes (isSameItemName)
     createdAt, updatedAt
 
