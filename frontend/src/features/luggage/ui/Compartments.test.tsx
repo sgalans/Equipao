@@ -397,10 +397,11 @@ describe('Compartimento "listo" (estado propio)', () => {
         screen.getByRole('checkbox', { name: 'Neceser listo' }),
       ).toBeChecked(),
     )
-    // Decisión de producto: nada de "sin guardar", solo su progreso.
+    // Decisión de producto: nada de "sin guardar", solo su progreso. Y como
+    // le faltan artículos, NO se pliega: se queda a la vista.
     expect(
       screen.getByRole('button', { name: 'Neceser, 0 de 2' }),
-    ).toBeInTheDocument()
+    ).toHaveAttribute('aria-expanded', 'true')
     expect(screen.queryByText(/sin guardar/)).not.toBeInTheDocument()
     // Cuenta como bloque hecho igualmente (decisión de producto).
     expect(screen.getByText('¡Maleta lista!')).toBeInTheDocument()
@@ -413,7 +414,10 @@ describe('Compartimento "listo" (estado propio)', () => {
           luggageId,
           name: 'Neceser',
         })
-        await addItem(repos, luggageId, 'Cepillo', { compartmentId: kit.id })
+        await addItem(repos, luggageId, 'Cepillo', {
+          compartmentId: kit.id,
+          packed: true,
+        })
       },
     )
     const check = screen.getByRole('checkbox', { name: 'Neceser listo' })
@@ -427,9 +431,54 @@ describe('Compartimento "listo" (estado propio)', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Neceser listo' }))
 
     expect(
-      await screen.findByRole('button', { name: 'Neceser, 0 de 1' }),
+      await screen.findByRole('button', { name: 'Neceser, 1 de 1' }),
     ).toHaveAttribute('aria-expanded', 'false')
     const [cepillo] = await repositories.quantities.listByLuggage(luggage.id)
-    expect(cepillo.nAlreadyPacked).toBe(0)
+    expect(cepillo.nAlreadyPacked).toBe(1)
+  })
+})
+
+describe('Plegado automático', () => {
+  it('se pliega solo cuando su último artículo queda listo', async () => {
+    const { user } = await openLuggage(async (repos, luggageId) => {
+      const kit = await repos.compartments.create({
+        luggageId,
+        name: 'Neceser',
+      })
+      await addItem(repos, luggageId, 'Cepillo', {
+        compartmentId: kit.id,
+        packed: true,
+      })
+      await addItem(repos, luggageId, 'Pasta', { compartmentId: kit.id })
+    })
+    const toggle = () => screen.getByRole('button', { name: /^Neceser,/ })
+    expect(toggle()).toHaveAttribute('aria-expanded', 'true')
+
+    await user.click(screen.getByRole('checkbox', { name: 'Pasta' }))
+
+    await waitFor(() =>
+      expect(toggle()).toHaveAttribute('aria-expanded', 'false'),
+    )
+    // Si se despliega a mano, no se vuelve a plegar solo.
+    await user.click(toggle())
+    expect(toggle()).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('al abrir una maleta con un compartimento ya completo, no lo pliega', async () => {
+    await openLuggage(async (repos, luggageId) => {
+      const kit = await repos.compartments.create({
+        luggageId,
+        name: 'Neceser',
+      })
+      await addItem(repos, luggageId, 'Cepillo', {
+        compartmentId: kit.id,
+        packed: true,
+      })
+    })
+
+    expect(screen.getByRole('button', { name: /^Neceser,/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
   })
 })

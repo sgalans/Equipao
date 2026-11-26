@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { useRepositories } from '@/shared/di/repositories'
 import { reportError } from '@/shared/ui/notifications/notificationStore'
@@ -90,13 +90,29 @@ export function CompartmentSection({
   const { done, total } = itemsProgress(entries)
   const status = compartmentStatus(done, total, compartment.isReady)
   const collapse = useCollapsedCompartments((state) => state.collapse)
+  // ¿Le falta algún artículo? (uno vacío no: no le falta nada)
+  const hasPending = done < total
+
+  // Decisión de producto: se pliega SOLO en el momento en que su último
+  // artículo queda listo (marques donde marques: la fila, la ventana
+  // "Listos"…), para que lo hecho deje de ocupar sitio. Solo en el CAMBIO
+  // de "le falta algo" a "todo listo": al abrir una maleta ya completa no se
+  // pliega, y si se despliega a mano no se vuelve a plegar solo. useRef
+  // guarda el valor del render anterior sin provocar renders.
+  const allPacked = total > 0 && !hasPending
+  const wasAllPacked = useRef(allPacked)
+  useEffect(() => {
+    if (allPacked && !wasAllPacked.current) collapse(compartment.id)
+    wasAllPacked.current = allPacked
+  }, [allPacked, collapse, compartment.id])
 
   async function toggleReady() {
     try {
       const updated = await compartments.toggleReady(compartment.id)
-      // Decisión de producto: al marcarlo como listo se pliega solo, para
-      // que lo ya hecho deje de ocupar sitio. Al desmarcarlo no se toca.
-      if (updated.isReady) collapse(compartment.id)
+      // Al marcarlo como listo se pliega, pero SOLO si no le falta ningún
+      // artículo (decisión de producto: si falta algo, se queda a la vista).
+      // Al desmarcarlo no se toca.
+      if (updated.isReady && !hasPending) collapse(compartment.id)
     } catch (error) {
       reportError(error)
     }
