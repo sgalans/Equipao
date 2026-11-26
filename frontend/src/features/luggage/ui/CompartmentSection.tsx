@@ -1,4 +1,5 @@
 import { useId, useState, type ReactNode } from 'react'
+import { Link } from 'react-router'
 import { useRepositories } from '@/shared/di/repositories'
 import { reportError } from '@/shared/ui/notifications/notificationStore'
 import buttons from '@/shared/ui/buttons.module.css'
@@ -14,7 +15,7 @@ import { InlineEditInput } from '@/shared/ui/InlineEditInput'
 import type { Compartment } from '../domain/compartment'
 import type { LuggageEntry } from '../domain/itemQuantityRepository'
 import { itemsProgress } from '../domain/packing'
-import { AddItemForm } from './AddItemForm'
+import { COMPARTMENT_PARAM } from './AddItemsPage'
 import {
   useCollapsedCompartments,
   useIsCollapsed,
@@ -30,9 +31,6 @@ interface CompartmentSectionProps {
   visibleEntries: LuggageEntry[]
   /** Pinta la lista de filas (la comparte con los artículos sueltos). */
   renderRows: (entries: LuggageEntry[]) => ReactNode
-  /** TODAS las líneas de la maleta: el formulario no sugiere lo que ya está. */
-  luggageEntries: LuggageEntry[]
-  onDuplicate: (itemName: string) => void
   /**
    * Modo selección de la maleta: solo se eligen artículos, así que se ocultan
    * los controles propios del compartimento ("listo", +, ⋯). Plegar sigue.
@@ -42,7 +40,8 @@ interface CompartmentSectionProps {
 
 /**
  * Un compartimento dentro de la maleta:
- *   ▾ Neceser · 2 de 3   [+] [⋯]  ← tocar = plegar; + = añadir; ⋯ = acciones
+ *   ▾ Neceser · 2 de 3   [+] [⋯]  ← tocar = plegar; + = añadir (abre el
+ *                                   catálogo con este destino); ⋯ = acciones
  *     ✎ Renombrar   🗑 Borrar       ← solo tras tocar ⋯
  *     (filas de artículos)
  */
@@ -51,15 +50,11 @@ export function CompartmentSection({
   entries,
   visibleEntries,
   renderRows,
-  luggageEntries,
-  onDuplicate,
   isSelecting = false,
 }: CompartmentSectionProps) {
   const { compartments } = useRepositories()
   const isCollapsed = useIsCollapsed(compartment.id)
   const toggle = useCollapsedCompartments((state) => state.toggle)
-  const expand = useCollapsedCompartments((state) => state.expand)
-  const [isAdding, setIsAdding] = useState(false)
   const [isRenaming, setIsRenaming] = useState(false)
   // Acciones poco frecuentes (renombrar, borrar) ocultas tras "⋯": los
   // compartimentos suelen estar desplegados y no deben llenarse de botones.
@@ -137,27 +132,16 @@ export function CompartmentSection({
         </h2>
         {!isSelecting && (
           <>
-            <button
-              type="button"
-              className={`${buttons.iconGhost} ${styles.headerButton} ${styles.addToggle}`}
-              // El mismo botón abre y cierra: al abrirse, el "+" gira y se ve
-              // como "×" (ver CSS), y el nombre accesible cambia con él para
-              // que VoiceOver también anuncie que ahora cierra.
-              aria-label={
-                isAdding
-                  ? `Dejar de añadir a ${compartment.name}`
-                  : `Añadir a ${compartment.name}`
-              }
-              title={isAdding ? 'Cerrar' : `Añadir a ${compartment.name}`}
-              aria-expanded={isAdding}
-              onClick={() => {
-                // Si estaba plegado, se despliega: no se añade a algo que no se ve.
-                expand(compartment.id)
-                setIsAdding((current) => !current)
-              }}
+            <Link
+              // Misma pantalla que "Añadir artículos", con ESTE compartimento
+              // como destino (decisión de producto: un solo "añadir").
+              to={`/luggages/${compartment.luggageId}/add-items?${COMPARTMENT_PARAM}=${compartment.id}`}
+              className={`${buttons.iconGhost} ${styles.headerButton}`}
+              aria-label={`Añadir a ${compartment.name}`}
+              title={`Añadir a ${compartment.name}`}
             >
               <PlusIcon />
-            </button>
+            </Link>
             <button
               type="button"
               className={`${buttons.iconGhost} ${styles.headerButton}`}
@@ -206,19 +190,6 @@ export function CompartmentSection({
           lector de pantalla). aria-expanded en el botón anuncia el estado. */}
       {!isCollapsed && (
         <div id={contentId} className={styles.content}>
-          {isAdding && !isSelecting && (
-            <div className={styles.addForm}>
-              <AddItemForm
-                luggageId={compartment.luggageId}
-                entries={luggageEntries}
-                onDuplicate={onDuplicate}
-                compartmentId={compartment.id}
-                label={`Añadir a ${compartment.name}`}
-                focusOnMount
-                onClose={() => setIsAdding(false)}
-              />
-            </div>
-          )}
           {entries.length === 0 ? (
             <p className={styles.empty}>Este compartimento está vacío.</p>
           ) : visibleEntries.length > 0 ? (

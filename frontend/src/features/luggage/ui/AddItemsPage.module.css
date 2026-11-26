@@ -1,9 +1,17 @@
-.search {
-  margin-bottom: 0.25rem;
+/* "Buscar o crear" + "+", como en el catálogo. */
+.field {
+  display: flex;
+  gap: 0.5rem;
 }
 
-.note {
-  margin: 0 0 0.75rem;
+.field input {
+  flex: 1;
+  width: auto;
+}
+
+.message {
+  min-height: 1.25rem;
+  margin: 0.25rem 0 0.5rem;
   color: var(--text-muted);
   font-size: 0.875rem;
 }

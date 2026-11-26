@@ -3,7 +3,6 @@ import { useRepositories } from '@/shared/di/repositories'
 import { reportError } from '@/shared/ui/notifications/notificationStore'
 import buttons from '@/shared/ui/buttons.module.css'
 import checkCircle from '@/shared/ui/checkCircle.module.css'
-import highlightStyles from '@/shared/ui/highlight.module.css'
 import { CheckIcon } from '@/shared/ui/icons/CheckIcon'
 import { MinusIcon } from '@/shared/ui/icons/MinusIcon'
 import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
@@ -18,7 +17,6 @@ const MAX_UNITS = 99
 interface PackingListRowProps {
   entry: LuggageEntry
   isExpanded: boolean
-  isHighlighted: boolean
   /** Compartimentos de la maleta, para "Mover a…". */
   compartments: Compartment[]
   onToggleExpanded: () => void
@@ -43,7 +41,6 @@ const units = (n: number) => `${n} ${n === 1 ? 'unidad' : 'unidades'}`
 export function PackingListRow({
   entry,
   isExpanded,
-  isHighlighted,
   compartments,
   onToggleExpanded,
   selection,
@@ -85,13 +82,7 @@ export function PackingListRow({
   }
 
   return (
-    <li
-      className={[
-        styles.row,
-        isDone ? styles.done : '',
-        isHighlighted ? highlightStyles.highlighted : '',
-      ].join(' ')}
-    >
+    <li className={[styles.row, isDone ? styles.done : ''].join(' ')}>
       <div className={styles.main}>
         <button
           type="button"

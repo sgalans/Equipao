@@ -56,3 +56,15 @@
 .selectable .usage {
   margin-left: auto;
 }
+
+/* No se puede elegir (p. ej. ya está en la maleta): atenuada con COLOR,
+   no con opacity. Un opacity < 1 crea un "stacking context" y la fila se
+   pintaba por encima de la cabecera sticky al hacer scroll. */
+.selectable:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.selectable:disabled > span:first-child {
+  border-color: var(--border);
+}

@@ -34,7 +34,15 @@ interface CatalogRowProps {
    * Modo selección (añadir varios a una maleta): la fila entera es una
    * casilla y no se despliegan acciones.
    */
-  selection?: { isSelected: boolean; onToggle: () => void }
+  selection?: {
+    isSelected: boolean
+    onToggle: () => void
+    /**
+     * Si se pasa, la fila NO se puede elegir y muestra este motivo en vez
+     * del uso (p. ej. "Ya en la maleta" al añadir a una maleta).
+     */
+    disabledReason?: string
+  }
 }
 
 /**
@@ -80,15 +88,20 @@ export function CatalogRow({
           type="button"
           role="checkbox"
           aria-checked={selection.isSelected}
-          aria-label={`${item.name}, ${usage}`}
+          aria-label={`${item.name}, ${selection.disabledReason ?? usage}`}
           className={styles.selectable}
+          // disabled (no aria-disabled): no se puede tocar, y VoiceOver lo
+          // anuncia como "atenuado".
+          disabled={selection.disabledReason !== undefined}
           onClick={selection.onToggle}
         >
           <span className={checkCircle.check} aria-hidden="true">
             {selection.isSelected && <CheckIcon />}
           </span>
           <span className={styles.name}>{item.name}</span>
-          <span className={styles.usage}>{usage}</span>
+          <span className={styles.usage}>
+            {selection.disabledReason ?? usage}
+          </span>
         </button>
       </li>
     )

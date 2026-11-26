@@ -31,7 +31,7 @@
 }
 
 /*
- * Contenido del compartimento (filas, campo de añadir, "vacío") con una
+ * Contenido del compartimento (filas o "vacío") con una
  * pequeña sangría: se ve de un vistazo qué va DENTRO y qué va suelto. Se
  * aplica al contenedor y no a las filas, porque las filas sueltas usan el
  * mismo componente y no deben moverse.
@@ -44,14 +44,10 @@
  * El último artículo de un compartimento no lleva su línea inferior: justo
  * debajo está la que cierra el compartimento y se verían dos pegadas.
  * Selector preciso (> ul > li): solo la lista de artículos del
- * compartimento, no la de sugerencias del campo de añadir.
+ * compartimento.
  */
 .content > ul > li:last-child {
   border-bottom: none;
-}
-
-.addForm {
-  padding-left: 0.75rem;
 }
 
 /* Toda la cabecera es el botón de plegar: zona táctil grande. */
@@ -113,24 +109,8 @@
   padding: 0 0 0.5rem 2rem;
 }
 
-/* "+" que se convierte en "×" al abrir el campo de añadir: el mismo
-   botón cierra. Girar el icono (en vez de cambiarlo por otro) deja claro
-   que es el MISMO control en otro estado. */
-.addToggle svg {
-  transition: transform 0.15s ease-out;
-}
-
-.addToggle[aria-expanded='true'] {
-  color: var(--accent);
-}
-
-.addToggle[aria-expanded='true'] svg {
-  transform: rotate(45deg);
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .chevron,
-  .addToggle svg {
+  .chevron {
     transition: none;
   }
 }

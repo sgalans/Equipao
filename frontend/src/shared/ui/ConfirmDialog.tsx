@@ -37,6 +37,7 @@ export function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const cancelRef = useRef<HTMLButtonElement>(null)
   const titleId = useId()
   const [isBusy, setIsBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -44,7 +45,14 @@ export function ConfirmDialog({
   useEffect(() => {
     const dialog = dialogRef.current
     if (!dialog) return
-    if (open && !dialog.open) dialog.showModal()
+    if (open && !dialog.open) {
+      dialog.showModal()
+      // Foco inicial EXPLÍCITO en "Cancelar": showModal() enfoca el primer
+      // elemento enfocable, y si es un <select> (p. ej. "Dónde"), iOS abre
+      // su rueda nada más abrirse el diálogo. (Se hace aquí y no con
+      // autoFocus: la regla jsx-a11y/no-autofocus lo prohíbe en general.)
+      cancelRef.current?.focus()
+    }
     if (!open && dialog.open) dialog.close()
   }, [open])
 
@@ -82,10 +90,15 @@ export function ConfirmDialog({
       )}
 
       <div className={styles.actions}>
-        {/* "Cancelar" va PRIMERO en el DOM: al abrirse, el navegador enfoca
-            el primer elemento enfocable. Así un Enter accidental cancela en
-            lugar de borrar (default seguro en acciones destructivas). */}
-        <button type="button" className={buttons.secondary} onClick={onCancel}>
+        {/* "Cancelar" va PRIMERO y con el foco inicial: un Enter accidental
+            cancela en lugar de borrar (default seguro en acciones
+            destructivas). */}
+        <button
+          type="button"
+          className={buttons.secondary}
+          onClick={onCancel}
+          ref={cancelRef}
+        >
           Cancelar
         </button>
         <button

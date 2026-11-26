@@ -1,17 +1,15 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { isSameItemName } from '@/features/items/domain/itemName'
 import { useRepositories } from '@/shared/di/repositories'
 import buttons from '@/shared/ui/buttons.module.css'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { EditableTitle } from '@/shared/ui/EditableTitle'
 import { PackedVisibilityIcon } from '@/shared/ui/icons/PackedVisibilityIcon'
+import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
 import { useNotifications } from '@/shared/ui/notifications/notificationStore'
 import page from '@/shared/ui/page.module.css'
-import { useTemporaryHighlight } from '@/shared/ui/useTemporaryHighlight'
 import { isFullyPacked, packingProgress } from '../domain/packing'
-import { AddItemForm } from './AddItemForm'
 import { articles } from './addedSummary'
 import { removedSummary } from './bulkSummary'
 import { DeleteLuggageButton } from './DeleteLuggageButton'
@@ -89,9 +87,6 @@ export function LuggageDetailPage() {
     return { entries, compartmentList }
   }, [quantities, compartments, luggageId])
 
-  // Fila resaltada brevemente (al intentar añadir algo que ya estaba).
-  const { highlightedId, highlight } = useTemporaryHighlight()
-
   // OJO: todos los hooks van ANTES de los `return` tempranos. Las reglas de
   // los hooks exigen llamarlos siempre en el mismo orden en cada render.
   if (luggage === undefined || contents === undefined) {
@@ -115,16 +110,6 @@ export function LuggageDetailPage() {
   // oculto. En modo selección, fuera (solo se eligen artículos).
   const showVisibilityToggle = !isSelecting && doneNow.size > 0
   const isHidingPacked = isAllDoneHidden(entries, compartmentList, hidden)
-
-  /** Resalta la fila del artículo que se ha intentado añadir de nuevo. */
-  function highlightExisting(name: string) {
-    // MISMO criterio que el repositorio usa para decidir que es un
-    // duplicado: así se resalta exactamente la fila que lo ha provocado.
-    const existing = entries.find((entry) =>
-      isSameItemName(entry.itemName, name),
-    )
-    highlight(existing?.id ?? null)
-  }
 
   return (
     <section>
@@ -159,12 +144,15 @@ export function LuggageDetailPage() {
       />
       {/* En modo selección solo se eligen artículos: fuera lo demás. */}
       {!isSelecting && (
-        <AddItemForm
-          luggageId={luggage.id}
-          entries={entries}
-          onDuplicate={highlightExisting}
-          catalogLink={`/luggages/${luggage.id}/add-items`}
-        />
+        // ÚNICA forma de añadir (decisión de producto): la pantalla del
+        // catálogo, donde se busca, se elige y se crea lo que falte.
+        <Link
+          to={`/luggages/${luggage.id}/add-items`}
+          className={`${buttons.secondary} ${styles.addLink}`}
+        >
+          <PlusIcon />
+          Añadir artículos
+        </Link>
       )}
       {/* Acciones sobre la lista, justo encima de ella: ocultar listos y
           "Seleccionar". */}
@@ -206,8 +194,6 @@ export function LuggageDetailPage() {
         entries={entries}
         compartments={compartmentList}
         hidden={hidden}
-        highlightedId={highlightedId}
-        onDuplicate={highlightExisting}
         selection={
           isSelecting ? { selected, onToggle: toggleSelected } : undefined
         }
