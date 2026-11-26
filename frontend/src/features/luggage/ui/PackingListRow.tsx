@@ -4,6 +4,7 @@ import { reportError } from '@/shared/ui/notifications/notificationStore'
 import buttons from '@/shared/ui/buttons.module.css'
 import checkCircle from '@/shared/ui/checkCircle.module.css'
 import { CheckIcon } from '@/shared/ui/icons/CheckIcon'
+import { GripIcon } from '@/shared/ui/icons/GripIcon'
 import { MinusIcon } from '@/shared/ui/icons/MinusIcon'
 import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
 import { TrashIcon } from '@/shared/ui/icons/TrashIcon'
@@ -11,6 +12,7 @@ import type { Compartment } from '../domain/compartment'
 import type { LuggageEntry } from '../domain/itemQuantityRepository'
 import { isFullyPacked } from '../domain/packing'
 import styles from './PackingListRow.module.css'
+import type { DragHandle } from './SortableRows'
 
 const MAX_UNITS = 99
 
@@ -25,6 +27,14 @@ interface PackingListRowProps {
    * no empaqueta ni se despliega.
    */
   selection?: { isSelected: boolean; onToggle: () => void }
+  /**
+   * "Subir"/"Bajar" (alternativa a arrastrar, WCAG 2.2 SC 2.5.7): null =
+   * ya está arriba/abajo del todo de su grupo (botón desactivado).
+   */
+  onMoveUp?: (() => void) | null
+  onMoveDown?: (() => void) | null
+  /** Asa para ordenar arrastrando (ver SortableRows); sin ella, no se arrastra. */
+  drag?: DragHandle
 }
 
 /** Valor del <select> para "suelto": los <option> solo admiten strings. */
@@ -34,8 +44,9 @@ const units = (n: number) => `${n} ${n === 1 ? 'unidad' : 'unidades'}`
 
 /**
  * Una línea de la maleta:
- *   [círculo]  Nombre ×N        ← tocar el círculo = guardar/sacar
+ *   [círculo]  Nombre ×N    ≡   ← círculo = guardar/sacar; ≡ = arrastrar
  *              − N +   🗑       ← tocar el nombre despliega esto
+ *              ↑ Subir  ↓ Bajar
  *              Mover a [Neceser ▾]   (si hay compartimentos)
  */
 export function PackingListRow({
@@ -44,6 +55,9 @@ export function PackingListRow({
   compartments,
   onToggleExpanded,
   selection,
+  onMoveUp = null,
+  onMoveDown = null,
+  drag,
 }: PackingListRowProps) {
   const { quantities } = useRepositories()
   const panelId = useId()
@@ -82,7 +96,15 @@ export function PackingListRow({
   }
 
   return (
-    <li className={[styles.row, isDone ? styles.done : ''].join(' ')}>
+    <li
+      ref={drag?.setRowRef}
+      style={drag?.rowStyle}
+      className={[
+        styles.row,
+        isDone ? styles.done : '',
+        drag?.isDragging ? styles.dragging : '',
+      ].join(' ')}
+    >
       <div className={styles.main}>
         <button
           type="button"
@@ -110,6 +132,16 @@ export function PackingListRow({
           <span className={styles.name}>{entry.itemName}</span>
           <span className={styles.quantity}>×{entry.num}</span>
         </button>
+        {drag && (
+          <button
+            type="button"
+            {...drag.handleProps}
+            className={`${buttons.iconGhost} ${styles.handle}`}
+            aria-label={`Ordenar ${entry.itemName}`}
+          >
+            <GripIcon />
+          </button>
+        )}
       </div>
 
       {isExpanded && (
@@ -150,6 +182,27 @@ export function PackingListRow({
               onClick={() => run(quantities.remove(entry.id))}
             >
               <TrashIcon />
+            </button>
+          </div>
+
+          <div className={styles.reorder}>
+            <button
+              type="button"
+              className={buttons.textAction}
+              aria-label={`Subir ${entry.itemName}`}
+              disabled={onMoveUp === null}
+              onClick={() => onMoveUp?.()}
+            >
+              <span aria-hidden="true">↑</span> Subir
+            </button>
+            <button
+              type="button"
+              className={buttons.textAction}
+              aria-label={`Bajar ${entry.itemName}`}
+              disabled={onMoveDown === null}
+              onClick={() => onMoveDown?.()}
+            >
+              <span aria-hidden="true">↓</span> Bajar
             </button>
           </div>
 

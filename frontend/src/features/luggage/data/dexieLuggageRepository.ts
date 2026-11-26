@@ -109,8 +109,8 @@ export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
             }
           })
 
-          // Se copian en el mismo orden: los UUID v7 nuevos se generan en
-          // orden creciente, así que la copia conserva el orden de añadido.
+          // Cada línea se copia ENTERA, `position` incluida: la copia
+          // conserva el orden manual de la original.
           const quantities = (
             await db.itemQuantities
               .where('luggageId')

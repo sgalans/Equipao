@@ -1,4 +1,5 @@
 import { Dexie, type EntityTable } from 'dexie'
+import { positionsAfter } from '@/features/luggage/domain/position'
 import type { Item } from '@/features/items/domain/item'
 import type { Compartment } from '@/features/luggage/domain/compartment'
 import type { ItemQuantity } from '@/features/luggage/domain/itemQuantity'
@@ -63,6 +64,14 @@ export const SCHEMA_V2 = {
 export const SCHEMA_V3 = {}
 
 /**
+ * v4 (orden manual, arrastrando): `ItemQuantity.position` (fractional
+ * indexing, ver domain/position.ts). Sin índice nuevo: se ordena en memoria
+ * con sortBy dentro de cada maleta (listas cortas). Hay que dar posición a
+ * las líneas existentes (ver upgrade() en AppDb).
+ */
+export const SCHEMA_V4 = {}
+
+/**
  * Base de datos local (IndexedDB) de la app.
  *
  * Solo la capa `data` (repositorios) debe usar esta clase; la UI nunca habla
@@ -115,6 +124,39 @@ export class AppDb extends Dexie {
           .toCollection()
           .modify((compartment: { isReady?: boolean }) => {
             compartment.isReady = false
+          })
+      })
+
+    this.version(4)
+      .stores(SCHEMA_V4)
+      .upgrade(async (tx) => {
+        // Cada maleta conserva el orden que tenía (el de añadido, createdAt):
+        // se reparten claves crecientes en ese orden, maleta a maleta.
+        const rows: { id: string; luggageId: string; createdAt: string }[] =
+          await tx.table('itemQuantities').toArray()
+        const byLuggage = new Map<string, typeof rows>()
+        for (const row of rows) {
+          byLuggage.set(row.luggageId, [
+            ...(byLuggage.get(row.luggageId) ?? []),
+            row,
+          ])
+        }
+        const positionById = new Map<string, string>()
+        for (const group of byLuggage.values()) {
+          // Empate (mismo milisegundo): por id, que es UUID v7 (ordenado
+          // por creación).
+          group.sort(
+            (a, b) =>
+              a.createdAt.localeCompare(b.createdAt) || (a.id < b.id ? -1 : 1),
+          )
+          const keys = positionsAfter(null, group.length)
+          group.forEach((row, index) => positionById.set(row.id, keys[index]))
+        }
+        await tx
+          .table('itemQuantities')
+          .toCollection()
+          .modify((row: { id: string; position?: string }) => {
+            row.position = positionById.get(row.id)
           })
       })
   }

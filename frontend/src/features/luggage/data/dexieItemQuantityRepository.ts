@@ -12,6 +12,12 @@ import {
 } from '../domain/itemQuantity'
 import type { ItemQuantityRepository } from '../domain/itemQuantityRepository'
 import { packedCountAfterResize, toggledPackedCount } from '../domain/packing'
+import {
+  lastPosition,
+  positionAfter,
+  positionBetween,
+  positionsAfter,
+} from '../domain/position'
 import { loadQuantitiesOfOneLuggage } from './loadQuantities'
 
 type CountChanges = { num?: number; nAlreadyPacked?: number }
@@ -70,11 +76,13 @@ export function createDexieItemQuantityRepository(
 
   // Función local (no `this.listByLuggage`): `this` dentro de un objeto
   // literal se pierde si alguien desestructura el método, y fallaría.
+  // Orden = el del usuario (`position`, fractional indexing). sortBy compara
+  // las claves como IndexedDB, por unidades de código: el orden correcto.
   function listByLuggage(luggageId: string) {
     return db.itemQuantities
       .where('luggageId')
       .equals(luggageId)
-      .sortBy('createdAt')
+      .sortBy('position')
   }
 
   return {
@@ -111,7 +119,11 @@ export function createDexieItemQuantityRepository(
               throw new EntityNotFoundError('Item', data.itemId)
             }
             await assertCompartmentBelongsTo(data.compartmentId, data.luggageId)
-            const quantity = { ...newEntityBase(), ...data }
+            // Al final de la maleta (detrás de la última clave).
+            const position = positionAfter(
+              lastPosition(await listByLuggage(data.luggageId)),
+            )
+            const quantity = { ...newEntityBase(), ...data, position }
             await db.itemQuantities.add(quantity)
             return quantity
           },
@@ -149,11 +161,12 @@ export function createDexieItemQuantityRepository(
 
           // Lo que ya está en la maleta se salta (decisión de producto: ni
           // se vuelve a añadir ni se suma cantidad).
-          const alreadyIn = new Set(
-            (await listByLuggage(luggageId)).map((q) => q.itemId),
-          )
+          const current = await listByLuggage(luggageId)
+          const alreadyIn = new Set(current.map((q) => q.itemId))
           const toAdd = uniqueItemIds.filter((itemId) => !alreadyIn.has(itemId))
-          const added = toAdd.map((itemId) =>
+          // Todas al final, en el orden en que llegan.
+          const positions = positionsAfter(lastPosition(current), toAdd.length)
+          const added = toAdd.map((itemId, index) =>
             ItemQuantitySchema.parse({
               ...newEntityBase(),
               luggageId,
@@ -161,6 +174,7 @@ export function createDexieItemQuantityRepository(
               compartmentId,
               num: 1,
               nAlreadyPacked: 0,
+              position: positions[index],
             }),
           )
           await db.itemQuantities.bulkAdd(added)
@@ -185,6 +199,38 @@ export function createDexieItemQuantityRepository(
         num,
         nAlreadyPacked: packedCountAfterResize(current, num),
       }))
+    },
+
+    reorder(id, beforeId, afterId) {
+      return db.transaction('rw', db.itemQuantities, async () => {
+        const [current, before, after] = await db.itemQuantities.bulkGet([
+          id,
+          beforeId ?? '',
+          afterId ?? '',
+        ])
+        if (!current) throw new EntityNotFoundError('ItemQuantity', id)
+        if (beforeId !== null && !before) {
+          throw new EntityNotFoundError('ItemQuantity', beforeId)
+        }
+        if (afterId !== null && !after) {
+          throw new EntityNotFoundError('ItemQuantity', afterId)
+        }
+        const neighbours = [before, after].filter((row) => row !== undefined)
+        if (neighbours.some((row) => row.luggageId !== current.luggageId)) {
+          throw new ConsistencyError('Los artículos son de maletas distintas')
+        }
+        // Clave intermedia: solo cambia ESTA fila (ver domain/position.ts).
+        const updated = {
+          ...current,
+          position: positionBetween(
+            before?.position ?? null,
+            after?.position ?? null,
+          ),
+          updatedAt: nowIso(),
+        }
+        await db.itemQuantities.put(updated)
+        return updated
+      })
     },
 
     moveTo(id, compartmentId) {

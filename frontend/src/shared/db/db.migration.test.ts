@@ -2,7 +2,7 @@ import { Dexie } from 'dexie'
 import { v7 as uuidv7 } from 'uuid'
 import { describe, expect, it, onTestFinished } from 'vitest'
 import { TEST_TIMESTAMP } from '@/test/db'
-import { AppDb, SCHEMA_V1, SCHEMA_V2 } from './db'
+import { AppDb, SCHEMA_V1, SCHEMA_V2, SCHEMA_V3 } from './db'
 
 /**
  * Test de migración: reproduce lo que pasará en el navegador de alguien que
@@ -12,7 +12,7 @@ import { AppDb, SCHEMA_V1, SCHEMA_V2 } from './db'
  *   3. Abrirla con AppDb actual → Dexie ejecuta upgrade() de la v2.
  *   4. Comprobar que los datos siguen ahí y con la forma nueva.
  */
-describe('Migración v1 → actual (cadena completa v1 → v2 → v3)', () => {
+describe('Migración v1 → actual (cadena completa v1 → v2 → v3 → v4)', () => {
   it('conserva los datos y deja los artículos existentes como sueltos', async () => {
     const name = `test-migration-${uuidv7()}`
     const base = { createdAt: TEST_TIMESTAMP, updatedAt: TEST_TIMESTAMP }
@@ -36,12 +36,12 @@ describe('Migración v1 → actual (cadena completa v1 → v2 → v3)', () => {
     })
     v1.close()
 
-    // 3. La app nueva abre la misma base de datos → migra v1 → v2 → v3.
+    // 3. La app nueva abre la misma base de datos → migra v1 → … → v4.
     const db = new AppDb(name)
     onTestFinished(() => db.delete())
 
     // 4. Datos intactos y con la forma nueva.
-    expect(db.verno).toBe(3)
+    expect(db.verno).toBe(4)
     expect(await db.luggages.get(luggageId)).toMatchObject({
       name: 'Grande',
       description: '', // ← v3
@@ -50,9 +50,10 @@ describe('Migración v1 → actual (cadena completa v1 → v2 → v3)', () => {
       id: quantityId,
       luggageId,
       itemId,
-      compartmentId: null, // ← lo ha puesto upgrade()
+      compartmentId: null, // ← lo ha puesto upgrade() de la v2
       num: 5,
       nAlreadyPacked: 2,
+      position: expect.any(String), // ← v4
       ...base,
     })
     // La tabla nueva existe y está vacía.
@@ -76,6 +77,7 @@ describe('Migración v1 → actual (cadena completa v1 → v2 → v3)', () => {
       compartmentId,
       num: 1,
       nAlreadyPacked: 0,
+      position: 'a0',
       createdAt: TEST_TIMESTAMP,
       updatedAt: TEST_TIMESTAMP,
     })
@@ -109,7 +111,7 @@ describe('Migración v2 → v3 (descripción y compartimentos "listos")', () => 
     const db = new AppDb(name)
     onTestFinished(() => db.delete())
 
-    expect(db.verno).toBe(3)
+    expect(db.verno).toBe(4)
     expect(await db.luggages.get(luggageId)).toEqual({
       id: luggageId,
       name: 'Grande',
@@ -123,5 +125,56 @@ describe('Migración v2 → v3 (descripción y compartimentos "listos")', () => 
       isReady: false,
       ...base,
     })
+  })
+})
+
+describe('Migración v3 → v4 (orden manual: position)', () => {
+  it('da a cada línea una posición que conserva el orden de añadido de SU maleta', async () => {
+    const name = `test-migration-${uuidv7()}`
+    const at = (second: number) =>
+      `2026-01-01T00:00:${String(second).padStart(2, '0')}.000Z`
+    const [big, small, itemA, itemB, itemC] = [1, 2, 3, 4, 5].map(() =>
+      uuidv7(),
+    )
+    const line = (luggageId: string, itemId: string, second: number) => ({
+      id: uuidv7(),
+      luggageId,
+      itemId,
+      compartmentId: null,
+      num: 1,
+      nAlreadyPacked: 0,
+      createdAt: at(second),
+      updatedAt: at(second),
+    })
+    // Guardadas DESORDENADAS a propósito: el orden debe salir de createdAt.
+    const rows = [
+      line(big, itemB, 20),
+      line(small, itemA, 5),
+      line(big, itemA, 10),
+      line(big, itemC, 30),
+    ]
+
+    const v3 = new Dexie(name)
+    v3.version(1).stores(SCHEMA_V1)
+    v3.version(2).stores(SCHEMA_V2)
+    v3.version(3).stores(SCHEMA_V3)
+    await v3.table('itemQuantities').bulkAdd(rows)
+    v3.close()
+
+    const db = new AppDb(name)
+    onTestFinished(() => db.delete())
+
+    expect(db.verno).toBe(4)
+    const bigInOrder = await db.itemQuantities
+      .where('luggageId')
+      .equals(big)
+      .sortBy('position')
+    expect(bigInOrder.map((row) => row.itemId)).toEqual([itemA, itemB, itemC])
+    const all = await db.itemQuantities.toArray()
+    expect(all.every((row) => typeof row.position === 'string')).toBe(true)
+    expect(
+      (await db.itemQuantities.where('luggageId').equals(small).toArray())[0]
+        .position,
+    ).toEqual(expect.any(String))
   })
 })

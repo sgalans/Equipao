@@ -41,6 +41,17 @@ export interface ItemQuantityRepository {
     itemIds: string[],
     compartmentId?: string | null,
   ): Promise<AddManyResult>
+  /**
+   * Orden manual: coloca la línea `id` ENTRE `beforeId` y `afterId` (null =
+   * sin vecino por ese lado: el principio o el final). Cambia solo esa fila
+   * (fractional indexing, ver domain/position.ts). EntityNotFoundError si
+   * alguna no existe; ConsistencyError si son de maletas distintas.
+   */
+  reorder(
+    id: string,
+    beforeId: string | null,
+    afterId: string | null,
+  ): Promise<ItemQuantity>
   /** Empaquetado "todo o nada" (ver domain/packing.ts). */
   togglePacked(id: string): Promise<ItemQuantity>
   /** Cambia la cantidad total ajustando lo ya guardado (ver packing.ts). */

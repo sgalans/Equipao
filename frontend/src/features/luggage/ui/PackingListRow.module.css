@@ -58,6 +58,19 @@
   justify-content: space-between;
 }
 
+/* "↑ Subir  ↓ Bajar": alternativa a arrastrar con el asa. */
+.reorder {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Desactivado con COLOR, no con opacity (crearía un stacking context que
+   se pinta encima de la cabecera sticky al hacer scroll). */
+.reorder button:disabled {
+  color: var(--border);
+  cursor: default;
+}
+
 .move {
   display: flex;
   align-items: center;
@@ -99,4 +112,25 @@
 
 .selectable .quantity {
   margin-left: auto;
+}
+
+/*
+ * Asa ≡ para arrastrar. touch-action: none → en iOS, un gesto que empieza
+ * en el asa es un ARRASTRE, no un scroll de la página (el resto de la fila
+ * sigue haciendo scroll con normalidad).
+ */
+.handle {
+  flex: none;
+  touch-action: none;
+  cursor: grab;
+}
+
+/* La fila que se arrastra: por encima de las demás y con fondo propio. */
+.dragging {
+  background: var(--bg);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
+}
+
+.dragging .handle {
+  cursor: grabbing;
 }

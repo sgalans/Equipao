@@ -33,7 +33,13 @@ const packedWithinTotalError = {
 }
 
 export const ItemQuantitySchema = z
-  .object({ ...entityBaseShape, ...itemQuantityFields })
+  .object({
+    ...entityBaseShape,
+    ...itemQuantityFields,
+    // Orden manual dentro de la maleta (fractional indexing, ver
+    // domain/position.ts). Lo asigna el repositorio: no va en NewItemQuantity.
+    position: z.string().min(1),
+  })
   .refine(packedWithinTotal, packedWithinTotalError)
 
 export const NewItemQuantitySchema = z

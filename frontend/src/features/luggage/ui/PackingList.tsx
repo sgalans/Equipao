@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useRepositories } from '@/shared/di/repositories'
+import { reportError } from '@/shared/ui/notifications/notificationStore'
 import type { Compartment } from '../domain/compartment'
 import type { LuggageEntry } from '../domain/itemQuantityRepository'
 import { CompartmentSection } from './CompartmentSection'
@@ -10,6 +12,7 @@ import {
 } from './packingOrderStore'
 import styles from './PackingList.module.css'
 import { PackingListRow } from './PackingListRow'
+import { SortableRows, type DragHandle } from './SortableRows'
 
 interface PackingListProps {
   luggageId: string
@@ -47,29 +50,73 @@ export function PackingList({
     (entry) => entry.compartmentId === null && isShown(entry),
   )
 
-  function renderRows(rows: LuggageEntry[]) {
+  const { quantities } = useRepositories()
+
+  /**
+   * "Subir"/"Bajar" respecto a los vecinos VISIBLES del grupo (lo oculto
+   * con el ojo no cuenta: si no, un toque podría no mover nada a la vista).
+   * Subir = ponerlo entre el de dos más arriba y el de justo encima.
+   */
+  function reorderHandlers(rows: LuggageEntry[], index: number) {
+    const move =
+      (before: LuggageEntry | undefined, after: LuggageEntry | undefined) =>
+      () =>
+        void quantities
+          .reorder(rows[index].id, before?.id ?? null, after?.id ?? null)
+          .catch(reportError)
+    return {
+      onMoveUp: index > 0 ? move(rows[index - 2], rows[index - 1]) : null,
+      onMoveDown:
+        index < rows.length - 1 ? move(rows[index + 1], rows[index + 2]) : null,
+    }
+  }
+
+  /** Una fila; `drag` = asa para arrastrar (sin ella, en modo selección). */
+  function renderRow(
+    rows: LuggageEntry[],
+    entry: LuggageEntry,
+    drag?: DragHandle,
+  ) {
     return (
-      <ul className={styles.list}>
-        {rows.map((entry) => (
-          <PackingListRow
-            key={entry.id}
-            entry={entry}
-            isExpanded={expandedId === entry.id}
-            compartments={compartments}
-            selection={
-              selection && {
-                isSelected: selection.selected.has(entry.id),
-                onToggle: () => selection.onToggle(entry.id),
-              }
-            }
-            onToggleExpanded={() =>
-              setExpandedId((current) =>
-                current === entry.id ? null : entry.id,
-              )
-            }
-          />
-        ))}
-      </ul>
+      <PackingListRow
+        {...reorderHandlers(rows, rows.indexOf(entry))}
+        key={entry.id}
+        entry={entry}
+        drag={drag}
+        isExpanded={expandedId === entry.id}
+        compartments={compartments}
+        selection={
+          selection && {
+            isSelected: selection.selected.has(entry.id),
+            onToggle: () => selection.onToggle(entry.id),
+          }
+        }
+        onToggleExpanded={() =>
+          setExpandedId((current) => (current === entry.id ? null : entry.id))
+        }
+      />
+    )
+  }
+
+  function renderRows(rows: LuggageEntry[]) {
+    // En modo selección las filas son casillas: no se arrastran.
+    if (selection) {
+      return (
+        <ul className={styles.list}>
+          {rows.map((entry) => renderRow(rows, entry))}
+        </ul>
+      )
+    }
+    return (
+      <SortableRows
+        rows={rows}
+        renderRow={(entry, drag) => renderRow(rows, entry, drag)}
+        onMove={(id, before, after) =>
+          void quantities
+            .reorder(id, before?.id ?? null, after?.id ?? null)
+            .catch(reportError)
+        }
+      />
     )
   }
 
