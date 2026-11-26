@@ -95,3 +95,117 @@ describe('Orden manual (position)', () => {
     )
   })
 })
+
+describe('Orden manual de compartimentos', () => {
+  /** Maleta con los compartimentos Neceser, Mochila y Bolsa (en ese orden). */
+  async function withCompartments() {
+    const repos = createTestRepositories()
+    const luggage = await repos.luggages.create({ name: 'Grande' })
+    const [kit, bag, sack] = [
+      await repos.compartments.create({
+        luggageId: luggage.id,
+        name: 'Neceser',
+      }),
+      await repos.compartments.create({
+        luggageId: luggage.id,
+        name: 'Mochila',
+      }),
+      await repos.compartments.create({ luggageId: luggage.id, name: 'Bolsa' }),
+    ]
+    const order = async () =>
+      (await repos.compartments.listByLuggage(luggage.id)).map((c) => c.name)
+    return { ...repos, luggage, kit, bag, sack, order }
+  }
+
+  it('los nuevos van al final y reorder los coloca entre dos', async () => {
+    const { compartments, kit, sack, order } = await withCompartments()
+    expect(await order()).toEqual(['Neceser', 'Mochila', 'Bolsa'])
+
+    await compartments.reorder(sack.id, null, kit.id)
+
+    expect(await order()).toEqual(['Bolsa', 'Neceser', 'Mochila'])
+  })
+
+  it('al duplicar, la copia conserva el orden de los compartimentos', async () => {
+    const { compartments, luggages, luggage, kit, sack } =
+      await withCompartments()
+    await compartments.reorder(sack.id, null, kit.id)
+
+    const copy = await luggages.duplicate(luggage.id)
+
+    expect(
+      (await compartments.listByLuggage(copy.id)).map((c) => c.name),
+    ).toEqual(['Bolsa', 'Neceser', 'Mochila'])
+  })
+
+  it('rechaza compartimentos inexistentes', async () => {
+    const { compartments, kit } = await withCompartments()
+
+    await expect(
+      compartments.reorder(kit.id, MISSING_ID, null),
+    ).rejects.toThrow(EntityNotFoundError)
+  })
+})
+
+describe('place (arrastrar entre grupos)', () => {
+  it('mete la línea en un compartimento, entre dos, en una sola escritura', async () => {
+    const repos = createTestRepositories()
+    const luggage = await repos.luggages.create({ name: 'Grande' })
+    const kit = await repos.compartments.create({
+      luggageId: luggage.id,
+      name: 'Neceser',
+    })
+    const line = async (name: string, compartmentId: string | null) => {
+      const item = await repos.items.create({ name })
+      return repos.quantities.add({
+        luggageId: luggage.id,
+        itemId: item.id,
+        compartmentId,
+        num: 1,
+        nAlreadyPacked: 0,
+      })
+    }
+    const loose = await line('Suelto', null)
+    const brush = await line('Cepillo', kit.id)
+    const paste = await line('Pasta', kit.id)
+
+    const placed = await repos.quantities.place(
+      loose.id,
+      kit.id,
+      brush.id,
+      paste.id,
+    )
+
+    expect(placed.compartmentId).toBe(kit.id)
+    const inKit = (await repos.quantities.listEntriesByLuggage(luggage.id))
+      .filter((e) => e.compartmentId === kit.id)
+      .map((e) => e.itemName)
+    expect(inKit).toEqual(['Cepillo', 'Suelto', 'Pasta'])
+
+    // Y de vuelta a suelto (sin vecinos: solo).
+    expect(
+      (await repos.quantities.place(loose.id, null, null, null)).compartmentId,
+    ).toBeNull()
+  })
+
+  it('rechaza un compartimento de otra maleta', async () => {
+    const repos = createTestRepositories()
+    const luggage = await repos.luggages.create({ name: 'Grande' })
+    const other = await repos.luggages.create({ name: 'Otra' })
+    const foreign = await repos.compartments.create({
+      luggageId: other.id,
+      name: 'Ajeno',
+    })
+    const item = await repos.items.create({ name: 'A' })
+    const a = await repos.quantities.add({
+      luggageId: luggage.id,
+      itemId: item.id,
+      num: 1,
+      nAlreadyPacked: 0,
+    })
+
+    await expect(
+      repos.quantities.place(a.id, foreign.id, null, null),
+    ).rejects.toThrow(ConsistencyError)
+  })
+})

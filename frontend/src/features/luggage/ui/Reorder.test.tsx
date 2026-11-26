@@ -138,3 +138,50 @@ describe('Asa para arrastrar', () => {
     ).not.toBeInTheDocument()
   })
 })
+
+describe('Ordenar compartimentos', () => {
+  /** Nombres de los compartimentos, en el orden de la pantalla. */
+  const compartmentOrder = () =>
+    screen
+      .getAllByRole('checkbox', { name: / listo$/ })
+      .map((c) => c.getAttribute('aria-label')?.replace(/ listo$/, ''))
+
+  it('"Subir"/"Bajar" en ⋯ mueven el compartimento; en los bordes, desactivados', async () => {
+    const { user } = await openLuggage(async (repos, luggageId) => {
+      for (const name of ['Neceser', 'Mochila', 'Bolsa']) {
+        await repos.compartments.create({ luggageId, name })
+      }
+    })
+    await user.click(
+      screen.getByRole('button', { name: 'Más acciones de Bolsa' }),
+    )
+    expect(screen.getByRole('button', { name: 'Bajar Bolsa' })).toBeDisabled()
+
+    await user.click(screen.getByRole('button', { name: 'Subir Bolsa' }))
+    await waitFor(() =>
+      expect(compartmentOrder()).toEqual(['Neceser', 'Bolsa', 'Mochila']),
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Subir Bolsa' }))
+    await waitFor(() =>
+      expect(compartmentOrder()).toEqual(['Bolsa', 'Neceser', 'Mochila']),
+    )
+    expect(screen.getByRole('button', { name: 'Subir Bolsa' })).toBeDisabled()
+  })
+
+  it('cada compartimento tiene su asa ≡; en modo selección no', async () => {
+    const { user } = await openLuggage(async (repos, luggageId) => {
+      await repos.compartments.create({ luggageId, name: 'Neceser' })
+      await addItem(repos, luggageId, 'A')
+    })
+
+    expect(
+      screen.getByRole('button', { name: 'Ordenar Neceser' }),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Seleccionar' }))
+    expect(
+      screen.queryByRole('button', { name: 'Ordenar Neceser' }),
+    ).not.toBeInTheDocument()
+  })
+})

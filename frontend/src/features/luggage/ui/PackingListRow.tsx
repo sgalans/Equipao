@@ -12,7 +12,7 @@ import type { Compartment } from '../domain/compartment'
 import type { LuggageEntry } from '../domain/itemQuantityRepository'
 import { isFullyPacked } from '../domain/packing'
 import styles from './PackingListRow.module.css'
-import type { DragHandle } from './SortableRows'
+import type { DragHandle } from './packingDndLogic'
 
 const MAX_UNITS = 99
 

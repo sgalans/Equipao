@@ -8,29 +8,38 @@ import {
   type NewCompartment,
 } from '../domain/compartment'
 import type { CompartmentRepository } from '../domain/compartmentRepository'
+import { lastPosition, positionAfter } from '../domain/position'
 import { loadQuantitiesOfOneLuggage } from './loadQuantities'
+import { reorderRow } from './reorderRow'
 
 export function createDexieCompartmentRepository(
   db: AppDb,
 ): CompartmentRepository {
+  /** En su orden manual (`position`): sortBy compara como IndexedDB. */
+  function listByLuggage(luggageId: string) {
+    return db.compartments
+      .where('luggageId')
+      .equals(luggageId)
+      .sortBy('position')
+  }
+
   /** FOREIGN KEY + insert. Llamar dentro de una transacción con luggages. */
   async function insert(input: NewCompartment): Promise<Compartment> {
     const data = NewCompartmentSchema.parse(input)
     if (!(await db.luggages.get(data.luggageId))) {
       throw new EntityNotFoundError('Luggage', data.luggageId)
     }
-    const compartment = { ...newEntityBase(), ...data }
+    // Al final de la maleta (detrás de la última clave).
+    const position = positionAfter(
+      lastPosition(await listByLuggage(data.luggageId)),
+    )
+    const compartment = { ...newEntityBase(), ...data, position }
     await db.compartments.add(compartment)
     return compartment
   }
 
   return {
-    listByLuggage(luggageId) {
-      return db.compartments
-        .where('luggageId')
-        .equals(luggageId)
-        .sortBy('createdAt')
-    },
+    listByLuggage,
 
     create(input) {
       // FOREIGN KEY: comprobación + insert en la misma transacción.
@@ -62,6 +71,12 @@ export function createDexieCompartmentRepository(
           )
           return compartment
         },
+      )
+    },
+
+    reorder(id, beforeId, afterId) {
+      return db.transaction('rw', db.compartments, () =>
+        reorderRow(db.compartments, 'Compartment', id, beforeId, afterId),
       )
     },
 

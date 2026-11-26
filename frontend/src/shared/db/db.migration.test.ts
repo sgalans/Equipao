@@ -2,7 +2,7 @@ import { Dexie } from 'dexie'
 import { v7 as uuidv7 } from 'uuid'
 import { describe, expect, it, onTestFinished } from 'vitest'
 import { TEST_TIMESTAMP } from '@/test/db'
-import { AppDb, SCHEMA_V1, SCHEMA_V2, SCHEMA_V3 } from './db'
+import { AppDb, SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4 } from './db'
 
 /**
  * Test de migración: reproduce lo que pasará en el navegador de alguien que
@@ -12,7 +12,7 @@ import { AppDb, SCHEMA_V1, SCHEMA_V2, SCHEMA_V3 } from './db'
  *   3. Abrirla con AppDb actual → Dexie ejecuta upgrade() de la v2.
  *   4. Comprobar que los datos siguen ahí y con la forma nueva.
  */
-describe('Migración v1 → actual (cadena completa v1 → v2 → v3 → v4)', () => {
+describe('Migración v1 → actual (cadena completa v1 → v2 → v3 → v4 → v5)', () => {
   it('conserva los datos y deja los artículos existentes como sueltos', async () => {
     const name = `test-migration-${uuidv7()}`
     const base = { createdAt: TEST_TIMESTAMP, updatedAt: TEST_TIMESTAMP }
@@ -41,7 +41,7 @@ describe('Migración v1 → actual (cadena completa v1 → v2 → v3 → v4)', (
     onTestFinished(() => db.delete())
 
     // 4. Datos intactos y con la forma nueva.
-    expect(db.verno).toBe(4)
+    expect(db.verno).toBe(5)
     expect(await db.luggages.get(luggageId)).toMatchObject({
       name: 'Grande',
       description: '', // ← v3
@@ -111,7 +111,7 @@ describe('Migración v2 → v3 (descripción y compartimentos "listos")', () => 
     const db = new AppDb(name)
     onTestFinished(() => db.delete())
 
-    expect(db.verno).toBe(4)
+    expect(db.verno).toBe(5)
     expect(await db.luggages.get(luggageId)).toEqual({
       id: luggageId,
       name: 'Grande',
@@ -123,6 +123,7 @@ describe('Migración v2 → v3 (descripción y compartimentos "listos")', () => 
       luggageId,
       name: 'Neceser',
       isReady: false,
+      position: expect.any(String), // ← v5
       ...base,
     })
   })
@@ -164,7 +165,7 @@ describe('Migración v3 → v4 (orden manual: position)', () => {
     const db = new AppDb(name)
     onTestFinished(() => db.delete())
 
-    expect(db.verno).toBe(4)
+    expect(db.verno).toBe(5)
     const bigInOrder = await db.itemQuantities
       .where('luggageId')
       .equals(big)
@@ -176,5 +177,47 @@ describe('Migración v3 → v4 (orden manual: position)', () => {
       (await db.itemQuantities.where('luggageId').equals(small).toArray())[0]
         .position,
     ).toEqual(expect.any(String))
+  })
+})
+
+describe('Migración v4 → v5 (orden manual de compartimentos)', () => {
+  it('da a cada compartimento una posición en el orden de añadido de SU maleta', async () => {
+    const name = `test-migration-${uuidv7()}`
+    const at = (second: number) =>
+      `2026-01-01T00:00:${String(second).padStart(2, '0')}.000Z`
+    const luggageId = uuidv7()
+    const compartment = (label: string, second: number) => ({
+      id: uuidv7(),
+      luggageId,
+      name: label,
+      isReady: false,
+      createdAt: at(second),
+      updatedAt: at(second),
+    })
+
+    const v4 = new Dexie(name)
+    v4.version(1).stores(SCHEMA_V1)
+    v4.version(2).stores(SCHEMA_V2)
+    v4.version(3).stores(SCHEMA_V3)
+    v4.version(4).stores(SCHEMA_V4)
+    // Desordenados a propósito: el orden debe salir de createdAt.
+    await v4
+      .table('compartments')
+      .bulkAdd([
+        compartment('Mochila', 20),
+        compartment('Neceser', 10),
+        compartment('Bolsa', 30),
+      ])
+    v4.close()
+
+    const db = new AppDb(name)
+    onTestFinished(() => db.delete())
+
+    expect(db.verno).toBe(5)
+    const inOrder = await db.compartments
+      .where('luggageId')
+      .equals(luggageId)
+      .sortBy('position')
+    expect(inOrder.map((c) => c.name)).toEqual(['Neceser', 'Mochila', 'Bolsa'])
   })
 })

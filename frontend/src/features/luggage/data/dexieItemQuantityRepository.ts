@@ -12,13 +12,9 @@ import {
 } from '../domain/itemQuantity'
 import type { ItemQuantityRepository } from '../domain/itemQuantityRepository'
 import { packedCountAfterResize, toggledPackedCount } from '../domain/packing'
-import {
-  lastPosition,
-  positionAfter,
-  positionBetween,
-  positionsAfter,
-} from '../domain/position'
+import { lastPosition, positionAfter, positionsAfter } from '../domain/position'
 import { loadQuantitiesOfOneLuggage } from './loadQuantities'
+import { reorderRow } from './reorderRow'
 
 type CountChanges = { num?: number; nAlreadyPacked?: number }
 
@@ -202,35 +198,29 @@ export function createDexieItemQuantityRepository(
     },
 
     reorder(id, beforeId, afterId) {
-      return db.transaction('rw', db.itemQuantities, async () => {
-        const [current, before, after] = await db.itemQuantities.bulkGet([
-          id,
-          beforeId ?? '',
-          afterId ?? '',
-        ])
-        if (!current) throw new EntityNotFoundError('ItemQuantity', id)
-        if (beforeId !== null && !before) {
-          throw new EntityNotFoundError('ItemQuantity', beforeId)
-        }
-        if (afterId !== null && !after) {
-          throw new EntityNotFoundError('ItemQuantity', afterId)
-        }
-        const neighbours = [before, after].filter((row) => row !== undefined)
-        if (neighbours.some((row) => row.luggageId !== current.luggageId)) {
-          throw new ConsistencyError('Los artículos son de maletas distintas')
-        }
-        // Clave intermedia: solo cambia ESTA fila (ver domain/position.ts).
-        const updated = {
-          ...current,
-          position: positionBetween(
-            before?.position ?? null,
-            after?.position ?? null,
-          ),
-          updatedAt: nowIso(),
-        }
-        await db.itemQuantities.put(updated)
-        return updated
-      })
+      return db.transaction('rw', db.itemQuantities, () =>
+        reorderRow(db.itemQuantities, 'ItemQuantity', id, beforeId, afterId),
+      )
+    },
+
+    place(id, compartmentId, beforeId, afterId) {
+      return db.transaction(
+        'rw',
+        [db.itemQuantities, db.compartments],
+        async () => {
+          const current = await db.itemQuantities.get(id)
+          if (!current) throw new EntityNotFoundError('ItemQuantity', id)
+          await assertCompartmentBelongsTo(compartmentId, current.luggageId)
+          return reorderRow(
+            db.itemQuantities,
+            'ItemQuantity',
+            id,
+            beforeId,
+            afterId,
+            { compartmentId },
+          )
+        },
+      )
     },
 
     moveTo(id, compartmentId) {

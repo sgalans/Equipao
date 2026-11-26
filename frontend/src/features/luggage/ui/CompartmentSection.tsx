@@ -7,6 +7,7 @@ import checkCircle from '@/shared/ui/checkCircle.module.css'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { CheckIcon } from '@/shared/ui/icons/CheckIcon'
 import { ChevronDownIcon } from '@/shared/ui/icons/ChevronDownIcon'
+import { GripIcon } from '@/shared/ui/icons/GripIcon'
 import { MoreIcon } from '@/shared/ui/icons/MoreIcon'
 import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
 import { PencilIcon } from '@/shared/ui/icons/PencilIcon'
@@ -21,6 +22,7 @@ import {
   useIsCollapsed,
 } from './collapsedCompartmentsStore'
 import styles from './CompartmentSection.module.css'
+import type { DragHandle } from './packingDndLogic'
 import { compartmentStatus } from './progressLabel'
 
 interface CompartmentSectionProps {
@@ -29,20 +31,39 @@ interface CompartmentSectionProps {
   entries: LuggageEntry[]
   /** Los que se pintan (sin los listos ocultos con "Ocultar listos"). */
   visibleEntries: LuggageEntry[]
-  /** Pinta la lista de filas (la comparte con los artículos sueltos). */
-  renderRows: (entries: LuggageEntry[]) => ReactNode
+  /**
+   * Pinta sus filas (las decide PackingList: mientras se arrastra, pueden
+   * incluir un artículo que viene de otra lista).
+   */
+  renderRows: () => ReactNode
   /**
    * Modo selección de la maleta: solo se eligen artículos, así que se ocultan
    * los controles propios del compartimento ("listo", +, ⋯). Plegar sigue.
    */
   isSelecting?: boolean
+  /**
+   * Asa para arrastrarlo (ver packingDnd). Lo que se desplaza con el dedo es
+   * SOLO la cabecera: sus artículos son filas de la misma lista única y se
+   * desplazan por su cuenta (si se moviera la sección entera, se moverían
+   * dos veces).
+   */
+  drag?: DragHandle
+  /**
+   * Mientras se arrastra ESTE compartimento se ve plegado (decisión del
+   * usuario, opción A): un bloque largo sería incómodo de mover.
+   */
+  isBeingDragged?: boolean
+  /** "Subir"/"Bajar" en ⋯ (alternativa a arrastrar); null = en el borde. */
+  onMoveUp?: (() => void) | null
+  onMoveDown?: (() => void) | null
 }
 
 /**
  * Un compartimento dentro de la maleta:
- *   ▾ Neceser · 2 de 3   [+] [⋯]  ← tocar = plegar; + = añadir (abre el
- *                                   catálogo con este destino); ⋯ = acciones
- *     ✎ Renombrar   🗑 Borrar       ← solo tras tocar ⋯
+ *   ▾ Neceser · 2 de 3   [+] [⋯] [≡]  ← tocar = plegar; + = añadir (abre
+ *                                       el catálogo con este destino);
+ *                                       ⋯ = acciones; ≡ = arrastrar
+ *     ✎ Renombrar  🗑 Borrar  ↑ Subir  ↓ Bajar   ← solo tras tocar ⋯
  *     (filas de artículos)
  */
 export function CompartmentSection({
@@ -51,9 +72,13 @@ export function CompartmentSection({
   visibleEntries,
   renderRows,
   isSelecting = false,
+  drag,
+  isBeingDragged = false,
+  onMoveUp = null,
+  onMoveDown = null,
 }: CompartmentSectionProps) {
   const { compartments } = useRepositories()
-  const isCollapsed = useIsCollapsed(compartment.id)
+  const isCollapsed = useIsCollapsed(compartment.id) || isBeingDragged
   const toggle = useCollapsedCompartments((state) => state.toggle)
   const [isRenaming, setIsRenaming] = useState(false)
   // Acciones poco frecuentes (renombrar, borrar) ocultas tras "⋯": los
@@ -61,7 +86,6 @@ export function CompartmentSection({
   const [showActions, setShowActions] = useState(false)
   const actionsId = useId()
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
-  const contentId = useId()
 
   const { done, total } = itemsProgress(entries)
   const status = compartmentStatus(done, total, compartment.isReady)
@@ -90,7 +114,14 @@ export function CompartmentSection({
 
   return (
     <section className={styles.section} aria-label={compartment.name}>
-      <div className={styles.header}>
+      <div
+        ref={drag?.setRowRef}
+        style={drag?.rowStyle}
+        className={[
+          styles.header,
+          drag?.isDragging ? styles.dragging : '',
+        ].join(' ')}
+      >
         {/* Mismo círculo que los artículos (estilo compartido): "listo"
             PROPIO del compartimento, independiente de sus artículos. */}
         {!isSelecting && (
@@ -118,7 +149,6 @@ export function CompartmentSection({
               type="button"
               className={styles.toggle}
               aria-expanded={!isCollapsed}
-              aria-controls={contentId}
               aria-label={`${compartment.name}, ${status}`}
               onClick={() => toggle(compartment.id)}
             >
@@ -155,6 +185,16 @@ export function CompartmentSection({
             </button>
           </>
         )}
+        {drag && (
+          <button
+            type="button"
+            {...drag.handleProps}
+            className={`${buttons.iconGhost} ${styles.handle}`}
+            aria-label={`Ordenar ${compartment.name}`}
+          >
+            <GripIcon />
+          </button>
+        )}
       </div>
 
       {/* Fuera del contenido plegable: se puede renombrar o borrar un
@@ -183,17 +223,35 @@ export function CompartmentSection({
             <TrashIcon />
             Borrar compartimento
           </button>
+          <button
+            type="button"
+            className={buttons.textAction}
+            aria-label={`Subir ${compartment.name}`}
+            disabled={onMoveUp === null}
+            onClick={() => onMoveUp?.()}
+          >
+            <span aria-hidden="true">↑</span> Subir
+          </button>
+          <button
+            type="button"
+            className={buttons.textAction}
+            aria-label={`Bajar ${compartment.name}`}
+            disabled={onMoveDown === null}
+            onClick={() => onMoveDown?.()}
+          >
+            <span aria-hidden="true">↓</span> Bajar
+          </button>
         </div>
       )}
 
       {/* Plegado = no se pinta el contenido (ni ocupa sitio ni lo lee el
           lector de pantalla). aria-expanded en el botón anuncia el estado. */}
       {!isCollapsed && (
-        <div id={contentId} className={styles.content}>
+        <div className={styles.content}>
           {entries.length === 0 ? (
             <p className={styles.empty}>Este compartimento está vacío.</p>
           ) : visibleEntries.length > 0 ? (
-            renderRows(visibleEntries)
+            renderRows()
           ) : (
             // Todo listo y oculto: la cabecera se queda (nada salta) y se
             // dice por qué no se ve nada.

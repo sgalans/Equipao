@@ -52,6 +52,18 @@ export interface ItemQuantityRepository {
     beforeId: string | null,
     afterId: string | null,
   ): Promise<ItemQuantity>
+  /**
+   * Arrastrar entre grupos: mete la línea en `compartmentId` (null = suelta)
+   * y la coloca ENTRE `beforeId` y `afterId`, todo en UNA escritura (nunca
+   * queda en el compartimento nuevo con el orden viejo). Mismos errores que
+   * `reorder` y `moveTo`.
+   */
+  place(
+    id: string,
+    compartmentId: string | null,
+    beforeId: string | null,
+    afterId: string | null,
+  ): Promise<ItemQuantity>
   /** Empaquetado "todo o nada" (ver domain/packing.ts). */
   togglePacked(id: string): Promise<ItemQuantity>
   /** Cambia la cantidad total ajustando lo ya guardado (ver packing.ts). */
