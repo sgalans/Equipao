@@ -17,10 +17,6 @@ interface PackingListProps {
   compartments: Compartment[]
   /** Artículos listos ocultos (ver packingOrderStore); undefined = ninguno. */
   hidden: HiddenSnapshot | undefined
-  /** Fila a resaltar (p. ej. al intentar añadir algo que ya estaba). */
-  highlightedId: string | null
-  /** Al intentar añadir algo que ya estaba (desde el "+" de un compartimento). */
-  onDuplicate: (itemName: string) => void
   /** Modo selección: qué líneas están marcadas y cómo cambiar una. */
   selection?: {
     selected: ReadonlySet<string>
@@ -40,8 +36,6 @@ export function PackingList({
   entries,
   compartments,
   hidden,
-  highlightedId,
-  onDuplicate,
   selection,
 }: PackingListProps) {
   // Acordeón: como mucho una fila desplegada EN TODA LA MALETA (también
@@ -61,7 +55,6 @@ export function PackingList({
             key={entry.id}
             entry={entry}
             isExpanded={expandedId === entry.id}
-            isHighlighted={highlightedId === entry.id}
             compartments={compartments}
             selection={
               selection && {
@@ -107,8 +100,6 @@ export function PackingList({
               entries={own}
               visibleEntries={own.filter(isShown)}
               renderRows={renderRows}
-              luggageEntries={entries}
-              onDuplicate={onDuplicate}
               isSelecting={selection !== undefined}
             />
           )

@@ -14,6 +14,9 @@
   /* sticky: la cabecera se queda arriba al hacer scroll en el móvil. */
   position: sticky;
   top: 0;
+  /* Por encima del contenido al hacer scroll (filas con su propio stacking
+     context, p. ej. por opacity o transform, la taparían). */
+  z-index: 1;
   border-bottom: 1px solid var(--border);
   background: var(--bg);
   /* Safe areas del iPhone (con viewport-fit=cover): arriba, el notch o la
