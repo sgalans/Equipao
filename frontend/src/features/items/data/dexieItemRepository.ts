@@ -108,7 +108,21 @@ export function createDexieItemRepository(db: AppDb): ItemRepository {
       // no debe obligar a ir maleta por maleta). Hijos primero y después el
       // artículo, en una transacción: o se borra todo o nada.
       return db.transaction('rw', [db.items, db.itemQuantities], async () => {
-        await db.itemQuantities.where('itemId').equals(id).delete()
+        const lines = await db.itemQuantities
+          .where('itemId')
+          .equals(id)
+          .toArray()
+        // Si es un CONTENEDOR, sus líneas son compartimentos: lo que llevaban
+        // dentro pasa a suelto (ON DELETE SET NULL), no se queda apuntando a
+        // una línea que ya no existe.
+        const lineIds = lines.map((line) => line.id)
+        if (lineIds.length > 0) {
+          await db.itemQuantities
+            .where('compartmentId')
+            .anyOf(lineIds)
+            .modify({ compartmentId: null, updatedAt: nowIso() })
+        }
+        await db.itemQuantities.bulkDelete(lineIds)
         await db.items.delete(id)
       })
     },

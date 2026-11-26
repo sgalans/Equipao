@@ -4,7 +4,8 @@ import { EntityNotFoundError } from '@/shared/domain/errors'
 import { LuggageSchema, NewLuggageSchema } from '../domain/luggage'
 import type { LuggageRepository } from '../domain/luggageRepository'
 import { copyName } from '../domain/copyName'
-import { packingProgress } from '../domain/packing'
+import { isFullyPacked, packingProgress } from '../domain/packing'
+import { containerItemIds } from './containers'
 
 /**
  * Adapter: implementación de LuggageRepository sobre Dexie.
@@ -40,11 +41,20 @@ export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
       // maleta: eso sería el problema N+1). Con el volumen de una app de
       // equipaje, leer todas las cantidades y agrupar en memoria es
       // instantáneo.
-      const [luggages, quantities, compartments] = await Promise.all([
+      const [luggages, lines, containers] = await Promise.all([
         list(),
         db.itemQuantities.toArray(),
-        db.compartments.toArray(),
+        containerItemIds(db),
       ])
+      // Las líneas contenedor son los compartimentos ("listo" = guardada);
+      // las demás, los artículos (ver containers.ts).
+      const isContainer = (line: { itemId: string }) =>
+        containers.has(line.itemId)
+      const compartments = lines.filter(isContainer).map((line) => ({
+        luggageId: line.luggageId,
+        isReady: isFullyPacked(line),
+      }))
+      const quantities = lines.filter((line) => !isContainer(line))
 
       // Agrupamos por maleta en Maps (búsqueda O(1) por id).
       const quantitiesByLuggage = groupBy(quantities, (q) => q.luggageId)
@@ -72,11 +82,12 @@ export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
     },
 
     duplicate(id) {
-      // Una maleta, sus compartimentos y sus artículos forman un AGREGADO
-      // (DDD) con la maleta como raíz: se copian juntos o no se copia nada.
+      // Una maleta y sus líneas (compartimentos incluidos: son líneas
+      // contenedor) forman un AGREGADO (DDD) con la maleta como raíz: se
+      // copian juntas o no se copia nada.
       return db.transaction(
         'rw',
-        [db.luggages, db.compartments, db.itemQuantities],
+        [db.luggages, db.itemQuantities],
         async () => {
           const source = await db.luggages.get(id)
           if (!source) throw new EntityNotFoundError('Luggage', id)
@@ -88,51 +99,30 @@ export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
             description: source.description,
           })
 
-          // Los compartimentos de la copia tienen ids NUEVOS. Este mapa
-          // traduce "compartimento original → compartimento de la copia",
-          // para que cada artículo apunte al de SU maleta (invariante).
-          const compartmentIdMap = new Map<string, string>()
-          const compartments = (
-            await db.compartments
-              .where('luggageId')
-              .equals(id)
-              // Se copian enteros, `position` incluida: mismo orden manual.
-              .sortBy('position')
-          ).map((compartment) => {
-            const base = newEntityBase()
-            compartmentIdMap.set(compartment.id, base.id)
-            // Como los artículos, la copia empieza sin nada hecho.
-            return {
-              ...compartment,
-              ...base,
-              luggageId: copy.id,
-              isReady: false,
-            }
-          })
-
-          // Cada línea se copia ENTERA, `position` incluida: la copia
-          // conserva el orden manual de la original.
-          const quantities = (
-            await db.itemQuantities
-              .where('luggageId')
-              .equals(id)
-              .sortBy('position')
-          ).map((quantity) => ({
-            ...quantity,
-            ...newEntityBase(),
+          // Cada línea se copia ENTERA (`position` incluida: mismo orden
+          // manual) con un id NUEVO. Este mapa traduce "línea original → línea
+          // de la copia", para que cada artículo apunte a SU compartimento.
+          const lines = await db.itemQuantities
+            .where('luggageId')
+            .equals(id)
+            .toArray()
+          const idMap = new Map(lines.map((line) => [line.id, newEntityBase()]))
+          const copies = lines.map((line) => ({
+            ...line,
+            ...idMap.get(line.id)!,
             luggageId: copy.id,
             compartmentId:
-              quantity.compartmentId === null
+              line.compartmentId === null
                 ? null
-                : (compartmentIdMap.get(quantity.compartmentId) ?? null),
-            // Decisión de producto: la copia empieza sin nada guardado.
+                : (idMap.get(line.compartmentId)?.id ?? null),
+            // Decisión de producto: la copia empieza sin nada guardado (ni los
+            // compartimentos "listos").
             nAlreadyPacked: 0,
           }))
 
           await db.luggages.add(copy)
           // bulkAdd: una sola operación para todas las filas.
-          await db.compartments.bulkAdd(compartments)
-          await db.itemQuantities.bulkAdd(quantities)
+          await db.itemQuantities.bulkAdd(copies)
           return copy
         },
       )
@@ -161,12 +151,12 @@ export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
       // ON DELETE CASCADE a mano (IndexedDB no tiene claves foráneas): hijos
       // primero (contenido y compartimentos) y luego el padre, todo en una
       // transacción para que nunca queden filas huérfanas si algo falla.
+      // (Los compartimentos son líneas: caen con el contenido.)
       return db.transaction(
         'rw',
-        [db.luggages, db.itemQuantities, db.compartments],
+        [db.luggages, db.itemQuantities],
         async () => {
           await db.itemQuantities.where('luggageId').equals(id).delete()
-          await db.compartments.where('luggageId').equals(id).delete()
           await db.luggages.delete(id)
         },
       )

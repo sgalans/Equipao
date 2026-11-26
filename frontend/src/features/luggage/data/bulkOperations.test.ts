@@ -97,7 +97,8 @@ describe('quantities.removeMany', () => {
     expect(
       (await quantities.listByLuggage(luggage.id)).map((q) => q.id),
     ).toEqual([towel.id])
-    expect(await items.list()).toHaveLength(3)
+    // 3 artículos + el contenedor del compartimento del setup.
+    expect(await items.list()).toHaveLength(4)
   })
 
   it('es idempotente: quitar algo que ya no está no falla', async () => {

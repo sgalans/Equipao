@@ -49,6 +49,8 @@ describe('importLuggage', () => {
       'Cámara',
       'Camisetas',
       'Cepillo de dientes',
+      // El compartimento: un CONTENEDOR del catálogo (refactor/compartments).
+      'Neceser',
     ])
   })
 

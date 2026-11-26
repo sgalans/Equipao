@@ -6,6 +6,8 @@ describe('NewItemSchema', () => {
   it('acepta un ítem válido y recorta el nombre', () => {
     expect(NewItemSchema.parse({ name: ' Calcetines ' })).toEqual({
       name: 'Calcetines',
+      // Por defecto, un artículo normal (no un contenedor).
+      isContainer: false,
     })
   })
 

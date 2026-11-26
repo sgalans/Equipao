@@ -31,7 +31,7 @@ export async function seedDefaults(
   // subconjunto de tablas), así que todo es una única unidad atómica.
   return db.transaction(
     'rw',
-    [db.meta, db.items, db.luggages, db.compartments, db.itemQuantities],
+    [db.meta, db.items, db.luggages, db.itemQuantities],
     async () => {
       if (await db.meta.get(DEFAULTS_SEEDED_KEY)) return false
 
