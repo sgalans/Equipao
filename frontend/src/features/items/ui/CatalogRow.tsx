@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import { useRepositories } from '@/shared/di/repositories'
-import { DuplicateError } from '@/shared/domain/errors'
+import { MergeItemsDialog } from './MergeItemsDialog'
+import { useItemRename } from './useItemRename'
 import buttons from '@/shared/ui/buttons.module.css'
 import checkCircle from '@/shared/ui/checkCircle.module.css'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
@@ -63,21 +64,14 @@ export function CatalogRow({
   const panelId = useId()
   const usage = usageLabel(item.luggageNames.length)
 
-  async function rename(name: string | null) {
+  // Mismo renombrar que en la maleta (useItemRename): si el nombre es el
+  // de otro artículo, se propone UNIRLOS en vez de fallar.
+  const renaming = useItemRename()
+  function rename(name: string | null) {
     setIsRenaming(false)
-    if (name === null || name === '' || name === item.name) return
-    try {
-      await items.update(item.id, { name })
-    } catch (e) {
-      // Nombre de otro artículo: no es un fallo, se explica al usuario.
-      if (e instanceof DuplicateError) {
-        setError(`${e.message}.`)
-      } else {
-        console.error(e)
-        setError('No se ha podido renombrar. Inténtalo de nuevo.')
-      }
-    }
+    if (name !== null) void renaming.rename(item.id, item.name, name)
   }
+  const shownError = renaming.error ?? error
 
   if (selection) {
     return (
@@ -139,9 +133,9 @@ export function CatalogRow({
         </button>
       )}
 
-      {error && (
+      {shownError && (
         <p role="alert" className={styles.error}>
-          {error}
+          {shownError}
         </p>
       )}
 
@@ -186,6 +180,11 @@ export function CatalogRow({
         </p>
         <p>Esta acción no se puede deshacer.</p>
       </ConfirmDialog>
+      <MergeItemsDialog
+        pending={renaming.pending}
+        onConfirm={renaming.confirmMerge}
+        onCancel={renaming.cancelMerge}
+      />
     </li>
   )
 }

@@ -58,7 +58,7 @@ describe('Llegar a "Añadir artículos"', () => {
     expect(router.state.location.pathname).toBe(`/luggages/${luggage.id}`)
   })
 
-  it('el "+" de un compartimento añade AHÍ, sin preguntar dónde', async () => {
+  it('"Añadir" en ⋯ de un compartimento añade AHÍ, sin preguntar dónde', async () => {
     let kitId = ''
     const { user, luggage, repositories } = await setup(
       (id) => `/luggages/${id}`,
@@ -69,9 +69,11 @@ describe('Llegar a "Añadir artículos"', () => {
       },
     )
 
+    // Está en sus acciones (⋯), junto a ↑ ↓ ✎ 🗑.
     await user.click(
-      await screen.findByRole('link', { name: 'Añadir a Neceser' }),
+      await screen.findByRole('button', { name: 'Más acciones de Neceser' }),
     )
+    await user.click(screen.getByRole('link', { name: 'Añadir a Neceser' }))
     expect(
       await screen.findByRole('heading', { name: 'Añadir a «Neceser»' }),
     ).toBeInTheDocument()

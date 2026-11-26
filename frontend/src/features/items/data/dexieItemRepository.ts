@@ -1,6 +1,11 @@
 import { newEntityBase, nowIso } from '@/shared/data/entityBase'
 import type { AppDb } from '@/shared/db/db'
-import { DuplicateError, EntityNotFoundError } from '@/shared/domain/errors'
+import { mergedCounts } from '@/features/luggage/domain/packing'
+import {
+  ConsistencyError,
+  DuplicateError,
+  EntityNotFoundError,
+} from '@/shared/domain/errors'
 import { ItemSchema, NewItemSchema, type Item } from '../domain/item'
 import type { ItemRepository } from '../domain/itemRepository'
 import { compareItemNames, isSameItemName } from '../domain/itemName'
@@ -100,6 +105,52 @@ export function createDexieItemRepository(db: AppDb): ItemRepository {
         if (clash && clash.id !== id) throw duplicateNameError(clash.name)
         await db.items.put(updated)
         return updated
+      })
+    },
+
+    merge(sourceId, targetId) {
+      return db.transaction('rw', [db.items, db.itemQuantities], async () => {
+        const [source, target] = await db.items.bulkGet([sourceId, targetId])
+        if (!source) throw new EntityNotFoundError('Item', sourceId)
+        if (!target) throw new EntityNotFoundError('Item', targetId)
+        if (source.id === target.id) return target
+        if (source.isContainer !== target.isContainer) {
+          throw new ConsistencyError(
+            'No se puede unir un artículo con un compartimento',
+          )
+        }
+        const now = nowIso()
+        const sourceLines = await db.itemQuantities
+          .where('itemId')
+          .equals(sourceId)
+          .toArray()
+        for (const line of sourceLines) {
+          // ¿Esta maleta ya tenía el artículo destino? (UNIQUE luggage+item)
+          const existing = await db.itemQuantities
+            .where('[luggageId+itemId]')
+            .equals([line.luggageId, targetId])
+            .first()
+          if (!existing) {
+            await db.itemQuantities.update(line.id, {
+              itemId: targetId,
+              updatedAt: now,
+            })
+            continue
+          }
+          // Tenía los dos: una sola línea (la del destino, en su sitio).
+          await db.itemQuantities.update(existing.id, {
+            ...mergedCounts(existing, line),
+            updatedAt: now,
+          })
+          // Si eran compartimentos, lo de dentro pasa al que se queda.
+          await db.itemQuantities
+            .where('compartmentId')
+            .equals(line.id)
+            .modify({ compartmentId: existing.id, updatedAt: now })
+          await db.itemQuantities.delete(line.id)
+        }
+        await db.items.delete(sourceId)
+        return target
       })
     },
 

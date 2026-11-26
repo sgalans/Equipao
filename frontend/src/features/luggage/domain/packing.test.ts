@@ -3,7 +3,7 @@ import {
   isFullyDone,
   isFullyPacked,
   itemsProgress,
-  packedCountAfterResize,
+  mergedCounts,
   packingProgress,
   toggledPackedCount,
 } from './packing'
@@ -16,6 +16,9 @@ describe('isFullyPacked', () => {
     [q(1, 1), true],
     [q(2, 5), false],
     [q(5, 5), true],
+    // Tras cambiar la cantidad (suba o baje) deja de estar listo:
+    [q(5, 6), false],
+    [q(5, 4), false],
   ])('%o → %s', (counts, expected) => {
     expect(isFullyPacked(counts)).toBe(expected)
   })
@@ -30,22 +33,9 @@ describe('toggledPackedCount (todo o nada)', () => {
     expect(toggledPackedCount(q(5, 5))).toBe(0)
   })
 
-  it('a medias (p. ej. tras subir la cantidad) → lo completa', () => {
+  it('no listo tras cambiar la cantidad (5/6 o 5/4) → lo marca con la actual', () => {
     expect(toggledPackedCount(q(5, 6))).toBe(6)
-  })
-})
-
-describe('packedCountAfterResize', () => {
-  it('al subir la cantidad conserva lo guardado (la unidad nueva falta)', () => {
-    expect(packedCountAfterResize(q(5, 5), 6)).toBe(5)
-  })
-
-  it('al bajarla recorta para no violar nAlreadyPacked <= num', () => {
-    expect(packedCountAfterResize(q(5, 5), 4)).toBe(4)
-  })
-
-  it('si no había nada guardado, sigue en 0', () => {
-    expect(packedCountAfterResize(q(0, 3), 1)).toBe(0)
+    expect(toggledPackedCount(q(5, 4))).toBe(4)
   })
 })
 
@@ -109,5 +99,17 @@ describe('isFullyDone', () => {
 
   it('una maleta vacía no está "hecha"', () => {
     expect(isFullyDone({ done: 0, total: 0 })).toBe(false)
+  })
+})
+
+describe('mergedCounts (unir dos artículos en una maleta)', () => {
+  it.each([
+    // [a, b, resultado]
+    [q(1, 1), q(3, 3), q(3, 3)], // los dos guardados → guardado, la mayor
+    [q(2, 2), q(0, 3), q(0, 3)], // uno sin marcar → sin marcar
+    [q(1, 2), q(2, 4), q(0, 4)], // ninguno listo → sin marcar
+    [q(0, 5), q(0, 1), q(0, 5)], // sin guardar → cantidad mayor
+  ])('%j + %j → %j', (a, b, expected) => {
+    expect(mergedCounts(a, b)).toEqual(expected)
   })
 })

@@ -1,0 +1,46 @@
+/*
+ * Barra de acciones de una fila: la del panel de un artículo y la del ⋯ de
+ * un compartimento (decisión del usuario: que se vean IGUAL y en el mismo
+ * orden). Lo propio de cada uno a la izquierda (− N +, o "añadir"), y
+ * ↑ ↓ ✎ 🗑 a la derecha.
+ *
+ * Todo en UNA línea en el iPhone: el panel deja ~290 px y seis botones de
+ * 44 px de ancho no caben. Por eso son de 36 px de ancho (44 px de alto),
+ * como "+" y "⋯" de la cabecera del compartimento: muy por encima del
+ * mínimo de 24 px de WCAG 2.2 (SC 2.5.8).
+ */
+.toolbar {
+  display: flex;
+  /* Red de seguridad: en una pantalla más estrecha que un iPhone normal (p.
+     ej. el primer SE, 320 px) pasa a dos líneas en vez de salirse. */
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+}
+
+.group {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+/* El aspecto de los botones de los compartimentos (sin borde), para todos. */
+.tool {
+  composes: iconGhost from './buttons.module.css';
+  width: 2.25rem;
+}
+
+/* Desactivado (p. ej. ↑ arriba del todo) con COLOR, nunca con opacity: un
+   opacity < 1 crea un stacking context que tapa la cabecera sticky. */
+.tool:disabled {
+  color: var(--border);
+  cursor: default;
+}
+
+/* El número de unidades (hasta 99), entre − y +. */
+.count {
+  min-width: 1.75rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}

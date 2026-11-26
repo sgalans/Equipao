@@ -62,6 +62,16 @@ describe('importLuggage', () => {
     expect(luggage.name).toBe(IMPORTED_LUGGAGE_NAME)
   })
 
+  it('un compartimento con el nombre de un artículo normal se crea como «X (compartimento)»', async () => {
+    const repos = createTestRepositories()
+    await repos.items.create({ name: 'Neceser' }) // artículo normal
+
+    const luggage = await importLuggage(repos, parseLuggageText(text))
+
+    const [kit] = await repos.compartments.listByLuggage(luggage.id)
+    expect(kit.name).toBe('Neceser (compartimento)')
+  })
+
   it('si falla a medias, borra la maleta a medio crear (acción compensatoria)', async () => {
     const repos = createTestRepositories()
     vi.spyOn(repos.compartments, 'create').mockRejectedValueOnce(

@@ -7,7 +7,7 @@ import {
   type ItemQuantity,
 } from '../domain/itemQuantity'
 import type { ItemQuantityRepository } from '../domain/itemQuantityRepository'
-import { packedCountAfterResize, toggledPackedCount } from '../domain/packing'
+import { toggledPackedCount } from '../domain/packing'
 import { lastPosition, positionAfter, positionsAfter } from '../domain/position'
 import { loadQuantitiesOfOneLuggage } from './loadQuantities'
 import {
@@ -189,10 +189,10 @@ export function createDexieItemQuantityRepository(
     },
 
     resize(id, num) {
-      return modify(id, (current) => ({
-        num,
-        nAlreadyPacked: packedCountAfterResize(current, num),
-      }))
+      // Solo cambia la cantidad: `nAlreadyPacked` recuerda con cuántas se
+      // marcó, así que deja de estar listo (suba o baje) y vuelve a estarlo
+      // si se vuelve a esa cantidad (ver isFullyPacked).
+      return modify(id, () => ({ num }))
     },
 
     reorder(id, beforeId, afterId) {

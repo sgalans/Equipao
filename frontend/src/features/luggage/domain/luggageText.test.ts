@@ -86,6 +86,30 @@ describe('parseLuggageText', () => {
     ).toEqual([{ name: 'Neceser', items: [{ name: 'Peine', num: 1 }] }])
   })
 
+  it('un compartimento repetido se junta en uno (un Neceser por maleta)', () => {
+    expect(
+      parseLuggageText(
+        [
+          'Neceser:',
+          '- Cepillo',
+          'Mochila:',
+          '- Libro',
+          'neceser:',
+          '- Pasta',
+        ].join('\n'),
+      ).compartments,
+    ).toEqual([
+      {
+        name: 'Neceser',
+        items: [
+          { name: 'Cepillo', num: 1 },
+          { name: 'Pasta', num: 1 },
+        ],
+      },
+      { name: 'Mochila', items: [{ name: 'Libro', num: 1 }] },
+    ])
+  })
+
   it('una línea con viñeta que acaba en ":" es un artículo, no un compartimento', () => {
     expect(parseLuggageText('- Ver: museo').loose).toEqual([
       { name: 'Ver: museo', num: 1 },

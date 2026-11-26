@@ -103,12 +103,10 @@
 }
 
 /* Acciones poco frecuentes, visibles solo tras tocar ⋯ (estilo buttons.textAction). */
+/* La barra de ⋯ (toolbar.module.css), con la MISMA sangría que el panel
+   de un artículo: los botones quedan alineados bajo el nombre. */
 .actions {
-  display: flex;
-  /* Renombrar, Borrar, Subir, Bajar: en pantallas estrechas, dos líneas. */
-  flex-wrap: wrap;
-  column-gap: 1rem;
-  padding: 0 0 0.5rem 2rem;
+  padding: 0 0 0.5rem 3.25rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -132,7 +130,23 @@
 }
 
 /* Subir/Bajar desactivados con COLOR, nunca con opacity (stacking context). */
-.actions button:disabled {
-  color: var(--border);
-  cursor: default;
+
+.error {
+  margin: 0 0 0.5rem 3.25rem;
+  color: var(--danger);
+  font-size: 0.875rem;
+}
+
+.hint {
+  margin: 0 0 0.5rem 3.25rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+/* ⋯ abierto: se ve "activado" (color de acento y fondo suave). Se engancha
+   a aria-expanded: el estado visual y el que oye VoiceOver salen del mismo
+   atributo y nunca se desincronizan. */
+.moreToggle[aria-expanded='true'] {
+  background: var(--highlight);
+  color: var(--accent);
 }

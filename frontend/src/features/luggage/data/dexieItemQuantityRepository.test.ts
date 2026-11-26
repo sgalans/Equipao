@@ -109,12 +109,21 @@ describe('DexieItemQuantityRepository: empaquetado y lectura', () => {
     })
   })
 
-  it('resize a la baja recorta lo guardado (5/5 → 4/4) sin violar el CHECK', async () => {
+  it('cambiar la cantidad de algo listo lo deja sin marcar (suba o baje); volver a ella, listo otra vez', async () => {
     const { quantities, quantity } = await setupWithQuantity(5, 5)
 
+    // Se recuerda con cuántas se marcó (5), aunque ahora haya 4.
     expect(await quantities.resize(quantity.id, 4)).toMatchObject({
       num: 4,
-      nAlreadyPacked: 4,
+      nAlreadyPacked: 5,
+    })
+    expect(await quantities.resize(quantity.id, 6)).toMatchObject({
+      num: 6,
+      nAlreadyPacked: 5,
+    })
+    expect(await quantities.resize(quantity.id, 5)).toMatchObject({
+      num: 5,
+      nAlreadyPacked: 5, // = listo
     })
   })
 

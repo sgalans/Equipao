@@ -67,6 +67,24 @@ describe('Crear compartimentos', () => {
     ).toHaveLength(1)
   })
 
+  it('si ya hay uno igual en la maleta, lo explica junto al botón (no un aviso genérico)', async () => {
+    const { user } = await openLuggage(async (repos, luggageId) => {
+      await repos.compartments.create({ luggageId, name: 'Neceser' })
+    })
+
+    await user.click(
+      screen.getByRole('button', { name: 'Nuevo compartimento' }),
+    )
+    await user.keyboard('neceser{Enter}')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Ya hay un «Neceser» en esta maleta.',
+    )
+    expect(
+      screen.queryByText(/No se ha podido guardar/),
+    ).not.toBeInTheDocument()
+  })
+
   it('Escape o un nombre vacío no crean nada', async () => {
     const { user, repositories, luggage } = await openLuggage()
     const newButton = () =>
@@ -193,9 +211,11 @@ describe('Renombrar y borrar compartimentos', () => {
 
     await user.click(more)
     expect(more).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByRole('button', { name: 'Renombrar' })).toBeVisible()
     expect(
-      screen.getByRole('button', { name: 'Borrar compartimento' }),
+      screen.getByRole('button', { name: 'Renombrar Neceser' }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole('button', { name: 'Quitar Neceser de la maleta' }),
     ).toBeVisible()
 
     await user.click(more)
@@ -213,7 +233,7 @@ describe('Renombrar y borrar compartimentos', () => {
     await user.click(
       screen.getByRole('button', { name: 'Más acciones de Neceser' }),
     )
-    await user.click(screen.getByRole('button', { name: 'Renombrar' }))
+    await user.click(screen.getByRole('button', { name: 'Renombrar Neceser' }))
     await user.keyboard('Aseo{Enter}')
 
     expect(
@@ -229,7 +249,7 @@ describe('Renombrar y borrar compartimentos', () => {
     await user.click(
       screen.getByRole('button', { name: 'Más acciones de Neceser' }),
     )
-    await user.click(screen.getByRole('button', { name: 'Renombrar' }))
+    await user.click(screen.getByRole('button', { name: 'Renombrar Neceser' }))
     const input = screen.getByRole('textbox', {
       name: 'Nombre del compartimento',
     })
@@ -257,13 +277,15 @@ describe('Renombrar y borrar compartimentos', () => {
       screen.getByRole('button', { name: 'Más acciones de Neceser' }),
     )
     await user.click(
-      screen.getByRole('button', { name: 'Borrar compartimento' }),
+      screen.getByRole('button', { name: 'Quitar Neceser de la maleta' }),
     )
-    const dialog = screen.getByRole('dialog', { name: '¿Borrar «Neceser»?' })
+    const dialog = screen.getByRole('dialog', {
+      name: '¿Quitar «Neceser» de la maleta?',
+    })
     expect(dialog).toHaveTextContent(
       'Sus 2 artículos quedarán sueltos en la maleta.',
     )
-    await user.click(within(dialog).getByRole('button', { name: 'Borrar' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Quitar' }))
 
     expect(
       await screen.findByText(

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useRepositories } from '@/shared/di/repositories'
+import { DuplicateError } from '@/shared/domain/errors'
 import { reportError } from '@/shared/ui/notifications/notificationStore'
 import buttons from '@/shared/ui/buttons.module.css'
 import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
@@ -16,6 +17,8 @@ interface NewCompartmentProps {
 export function NewCompartment({ luggageId, showHelp }: NewCompartmentProps) {
   const { compartments } = useRepositories()
   const [isCreating, setIsCreating] = useState(false)
+  // Motivo por el que no se pudo crear (junto al botón, no un aviso global).
+  const [error, setError] = useState<string | null>(null)
 
   async function create(name: string | null) {
     setIsCreating(false)
@@ -23,8 +26,11 @@ export function NewCompartment({ luggageId, showHelp }: NewCompartmentProps) {
     if (!name) return
     try {
       await compartments.create({ luggageId, name })
-    } catch (error) {
-      reportError(error)
+    } catch (e) {
+      // Reglas del modelo (no son fallos): ya hay uno igual en la maleta, o
+      // ese nombre es de un artículo normal del catálogo. Se explica aquí.
+      if (e instanceof DuplicateError) setError(`${e.message}.`)
+      else reportError(e)
     }
   }
 
@@ -40,11 +46,20 @@ export function NewCompartment({ luggageId, showHelp }: NewCompartmentProps) {
         <button
           type="button"
           className={`${buttons.secondary} ${styles.button}`}
-          onClick={() => setIsCreating(true)}
+          onClick={() => {
+            setError(null)
+            setIsCreating(true)
+          }}
         >
           <PlusIcon />
           Nuevo compartimento
         </button>
+      )}
+
+      {error && (
+        <p role="alert" className={styles.error}>
+          {error}
+        </p>
       )}
 
       {showHelp && (

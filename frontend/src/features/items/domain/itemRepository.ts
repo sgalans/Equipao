@@ -30,6 +30,16 @@ export interface ItemRepository {
    */
   update(id: string, changes: Partial<NewItem>): Promise<Item>
   /**
+   * UNE `sourceId` en `targetId` (p. ej. corregir "peolota" → "pelota"):
+   * en cada maleta, "peolota" pasa a ser "pelota"; si una maleta tenía los
+   * dos, queda una línea (ver mergedCounts) y, si eran compartimentos, con
+   * los artículos de los dos dentro. Después "peolota" desaparece del
+   * catálogo. IRREVERSIBLE: la UI lo confirma antes. Todo en una transacción.
+   * EntityNotFoundError si alguno no existe; ConsistencyError si uno es
+   * contenedor y el otro no (no se mezclan artículos y compartimentos).
+   */
+  merge(sourceId: string, targetId: string): Promise<Item>
+  /**
    * Borra el artículo y lo quita de todas las maletas (ON DELETE CASCADE;
    * la UI avisa antes de en cuáles está). Idempotente.
    */

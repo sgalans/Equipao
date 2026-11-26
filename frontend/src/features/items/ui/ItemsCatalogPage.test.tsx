@@ -91,7 +91,7 @@ describe('Renombrar', () => {
     ).toBeInTheDocument()
   })
 
-  it('no permite el nombre de otro artículo: avisa y no cambia nada', async () => {
+  it('con el nombre de otro artículo, propone UNIRLOS; cancelar no cambia nada', async () => {
     const { user, repositories } = await openCatalog(async (repos) => {
       await repos.items.create({ name: 'Calcetines' })
       await repos.items.create({ name: 'Calcetnes' })
@@ -101,13 +101,42 @@ describe('Renombrar', () => {
     await user.click(screen.getByRole('button', { name: 'Renombrar' }))
     await user.keyboard('calcetines{Enter}')
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Ya existe un artículo llamado «Calcetines».',
-    )
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Ya existe «Calcetines»',
+    })
+    expect(dialog).toHaveTextContent('¿Unir «Calcetnes» con «Calcetines»?')
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
+
     expect((await repositories.items.list()).map((i) => i.name)).toEqual([
       'Calcetines',
       'Calcetnes',
     ])
+  })
+
+  it('"Unir" deja solo el destino, también en las maletas', async () => {
+    let luggageId = ''
+    const { user, repositories } = await openCatalog(async (repos) => {
+      await repos.items.create({ name: 'Calcetines' })
+      const typo = await repos.items.create({ name: 'Calcetnes' })
+      luggageId = (await useInLuggage(repos, typo.id, 'Grande')).id
+    })
+
+    await user.click(screen.getByRole('button', { name: /^Calcetnes,/ }))
+    await user.click(screen.getByRole('button', { name: 'Renombrar' }))
+    await user.keyboard('calcetines{Enter}')
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Ya existe «Calcetines»',
+    })
+    await user.click(within(dialog).getByRole('button', { name: 'Unir' }))
+
+    expect(
+      await screen.findByRole('button', { name: 'Calcetines, En 1 maleta' }),
+    ).toBeInTheDocument()
+    expect((await repositories.items.list()).map((i) => i.name)).toEqual([
+      'Calcetines',
+    ])
+    const [line] = await repositories.quantities.listEntriesByLuggage(luggageId)
+    expect(line.itemName).toBe('Calcetines')
   })
 })
 

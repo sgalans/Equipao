@@ -15,7 +15,9 @@ ItemQuantity(id: uuid, luggageId, compartmentId?, itemId, num, nAlreadyPacked, p
     invariant si item.isContainer: compartmentId = null y num = 1
     check num >= 0
     check nAlreadyPacked >= 0
-    check nAlreadyPacked <= num
+    nAlreadyPacked: con cuántas unidades se marcó como listo (0 = sin marcar)
+    listo = (nAlreadyPacked = num)               -- derivado; cambiar num lo desmarca, volver a él lo marca
+    check nAlreadyPacked <= num  solo al crear   -- después puede ser mayor (se bajó la cantidad)
     position: orden manual dentro de la maleta (fractional indexing: clave de
               texto, se ordena por unidades de código; nueva línea = al final;
               mover = una clave entre las de sus vecinos, cambia UNA fila)

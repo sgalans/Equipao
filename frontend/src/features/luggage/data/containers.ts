@@ -33,6 +33,7 @@ export function toCompartment(line: ItemQuantity, name: string): Compartment {
     name,
     isReady: isFullyPacked(line),
     position: line.position,
+    itemId: line.itemId,
     createdAt: line.createdAt,
     updatedAt: line.updatedAt,
   }

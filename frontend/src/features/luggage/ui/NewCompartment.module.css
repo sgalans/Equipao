@@ -15,3 +15,9 @@
      CSS y no <em>, que los lectores de pantalla pueden pronunciar distinto. */
   font-style: italic;
 }
+
+.error {
+  margin: 0.5rem 0 0;
+  color: var(--danger);
+  font-size: 0.875rem;
+}
