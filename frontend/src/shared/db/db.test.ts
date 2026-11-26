@@ -12,6 +12,7 @@ function makeQuantity(overrides: Partial<ItemQuantity> = {}): ItemQuantity {
     compartmentId: null,
     num: 2,
     nAlreadyPacked: 0,
+    position: 'a0',
     createdAt: TEST_TIMESTAMP,
     updatedAt: TEST_TIMESTAMP,
     ...overrides,

@@ -96,7 +96,8 @@ export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
             await db.compartments
               .where('luggageId')
               .equals(id)
-              .sortBy('createdAt')
+              // Se copian enteros, `position` incluida: mismo orden manual.
+              .sortBy('position')
           ).map((compartment) => {
             const base = newEntityBase()
             compartmentIdMap.set(compartment.id, base.id)
@@ -109,13 +110,13 @@ export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
             }
           })
 
-          // Se copian en el mismo orden: los UUID v7 nuevos se generan en
-          // orden creciente, así que la copia conserva el orden de añadido.
+          // Cada línea se copia ENTERA, `position` incluida: la copia
+          // conserva el orden manual de la original.
           const quantities = (
             await db.itemQuantities
               .where('luggageId')
               .equals(id)
-              .sortBy('createdAt')
+              .sortBy('position')
           ).map((quantity) => ({
             ...quantity,
             ...newEntityBase(),

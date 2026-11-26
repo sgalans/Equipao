@@ -1,4 +1,5 @@
-import { Dexie, type EntityTable } from 'dexie'
+import { Dexie, type EntityTable, type Table } from 'dexie'
+import { positionsAfter } from '@/features/luggage/domain/position'
 import type { Item } from '@/features/items/domain/item'
 import type { Compartment } from '@/features/luggage/domain/compartment'
 import type { ItemQuantity } from '@/features/luggage/domain/itemQuantity'
@@ -63,6 +64,49 @@ export const SCHEMA_V2 = {
 export const SCHEMA_V3 = {}
 
 /**
+ * v4 (orden manual, arrastrando): `ItemQuantity.position` (fractional
+ * indexing, ver domain/position.ts). Sin índice nuevo: se ordena en memoria
+ * con sortBy dentro de cada maleta (listas cortas). Hay que dar posición a
+ * las líneas existentes (ver upgrade() en AppDb).
+ */
+export const SCHEMA_V4 = {}
+
+/**
+ * v5 (ordenar compartimentos arrastrando): `Compartment.position`, igual que
+ * las líneas en la v4. Nueva versión y no ampliar la v4: aunque la v4 aún no
+ * esté publicada, ya puede estar en bases de datos de desarrollo, y una
+ * versión que ya se ha abierto no vuelve a migrarse.
+ */
+export const SCHEMA_V5 = {}
+
+/**
+ * Reparte claves de orden crecientes por maleta, en orden de añadido
+ * (createdAt; empate → id, que es UUID v7). Lo usan las migraciones v4 y v5.
+ */
+async function assignPositionsByCreation(table: Table) {
+  const rows: { id: string; luggageId: string; createdAt: string }[] =
+    await table.toArray()
+  const byLuggage = new Map<string, typeof rows>()
+  for (const row of rows) {
+    byLuggage.set(row.luggageId, [...(byLuggage.get(row.luggageId) ?? []), row])
+  }
+  const positionById = new Map<string, string>()
+  for (const group of byLuggage.values()) {
+    group.sort(
+      (a, b) =>
+        a.createdAt.localeCompare(b.createdAt) || (a.id < b.id ? -1 : 1),
+    )
+    const keys = positionsAfter(null, group.length)
+    group.forEach((row, index) => positionById.set(row.id, keys[index]))
+  }
+  await table
+    .toCollection()
+    .modify((row: { id: string; position?: string }) => {
+      row.position = positionById.get(row.id)
+    })
+}
+
+/**
  * Base de datos local (IndexedDB) de la app.
  *
  * Solo la capa `data` (repositorios) debe usar esta clase; la UI nunca habla
@@ -117,6 +161,15 @@ export class AppDb extends Dexie {
             compartment.isReady = false
           })
       })
+
+    this.version(4)
+      .stores(SCHEMA_V4)
+      // Cada maleta conserva el orden que tenía (el de añadido).
+      .upgrade((tx) => assignPositionsByCreation(tx.table('itemQuantities')))
+
+    this.version(5)
+      .stores(SCHEMA_V5)
+      .upgrade((tx) => assignPositionsByCreation(tx.table('compartments')))
   }
 }
 

@@ -105,7 +105,9 @@
 /* Acciones poco frecuentes, visibles solo tras tocar ⋯ (estilo buttons.textAction). */
 .actions {
   display: flex;
-  gap: 1rem;
+  /* Renombrar, Borrar, Subir, Bajar: en pantallas estrechas, dos líneas. */
+  flex-wrap: wrap;
+  column-gap: 1rem;
   padding: 0 0 0.5rem 2rem;
 }
 
@@ -113,4 +115,24 @@
   .chevron {
     transition: none;
   }
+}
+
+/* Asa ≡ del compartimento: como la de los artículos (touch-action: none
+   para que en iOS el gesto sea arrastrar y no hacer scroll). */
+.handle {
+  flex: none;
+  touch-action: none;
+  cursor: grab;
+}
+
+/* El compartimento que se arrastra: por encima y con fondo propio. */
+.dragging {
+  background: var(--bg);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
+}
+
+/* Subir/Bajar desactivados con COLOR, nunca con opacity (stacking context). */
+.actions button:disabled {
+  color: var(--border);
+  cursor: default;
 }
