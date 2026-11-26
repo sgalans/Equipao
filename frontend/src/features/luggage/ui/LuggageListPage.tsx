@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link } from 'react-router'
 import { useRepositories } from '@/shared/di/repositories'
+import buttons from '@/shared/ui/buttons.module.css'
 import highlightStyles from '@/shared/ui/highlight.module.css'
 import page from '@/shared/ui/page.module.css'
 import { useTemporaryHighlight } from '@/shared/ui/useTemporaryHighlight'
@@ -35,6 +36,11 @@ export function LuggageListPage() {
     <section>
       <header className={page.header}>
         <h1 className={page.title}>Mis maletas</h1>
+        {/* Crear una maleta pegando una lista (p. ej. la que alguien ha
+            compartido por WhatsApp). */}
+        <Link to="/import" className={buttons.headerAction}>
+          Importar
+        </Link>
       </header>
 
       {/* El formulario se muestra ya mientras carga: se puede escribir sin

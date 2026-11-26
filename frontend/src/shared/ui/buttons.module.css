@@ -84,6 +84,11 @@
 /* Acción de texto en la cabecera de una pantalla ("Seleccionar",
    "Cancelar"): azul como un enlace de iOS, con 44px de zona táctil. */
 .headerAction {
+  /* inline-flex + sin subrayado: sirve igual en un <button> que en un
+     enlace (<Link>, p. ej. "Importar"). */
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
   min-height: 2.75rem;
   padding: 0 0.5rem;
   border: 0;

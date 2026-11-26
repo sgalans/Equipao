@@ -1,0 +1,14 @@
+/* 16px como mínimo: si no, iOS hace zoom al enfocar el campo. */
+.text {
+  display: block;
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: max(1rem, 16px);
+  resize: none;
+}
