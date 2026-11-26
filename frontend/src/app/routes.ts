@@ -40,6 +40,13 @@ export const routes: RouteObject[] = [
         } satisfies RouteHandle,
       },
       {
+        path: 'import',
+        lazy: async () => ({
+          Component: (await import('@/features/luggage/ui/ImportLuggagePage'))
+            .ImportLuggagePage,
+        }),
+      },
+      {
         path: 'items',
         lazy: async () => ({
           Component: (await import('@/features/items/ui/ItemsCatalogPage'))

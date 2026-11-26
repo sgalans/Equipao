@@ -1,14 +1,18 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
+import { shareText } from '@/shared/lib/shareText'
 import { useRepositories } from '@/shared/di/repositories'
 import buttons from '@/shared/ui/buttons.module.css'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
+import { CopyTextDialog } from '@/shared/ui/CopyTextDialog'
 import { EditableTitle } from '@/shared/ui/EditableTitle'
 import { PackedVisibilityIcon } from '@/shared/ui/icons/PackedVisibilityIcon'
 import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
+import { ShareIcon } from '@/shared/ui/icons/ShareIcon'
 import { useNotifications } from '@/shared/ui/notifications/notificationStore'
 import page from '@/shared/ui/page.module.css'
+import { formatLuggageText, toLuggageText } from '../domain/luggageText'
 import { isFullyPacked, packingProgress } from '../domain/packing'
 import { articles } from './addedSummary'
 import { removedSummary } from './bulkSummary'
@@ -41,6 +45,8 @@ export function LuggageDetailPage() {
   )
   const hide = usePackingOrder((state) => state.hide)
   const showAll = usePackingOrder((state) => state.show)
+  // Último recurso de "Compartir": texto para copiar a mano (null = cerrado).
+  const [manualShareText, setManualShareText] = useState<string | null>(null)
   // Ventana "Listos": ids listos al abrirla (null = cerrada).
   const [readyListIds, setReadyListIds] = useState<string[] | null>(null)
 
@@ -111,6 +117,18 @@ export function LuggageDetailPage() {
   const showVisibilityToggle = !isSelecting && doneNow.size > 0
   const isHidingPacked = isAllDoneHidden(entries, compartmentList, hidden)
 
+  /** Comparte la maleta como texto (hoja nativa de iOS o portapapeles). */
+  async function share() {
+    if (!luggage) return
+    const text = formatLuggageText(
+      toLuggageText(luggage.name, entries, compartmentList),
+    )
+    // shareText nunca lanza: prueba hoja nativa → portapapeles → 'manual'.
+    const result = await shareText({ title: luggage.name, text })
+    if (result === 'copied') show('Lista copiada. Pégala donde quieras.')
+    if (result === 'manual') setManualShareText(text)
+  }
+
   return (
     <section>
       <header className={page.header}>
@@ -124,6 +142,15 @@ export function LuggageDetailPage() {
             await luggages.update(luggage.id, { name })
           }}
         />
+        <button
+          type="button"
+          className={buttons.iconGhost}
+          aria-label="Compartir maleta"
+          title="Compartir maleta"
+          onClick={() => void share()}
+        >
+          <ShareIcon />
+        </button>
       </header>
       <LuggageDescription
         // key: si cambia de maleta, el editor empieza de cero.
@@ -197,6 +224,14 @@ export function LuggageDetailPage() {
         selection={
           isSelecting ? { selected, onToggle: toggleSelected } : undefined
         }
+      />
+      <CopyTextDialog
+        text={manualShareText}
+        onClose={() => setManualShareText(null)}
+        onCopied={() => {
+          setManualShareText(null)
+          show('Lista copiada. Pégala donde quieras.')
+        }}
       />
       <ReadyListDialog
         quantityIds={readyListIds}
