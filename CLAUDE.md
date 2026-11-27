@@ -132,42 +132,45 @@ Detalle y restricciones en `Architecture.md` (fuente de verdad del modelo).
 
 ## 10. Estado actual
 
-- **Producción: v1.0.0** en `https://equipao.vercel.app` (rama `main`, *tag* `v1.0.0`), instalada como PWA en el iPhone. **Fallo conocido en producción**: sin modo sin conexión (el manifest salía dos veces en la precaché, Workbox lanzaba `add-to-cache-list-conflicting-entries` y el service worker no se instalaba). El arreglo (sin `webmanifest` en `globPatterns`, `vite.config.ts`) ya está en `develop` (commit `7b89a39`) y sale con la próxima *release* (v1.1.0); no hubo rama de hotfix aparte.
-- **Siguiente release: v1.1.0** (`develop` → `main`): orden manual y arrastre (migraciones v4, v5), compartimentos = líneas contenedor (v6, v7), renombrar/unir, compartimentos en el catálogo y al añadir, y el arreglo sin conexión. Antes de publicarla: copia en texto de las maletas reales (compartir) por si falla una migración.
+- **Producción: v1.1.0** en `https://equipao.vercel.app` (rama `main`, *tag* `v1.1.0`, con notas en GitHub Releases), instalada como PWA en el iPhone. El modo sin conexión funciona (el fallo de v1.0.0, manifest repetido en la precaché, se arregló y lo vigila `check:sw` en el CI). En el iPhone, para ver una versión nueva puede hacer falta cerrar la PWA del todo y volver a abrirla.
+- **Siguiente release: v1.1.1** (rama `issue/migrate-old-base-description` → `develop` → `main`): migración v8 (instrucciones de uso en la "Maleta básica" de quien instaló la v1.0.0 y no la editó).
 - **PWA** (iteración 10): `vite-plugin-pwa` con `registerType: 'prompt'` (manifest, precaché y `navigateFallback`); icono `public/icon.svg` → `@vite-pwa/assets-generator`; ajustes de iOS (safe areas, barra de estado `default`, `theme-color` claro/oscuro); `requestPersistentStorage()`; avisos de actualización (`AppUpdates`/`UpdateBanner`); chunk `vendor` + rutas secundarias con `lazy`.
 - **Vercel**: Root Directory `frontend`, producción = `main`, Node 26.x, vistas previas por PR protegidas (Deployment Protection). `frontend/vercel.json`: rewrite a `index.html` y sin caché para `sw.js`/`index.html`/manifest.
 - **Datos**: viven solo en cada dispositivo. En iOS, la app instalada y Safari NO comparten datos. Con la PWA instalada + almacenamiento persistente no aplica la limpieza de 7 días de Safari; compartir/importar una maleta como texto ya sirve para pasarla de un sitio a otro; las copias de seguridad completas irán con el backend.
 - **Flujo de Git**: `main` (producción) y `develop` (**rama por defecto en GitHub**: las PRs van a `develop` por defecto); una rama por grupo de tareas relacionadas que sale de `develop` (una migración o algo arriesgado, en su propia rama) → PR a `develop` (auto-merge activado: `gh pr merge --auto --merge --delete-branch`) → PR de *release* `develop` → `main` (Vercel publica `main`) → *tag* `vX.Y.Z` (versionado semántico). Probar antes en la vista previa de la PR. Remoto: https://github.com/sgalans/Equipao.
+- **Publicar una versión** (pasos, en orden): (1) en la rama de trabajo, subir `version` en `frontend/package.json` (PATCH = arreglos, MINOR = funciones nuevas) y preparar las notas; (2) PR a `develop` y merge; (3) PR de *release* `develop` → `main` y merge (Vercel publica); (4) **después** del merge, *tag* sobre `main`: `git checkout main; git pull; git tag vX.Y.Z; git push origin vX.Y.Z`; (5) GitHub → Releases → "Draft a new release" con ese *tag* y las notas; (6) comprobar en el iPhone (cerrar la PWA del todo y reabrir; aceptar "Nueva versión disponible"). Si una versión cambia el texto de los datos por defecto, quien ya tiene la app solo lo recibe con una migración (como la v8). El punto "Changelog y versiones automáticas" del backlog automatizaría 1, 4 y 5.
 
 ### Backlog (priorizado; decidir alcance con el usuario antes de empezar cada punto)
 
 El backlog vive **aquí** (decisión del usuario: GitHub Issues/Projects se probó y se descartó por incómodo para un proyecto de una persona). Para añadir, quitar o repriorizar: editar esta lista. Al terminar un punto, quitarlo de aquí y anotarlo en el historial.
 
 **Prioridad alta**
-- **En curso: rama `improvements/UI`** (sale de `develop`): últimos retoques de interfaz antes del deploy de v1.1.0. Después: PR a `develop`, *release* `develop` → `main` y *tag* `v1.1.0`.
+- Publicar **v1.1.1** (ver "Siguiente release" y "Publicar una versión").
 
 **Prioridad media**
 1. **Artículos de "último momento"** (cepillo de dientes, cargador, gafas: no se pueden guardar hasta el día de salida): marca + recordatorio "⏰ Antes de salir: N cosas ›" bajo la barra de progreso, que abre una hoja como "Listos". Propuesta pendiente de decidir: marca en `Item` (catálogo: vale para todas las maletas) en vez de por maleta; marcar desde el panel de la fila; icono ⏰ en la fila.
-2. **"Por comprar"**: marca por maleta (`ItemQuantity`) para lo que aún no se tiene (protector solar, adaptador) y lista de la compra en una hoja ("🛒 Por comprar: N ›"). Al duplicar, no se copia. Hacerla junto con "último momento": **una sola migración (v8)** con su test.
-3. **Aviso al ocultar listos** (posible extra): las 1-2 primeras veces que se toca el ojo, un aviso breve que explique dónde verlos ("Toca la barra de progreso para verlos").
-4. **Organizar maletas: archivo o carpetas** (petición del usuario: carpeta "Viajes hechos"). **A decidir**: (A, recomendado, YAGNI) `Luggage.archivedAt` + migración, acción "Archivar" y sección plegable "Viajes hechos (N)"; o (B) entidad `Folder` + `Luggage.folderId` (SET NULL al borrar), un nivel, con gestión de carpetas y "Mover a…". A es un caso particular de B (migrable sin perder nada). Al archivar, ofrecer "Reiniciar maleta" (ya existe en el ⋯).
-5. **Familias de artículos** (petición del usuario): `Category` (id, name, orden) + `Item.categoryId` opcional (SET NULL) + migración; familias por defecto desde los grupos de `defaultData.ts`; catálogo en secciones plegables. A decidir si se ven dentro de la maleta (compartimento = DÓNDE va; familia = QUÉ ES).
-6. **Fecha del viaje (opcional)**: revisar "sin fechas en la maleta" si se quiere ordenar por fecha, archivar solo o cuenta atrás. Valorarlo con el punto 4 (archivar). `'YYYY-MM-DD'`.
-7. **Recordatorio de olvidos típicos**: aviso si falta "DNI / Pasaporte" o "Cargador del móvil".
-8. **"Deshacer" al borrar** (snapshot + reinserción + aviso con botón): sustituiría a algunas confirmaciones.
-9. **Tests E2E con Playwright**: foco y Escape en `<dialog>`, blur en `InlineEditInput`, gestos táctiles, service worker y modo sin conexión.
-10. **Dependabot o Renovate** (con el CI comprobando las PRs).
-11. **Monitorización de errores** (p. ej. Sentry gratuito) en `reportError` y `RouteErrorPage`, sin enviar nombres de maletas ni de artículos.
-12. **Changelog y versiones automáticas** (release-please o changesets) a partir de los Conventional Commits.
+   **"Por comprar"** (va con el anterior): marca por maleta (`ItemQuantity`) para lo que aún no se tiene (protector solar, adaptador) y lista de la compra en una hoja ("🛒 Por comprar: N ›"). Al duplicar, no se copia. Los dos juntos: **una sola migración (v9)** con su test.
+2. **Changelog y versiones automáticas** (release-please o changesets) a partir de los Conventional Commits: PR automática con la versión y las notas; al hacer merge, crea el *tag* y la *release*. Sustituye los pasos manuales de "Publicar una versión".
+3. **Tests E2E con Playwright** (con **WebKit**, el motor de Safari, también en el CI): lo que jsdom no ve: foco y Escape en `<dialog>`, tocar fuera de las hojas, scroll con diálogos abiertos, campo que crece (`useAutoGrow`), blur en `InlineEditInput`, arrastre, service worker y modo sin conexión.
+4. **Arreglo: mensaje concreto en "Mover a… → + Nuevo compartimento…"**: con un nombre que ya es de un artículo normal (`DuplicateError`) sale el genérico "No se ha podido completar la acción"; debe decir el motivo, como en el resto de la app.
+5. **Organizar maletas: archivo o carpetas** (petición del usuario: carpeta "Viajes hechos"). **A decidir**: (A, recomendado, YAGNI) `Luggage.archivedAt` + migración, acción "Archivar" y sección plegable "Viajes hechos (N)"; o (B) entidad `Folder` + `Luggage.folderId` (SET NULL al borrar), un nivel, con gestión de carpetas y "Mover a…". A es un caso particular de B (migrable sin perder nada). Al archivar, ofrecer "Reiniciar maleta" (ya existe en el ⋯).
+6. **Familias de artículos** (petición del usuario): `Category` (id, name, orden) + `Item.categoryId` opcional (SET NULL) + migración; familias por defecto desde los grupos de `defaultData.ts`; catálogo en secciones plegables. A decidir si se ven dentro de la maleta (compartimento = DÓNDE va; familia = QUÉ ES).
+7. **"Deshacer" al borrar** (snapshot + reinserción + aviso con botón): sustituiría a algunas confirmaciones.
+8. **Dependabot o Renovate** (con el CI comprobando las PRs).
+9. **Monitorización de errores** (p. ej. Sentry gratuito) en `reportError` y `RouteErrorPage`, sin enviar nombres de maletas ni de artículos.
+10. **Fecha del viaje (opcional)**: revisar "sin fechas en la maleta" si se quiere ordenar por fecha, archivar solo o cuenta atrás. Valorarlo con el punto 5 (archivar). `'YYYY-MM-DD'`.
+11. **Recordatorio de olvidos típicos**: aviso si falta "DNI / Pasaporte" o "Cargador del móvil".
 
 **Prioridad baja / mejoras técnicas**
-13. **Celebración al completar una maleta** ("¡Cerrada!"), respetando "Reducir movimiento".
-14. **Buscar dentro de una maleta**.
-15. **`zod/mini`** para adelgazar `vendor` (Zod ≈ 19 %; exige reescribir los esquemas).
-16. **Mantenimiento de herramientas**: `overrides` de `eslint-plugin-jsx-a11y` (ESLint 10), avisos de `npm audit` (9 de `minimatch`; el CI ya muestra 12: revisar), npm 12.
-17. **Auditoría de accesibilidad** con VoiceOver y Lighthouse (incluir: el ojo "a medias"/"todo oculto" solo se distingue por el color).
-18. **Ideas aparcadas**: maleta plantilla adicional, "copiar compartimento desde otra maleta", perfiles locales.
-19. **Mantener la pantalla encendida mientras se empaqueta** (Screen Wake Lock API). Lo último (decisión del usuario).
+12. **Celebración al completar una maleta** ("¡Cerrada!"), respetando "Reducir movimiento".
+13. **Buscar dentro de una maleta**.
+14. **`zod/mini`** para adelgazar `vendor` (Zod ≈ 19 %; exige reescribir los esquemas).
+15. **Mantenimiento de herramientas**: `overrides` de `eslint-plugin-jsx-a11y` (ESLint 10), avisos de `npm audit` (9 de `minimatch`; el CI ya muestra 12: revisar), npm 12.
+16. **Auditoría de accesibilidad** con VoiceOver y Lighthouse (incluir: el ojo "a medias"/"todo oculto" solo se distingue por el color).
+17. **Ideas aparcadas**: maleta plantilla adicional, "copiar compartimento desde otra maleta", perfiles locales, pantalla de "Ayuda" (si las instrucciones de la "Maleta básica" crecen tanto que ya no caben bien en una descripción).
+18. **Mantener la pantalla encendida mientras se empaqueta** (Screen Wake Lock API). Lo último (decisión del usuario).
+
+Descartado: aviso al ocultar listos (las instrucciones de la "Maleta básica" ya explican el ojo y la barra de progreso).
 
 ### Entorno y herramientas
 
@@ -176,6 +179,6 @@ El backlog vive **aquí** (decisión del usuario: GitHub Issues/Projects se prob
 - **CI** (GitHub Actions, `.github/workflows/ci.yml`): un único job `check` (`npm ci` + `npm run check` + `npm run build` + `npm run check:sw`, Node desde `.nvmrc`) en cada PR a `develop`/`main` y en cada push a ellas; caché de `node_modules` con clave SO + `.nvmrc` + lockfile (sin caché, `npm ci` era ~37 de ~72 s; los tests, 8 s). **Ruleset "Proteger main y develop"**: exige PR (0 aprobaciones) y el check `check` en verde, sin *force push* ni borrado. Si se renombra el job, actualizar el ruleset.
 - TypeScript en la línea 6.0 por compatibilidad con `typescript-eslint`.
 - `npm audit`: 9 avisos moderados de `minimatch` solo en herramientas de lint (`npm audit --omit=dev` = 0). No aplicar `npm audit fix --force` (degradaría las herramientas); revisar cuando ESLint actualice.
-- Historial (una rama/PR por iteración): 0) setup · 1) capa de datos · 2) viajes (después eliminados) · 3) maleta como entidad principal · 4) artículos y empaquetado · 5) compartimentos · 6) duplicar maleta · 7) catálogo · 8) revisión general · 9) crear desde el catálogo, añadir varios, datos por defecto · 10) PWA y despliegue → **v1.0.0** · 11) CI con GitHub Actions (+ ruleset y caché) · 12) `feature/packing`: ventana "Listos" + ojo "Ocultar listos" (sustituye a "Solo lo que falta") · 13) `feature/unified-add`: un solo "añadir" desde el catálogo · 14) `feature/share-text`: compartir e importar maletas como texto · 15) `feature/drag-sort`: ordenar artículos y compartimentos arrastrando (migraciones v4 y v5) · 16) `refactor/compartments`: compartimentos = líneas contenedor (migraciones v6 y v7), renombrar y unir desde la maleta, compartimentos en el catálogo y en "Añadir artículos" (sin "Nuevo compartimento") · 17) `improvements/UI` (en curso): retoques antes de v1.1.0.
+- Historial (una rama/PR por iteración): 0) setup · 1) capa de datos · 2) viajes (después eliminados) · 3) maleta como entidad principal · 4) artículos y empaquetado · 5) compartimentos · 6) duplicar maleta · 7) catálogo · 8) revisión general · 9) crear desde el catálogo, añadir varios, datos por defecto · 10) PWA y despliegue → **v1.0.0** · 11) CI con GitHub Actions (+ ruleset y caché) · 12) `feature/packing`: ventana "Listos" + ojo "Ocultar listos" (sustituye a "Solo lo que falta") · 13) `feature/unified-add`: un solo "añadir" desde el catálogo · 14) `feature/share-text`: compartir e importar maletas como texto · 15) `feature/drag-sort`: ordenar artículos y compartimentos arrastrando (migraciones v4 y v5) · 16) `refactor/compartments`: compartimentos = líneas contenedor (migraciones v6 y v7), renombrar y unir desde la maleta, compartimentos en el catálogo y en "Añadir artículos" (sin "Nuevo compartimento") · 17) `improvements/UI`: hoja de acciones ⋯, ojo de tres estados, "Nueva maleta", "Dónde" al añadir, "Reiniciar maleta", instrucciones en la "Maleta básica", descripciones de hasta 1000 y test de humo del service worker → **v1.1.0** · 18) `issue/migrate-old-base-description`: migración v8 (instrucciones a la "Maleta básica" antigua) → **v1.1.1**.
 - **Test de humo del build** (`npm run check:sw`, tras `npm run build`): `scripts/check-sw.js` lee `dist/sw.js` y aplica las reglas puras de `scripts/swChecks.js` (con tests en `swChecks.test.js`, en el proyecto `unit` de Vitest): precaché sin URLs repetidas (el fallo de v1.0.0), con `index.html` y el manifest, con todo `dist/assets/` (también los chunks `lazy`), sin URLs que no existan, y con el `NavigationRoute` a `index.html`. Si no encuentra la precaché (cambio de formato de Workbox), falla en vez de dar por bueno. Comprobado reintroduciendo el fallo de v1.0.0: sale en rojo.
 - Actualiza esta sección conforme avance el proyecto.
