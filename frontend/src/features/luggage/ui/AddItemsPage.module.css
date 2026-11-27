@@ -20,16 +20,63 @@
   color: var(--text-muted);
 }
 
-/* Barra fija abajo, como en el modo selección del catálogo. */
+/* Barra fija abajo, como en el modo selección del catálogo: "Dónde" y el
+   botón de añadir. */
 .bar {
   position: sticky;
   bottom: 0;
   display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   padding: 0.75rem 0 calc(0.75rem + env(safe-area-inset-bottom));
   background: var(--bg);
   border-top: 1px solid var(--border);
 }
 
-.bar button {
+.destination {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 600;
+}
+
+/* El <select> con su flecha ▾ encima, a la derecha. */
+.selectWrap {
+  position: relative;
   flex: 1;
+  min-width: 0;
+}
+
+.selectWrap select {
+  /* Sin el aspecto propio del navegador: el mismo en todos y con nuestra ▾. */
+  appearance: none;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 2.25rem 0 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  /* 16 px: si no, iOS hace zoom al tocarlo. */
+  font-size: max(1rem, 16px);
+  font-weight: 400;
+  text-overflow: ellipsis;
+}
+
+.chevron {
+  position: absolute;
+  top: 50%;
+  right: 0.625rem;
+  display: grid;
+  color: var(--text-muted);
+  transform: translateY(-50%);
+  /* Que el toque llegue al <select> de debajo. */
+  pointer-events: none;
+}
+
+.note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
 }

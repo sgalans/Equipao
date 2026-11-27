@@ -187,7 +187,7 @@ export function LuggageDetailPage() {
             className={`${buttons.primary} ${styles.addLink}`}
           >
             <PlusIcon />
-            Añadir artículos
+            Añadir a la maleta
           </Link>
         </div>
       ) : (
@@ -240,7 +240,7 @@ export function LuggageDetailPage() {
               className={`${buttons.secondary} ${styles.addLink}`}
             >
               <PlusIcon />
-              Añadir artículos
+              Añadir a la maleta
             </Link>
           )}
           <PackingList

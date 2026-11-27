@@ -45,7 +45,7 @@ describe('Seleccionar dentro de una maleta', () => {
     // Las filas son casillas de selección (no empaquetan).
     expect(screen.getByRole('checkbox', { name: 'Cepillo' })).not.toBeChecked()
     expect(
-      screen.queryByRole('link', { name: 'Añadir artículos' }),
+      screen.queryByRole('link', { name: 'Añadir a la maleta' }),
     ).not.toBeInTheDocument()
     expect(
       screen.queryByRole('checkbox', { name: 'Neceser listo' }),
@@ -182,7 +182,7 @@ describe('Seleccionar dentro de una maleta', () => {
     await user.click(screen.getByRole('button', { name: 'Cancelar' }))
 
     expect(
-      screen.getByRole('link', { name: 'Añadir artículos' }),
+      screen.getByRole('link', { name: 'Añadir a la maleta' }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'Acciones de Mochila' }),

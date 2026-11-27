@@ -1,6 +1,10 @@
 import { newEntityBase, nowIso } from '@/shared/data/entityBase'
 import type { AppDb } from '@/shared/db/db'
-import { DuplicateError, EntityNotFoundError } from '@/shared/domain/errors'
+import {
+  ConsistencyError,
+  DuplicateError,
+  EntityNotFoundError,
+} from '@/shared/domain/errors'
 import {
   ItemQuantitySchema,
   NewItemQuantitySchema,
@@ -77,6 +81,83 @@ export function createDexieItemQuantityRepository(
     return db.itemQuantities.where('luggageId').equals(luggageId).toArray()
   }
 
+  /**
+   * Lo común a addMany y addManyIntoNewCompartment: los artículos van a
+   * `compartmentId` (un compartimento que YA existe, o null = sueltos) o,
+   * si se indica `newContainerItemId`, dentro de la línea de ese contenedor
+   * que se crea en esta misma transacción.
+   */
+  function insertMany(
+    luggageId: string,
+    itemIds: string[],
+    compartmentId: string | null,
+    newContainerItemId: string | null,
+  ) {
+    return db.transaction(
+      'rw',
+      [db.itemQuantities, db.luggages, db.items],
+      async () => {
+        // FOREIGN KEY (luggageId), invariante del compartimento y
+        // FOREIGN KEY (itemId) de CADA artículo: si algo no existe es un
+        // error (no se ignora en silencio) y no se añade nada.
+        if (!(await db.luggages.get(luggageId))) {
+          throw new EntityNotFoundError('Luggage', luggageId)
+        }
+        await assertCompartmentBelongsTo(compartmentId, luggageId)
+        // Set: si llegara el mismo id dos veces, se trata una sola vez.
+        const uniqueItemIds = [...new Set(itemIds)]
+        const items = await db.items.bulkGet(uniqueItemIds)
+        const missing = uniqueItemIds.find((_, index) => !items[index])
+        if (missing) throw new EntityNotFoundError('Item', missing)
+        const containers = new Set(
+          items.flatMap((item) => (item?.isContainer ? [item.id] : [])),
+        )
+
+        // Lo que ya está en la maleta se salta (decisión de producto: ni
+        // se vuelve a añadir ni se suma cantidad).
+        const current = await allLinesOf(luggageId)
+        const alreadyIn = new Set(current.map((q) => q.itemId))
+        const toAdd = uniqueItemIds.filter((itemId) => !alreadyIn.has(itemId))
+
+        // ids generados ANTES de crear las filas: así los artículos pueden
+        // apuntar a la línea del contenedor nuevo (aún sin guardar).
+        const bases = toAdd.map(() => newEntityBase())
+        let destination = compartmentId
+        if (newContainerItemId !== null) {
+          const index = toAdd.indexOf(newContainerItemId)
+          if (!containers.has(newContainerItemId) || index === -1) {
+            throw new ConsistencyError(
+              'El compartimento nuevo debe ser un contenedor que aún no esté en la maleta',
+            )
+          }
+          destination = bases[index].id
+        }
+
+        // Todas al final, en el orden en que llegan.
+        const positions = positionsAfter(lastPosition(current), toAdd.length)
+        const added = toAdd.map((itemId, index) =>
+          ItemQuantitySchema.parse({
+            ...bases[index],
+            luggageId,
+            itemId,
+            // Un contenedor es un compartimento: siempre de primer nivel.
+            compartmentId: containers.has(itemId) ? null : destination,
+            num: 1,
+            nAlreadyPacked: 0,
+            position: positions[index],
+          }),
+        )
+        await db.itemQuantities.bulkAdd(added)
+        return {
+          added,
+          skippedItemIds: uniqueItemIds.filter((itemId) =>
+            alreadyIn.has(itemId),
+          ),
+        }
+      },
+    )
+  }
+
   return {
     listByLuggage,
 
@@ -135,54 +216,11 @@ export function createDexieItemQuantityRepository(
     },
 
     addMany(luggageId, itemIds, compartmentId = null) {
-      return db.transaction(
-        'rw',
-        [db.itemQuantities, db.luggages, db.items],
-        async () => {
-          // FOREIGN KEY (luggageId), invariante del compartimento y
-          // FOREIGN KEY (itemId) de CADA artículo: si algo no existe es un
-          // error (no se ignora en silencio) y no se añade nada.
-          if (!(await db.luggages.get(luggageId))) {
-            throw new EntityNotFoundError('Luggage', luggageId)
-          }
-          await assertCompartmentBelongsTo(compartmentId, luggageId)
-          // Set: si llegara el mismo id dos veces, se trata una sola vez.
-          const uniqueItemIds = [...new Set(itemIds)]
-          const items = await db.items.bulkGet(uniqueItemIds)
-          const missing = uniqueItemIds.find((_, index) => !items[index])
-          if (missing) throw new EntityNotFoundError('Item', missing)
-          const containers = new Set(
-            items.flatMap((item) => (item?.isContainer ? [item.id] : [])),
-          )
+      return insertMany(luggageId, itemIds, compartmentId, null)
+    },
 
-          // Lo que ya está en la maleta se salta (decisión de producto: ni
-          // se vuelve a añadir ni se suma cantidad).
-          const current = await allLinesOf(luggageId)
-          const alreadyIn = new Set(current.map((q) => q.itemId))
-          const toAdd = uniqueItemIds.filter((itemId) => !alreadyIn.has(itemId))
-          // Todas al final, en el orden en que llegan.
-          const positions = positionsAfter(lastPosition(current), toAdd.length)
-          const added = toAdd.map((itemId, index) =>
-            ItemQuantitySchema.parse({
-              ...newEntityBase(),
-              luggageId,
-              itemId,
-              // Un contenedor es un compartimento: siempre de primer nivel.
-              compartmentId: containers.has(itemId) ? null : compartmentId,
-              num: 1,
-              nAlreadyPacked: 0,
-              position: positions[index],
-            }),
-          )
-          await db.itemQuantities.bulkAdd(added)
-          return {
-            added,
-            skippedItemIds: uniqueItemIds.filter((itemId) =>
-              alreadyIn.has(itemId),
-            ),
-          }
-        },
-      )
+    addManyIntoNewCompartment(luggageId, itemIds, containerItemId) {
+      return insertMany(luggageId, itemIds, null, containerItemId)
     },
 
     togglePacked(id) {

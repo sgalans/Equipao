@@ -4,6 +4,7 @@ import { AddItemsDialog } from '@/features/luggage/ui/AddItemsDialog'
 import { useRepositories } from '@/shared/di/repositories'
 import { DuplicateError } from '@/shared/domain/errors'
 import buttons from '@/shared/ui/buttons.module.css'
+import { SelectItemsIcon } from '@/shared/ui/icons/SelectItemsIcon'
 import page from '@/shared/ui/page.module.css'
 import { useTemporaryHighlight } from '@/shared/ui/useTemporaryHighlight'
 import { isSameItemName } from '../domain/itemName'
@@ -106,12 +107,16 @@ export function ItemsCatalogPage() {
         {catalog.length > 0 && (
           <button
             type="button"
-            className={buttons.headerAction}
+            className={`${buttons.headerAction} ${styles.selectButton}`}
             onClick={() => {
               if (isSelecting) exitSelection()
               else setIsSelecting(true)
             }}
           >
+            {/* El mismo icono que "Seleccionar artículos" en el ⋯ de la
+                maleta (decisión del usuario): una sola imagen para la misma
+                acción. "Cancelar", sin icono. */}
+            {!isSelecting && <SelectItemsIcon />}
             {isSelecting ? 'Cancelar' : 'Seleccionar'}
           </button>
         )}

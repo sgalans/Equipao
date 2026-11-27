@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useNotifications } from '@/shared/ui/notifications/notificationStore'
@@ -63,10 +63,16 @@ describe('Compartir una maleta', () => {
 
     await chooseLuggageAction(user, 'Mallorca', 'Compartir')
 
-    expect(share).toHaveBeenCalledWith({
-      title: 'Mallorca',
-      text: expectedText,
-    })
+    // waitFor: el texto se prepara al abrir el ⋯ (useLiveQuery, asíncrono).
+    // Si el test toca "Compartir" antes de que esté listo, la app lo calcula
+    // en ese momento y comparte un instante después (red de seguridad):
+    // sin esperar, el test fallaba a veces (flaky).
+    await waitFor(() =>
+      expect(share).toHaveBeenCalledWith({
+        title: 'Mallorca',
+        text: expectedText,
+      }),
+    )
   })
 
   it('sin hoja nativa, copia la lista y lo dice', async () => {
@@ -75,7 +81,8 @@ describe('Compartir una maleta', () => {
 
     await chooseLuggageAction(user, 'Mallorca', 'Compartir')
 
-    expect(writeText).toHaveBeenCalledWith(expectedText)
+    // waitFor: ver el test anterior (el texto se prepara de forma asíncrona).
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(expectedText))
     expect(
       await screen.findByText('Lista copiada. Pégala donde quieras.'),
     ).toBeInTheDocument()

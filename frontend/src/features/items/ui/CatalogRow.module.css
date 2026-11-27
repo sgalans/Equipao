@@ -66,6 +66,49 @@
   cursor: default;
 }
 
+/* El nombre de lo que ya está en la maleta, bastante más apagado (un gris
+   entre el texto secundario y el fondo): se lee, pero queda en segundo
+   plano (decisión del usuario: con el gris secundario casi no se
+   distinguía del resto). color-mix: Safari 16.2+. */
+.selectable:disabled .name {
+  color: color-mix(in srgb, var(--text-muted) 55%, var(--bg));
+}
+
+/* Etiqueta "Ya en la maleta": recuadro con fondo, pequeño. */
+.badge {
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  background: var(--border);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/*
+ * El círculo de la casilla, con TRES aspectos que se distinguen sin
+ * depender solo del color (decisión del usuario: "Ya en la maleta" casi no
+ * se distinguía):
+ *   ○ vacío      → se puede elegir
+ *   ✓ azul lleno → elegido (el color de selección de iOS)
+ *   ✓ gris lleno → ya está en la maleta: no se puede elegir
+ * El estado sale del BOTÓN de la fila (aria-checked / disabled), que es el
+ * que oye VoiceOver: lo que se ve y lo que se oye no se desincronizan.
+ */
+.selectable[aria-checked='true'] > span:first-child {
+  color: var(--on-accent);
+}
+
+.selectable[aria-checked='true'] > span:first-child::before {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
 .selectable:disabled > span:first-child {
+  color: var(--text-muted);
+}
+
+.selectable:disabled > span:first-child::before {
   border-color: var(--border);
+  background: var(--border);
 }

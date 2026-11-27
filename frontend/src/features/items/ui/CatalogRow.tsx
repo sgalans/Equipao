@@ -116,10 +116,22 @@ export function CatalogRow({
           onClick={selection.onToggle}
         >
           <span className={checkCircle.check} aria-hidden="true">
-            {selection.isSelected && <CheckIcon />}
+            {/* ✓ también si ya está en la maleta (en gris, ver CSS): "ya
+                incluido", que se distingue de "sin elegir" (○ vacío). */}
+            {(selection.isSelected || selection.disabledReason) && (
+              <CheckIcon />
+            )}
           </span>
           <span className={styles.name}>{item.name}</span>
-          <span className={styles.usage}>
+          {/* "Ya en la maleta" como etiqueta (recuadro con fondo): se
+              reconoce de un vistazo, no solo por el círculo. */}
+          <span
+            className={
+              selection.disabledReason
+                ? `${styles.usage} ${styles.badge}`
+                : styles.usage
+            }
+          >
             {selection.disabledReason ?? usage}
           </span>
         </button>

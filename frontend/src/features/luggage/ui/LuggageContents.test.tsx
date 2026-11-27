@@ -202,7 +202,7 @@ describe('Maleta vacía', () => {
       screen.getByText('Aún no hay nada en esta maleta.'),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('link', { name: 'Añadir artículos' }),
+      screen.getByRole('link', { name: 'Añadir a la maleta' }),
     ).toBeInTheDocument()
     // Nada que contar: ni "0 de 0 listos" ni la barra.
     expect(screen.queryByText(/de 0 listos/)).not.toBeInTheDocument()

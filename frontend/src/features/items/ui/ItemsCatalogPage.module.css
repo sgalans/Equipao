@@ -39,3 +39,8 @@
 .selectionBar button {
   flex: 1;
 }
+
+/* "Seleccionar" con su icono delante. */
+.selectButton {
+  gap: 0.375rem;
+}

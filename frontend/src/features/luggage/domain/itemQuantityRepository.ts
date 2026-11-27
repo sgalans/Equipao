@@ -47,6 +47,21 @@ export interface ItemQuantityRepository {
     compartmentId?: string | null,
   ): Promise<AddManyResult>
   /**
+   * Como addMany, pero metiendo los artículos en un compartimento que se
+   * añade EN LA MISMA operación: `containerItemId` es un contenedor de la
+   * lista que aún no está en la maleta ("Dónde: Mochila (compartimento
+   * nuevo)"). Una sola transacción: o entra todo o nada (si se hiciera en
+   * dos pasos, un fallo a medias dejaría la Mochila sin sus cosas). Los
+   * demás contenedores de la lista quedan de primer nivel, como en addMany.
+   * ConsistencyError si `containerItemId` no es un contenedor de la lista o
+   * ya está en la maleta.
+   */
+  addManyIntoNewCompartment(
+    luggageId: string,
+    itemIds: string[],
+    containerItemId: string,
+  ): Promise<AddManyResult>
+  /**
    * Orden manual: coloca la línea `id` ENTRE `beforeId` y `afterId` (null =
    * sin vecino por ese lado: el principio o el final). Cambia solo esa fila
    * (fractional indexing, ver domain/position.ts). EntityNotFoundError si
