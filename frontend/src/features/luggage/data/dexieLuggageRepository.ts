@@ -87,7 +87,7 @@ export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
       return luggage
     },
 
-    duplicate(id) {
+    duplicate(id, overrides = {}) {
       // Una maleta y sus líneas (compartimentos incluidos: son líneas
       // contenedor) forman un AGREGADO (DDD) con la maleta como raíz: se
       // copian juntas o no se copia nada.
@@ -100,9 +100,10 @@ export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
 
           const copy = LuggageSchema.parse({
             ...newEntityBase(),
-            name: copyName(source.name),
-            // La descripción es parte de la "plantilla": se copia.
-            description: source.description,
+            name: overrides.name ?? copyName(source.name),
+            // La descripción es parte de la "plantilla": se copia (salvo que
+            // se indique otra, p. ej. desde "Nueva maleta").
+            description: overrides.description ?? source.description,
           })
 
           // Cada línea se copia ENTERA (`position` incluida: mismo orden

@@ -237,7 +237,7 @@ export function LuggageDetailPage() {
             // catálogo, donde se busca, se elige y se crea lo que falte.
             <Link
               to={addItemsPath}
-              className={`${buttons.secondary} ${styles.addLink}`}
+              className={`${buttons.primary} ${styles.addLink}`}
             >
               <PlusIcon />
               Añadir a la maleta

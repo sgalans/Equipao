@@ -30,63 +30,112 @@ describe('LuggageListPage', () => {
     ).toEqual(['Mochila Japón, Vacía', 'Maleta finde, Vacía'])
   })
 
-  describe('crear en línea', () => {
-    it('Enter crea la maleta, limpia el campo y mantiene el foco', async () => {
+  describe('Nueva maleta', () => {
+    /** Desde "Mis maletas" → "+ Nueva maleta". */
+    async function openNewLuggage(repositories = createTestRepositories()) {
       const user = userEvent.setup()
-      const { repositories } = renderApp('/')
-      const input = screen.getByLabelText('Nombre de la nueva maleta')
+      const rendered = renderApp('/', repositories)
+      await user.click(screen.getByRole('link', { name: 'Nueva maleta' }))
+      await screen.findByRole('heading', { name: 'Nueva maleta', level: 1 })
+      return { ...rendered, repositories, user }
+    }
 
-      // {Enter} simula pulsar la tecla: envía el formulario como un usuario.
-      await user.type(input, '  Mochila Japón {Enter}')
+    it('"+ Nueva maleta" lleva a la pantalla; sin nombre no se puede crear', async () => {
+      await openNewLuggage()
 
       expect(
-        await screen.findByRole('link', { name: 'Mochila Japón, Vacía' }),
-      ).toBeInTheDocument()
-      expect(input).toHaveValue('')
-      expect(input).toHaveFocus()
-      const [saved] = await repositories.luggages.list()
-      expect(saved.name).toBe('Mochila Japón')
+        screen.getByRole('button', { name: 'Crear maleta' }),
+      ).toBeDisabled()
+      expect(
+        screen.getByRole('combobox', { name: 'Empezar con' }),
+      ).toHaveDisplayValue('Vacía')
     })
 
-    it('el botón "+" también crea la maleta', async () => {
-      const user = userEvent.setup()
-      renderApp('/')
+    it('con nombre y descripción crea la maleta y la abre (sin volver al formulario)', async () => {
+      const { user, repositories, router } = await openNewLuggage()
 
+      await user.type(screen.getByLabelText('Nombre'), '  Mallorca  ')
       await user.type(
-        screen.getByLabelText('Nombre de la nueva maleta'),
-        'Neceser',
+        screen.getByLabelText('Descripción (opcional)'),
+        'Playa en julio',
       )
       await user.click(screen.getByRole('button', { name: 'Crear maleta' }))
 
       expect(
-        await screen.findByRole('link', { name: 'Neceser, Vacía' }),
+        await screen.findByRole('heading', { name: 'Mallorca', level: 1 }),
+      ).toBeInTheDocument()
+      // replace: "‹" vuelve a "Mis maletas", no al formulario ya usado.
+      expect(router.state.historyAction).toBe('REPLACE')
+      const [saved] = await repositories.luggages.list()
+      expect(saved).toMatchObject({
+        name: 'Mallorca',
+        description: 'Playa en julio',
+      })
+    })
+
+    it('Intro en el nombre también la crea (atajo)', async () => {
+      const { user } = await openNewLuggage()
+
+      await user.type(screen.getByLabelText('Nombre'), 'Neceser{Enter}')
+
+      expect(
+        await screen.findByRole('heading', { name: 'Neceser', level: 1 }),
       ).toBeInTheDocument()
     })
 
-    it('se pueden crear varias seguidas sin tocar nada más', async () => {
-      const user = userEvent.setup()
-      const { repositories } = renderApp('/')
-      const input = screen.getByLabelText('Nombre de la nueva maleta')
+    it('"Empezar con": copia de otra maleta, con el nombre y la descripción nuevos', async () => {
+      const repositories = createTestRepositories()
+      const basic = await repositories.luggages.create({
+        name: 'Maleta básica',
+        description: 'Plantilla base',
+      })
+      const towel = await repositories.items.create({ name: 'Toalla' })
+      await repositories.quantities.add({
+        luggageId: basic.id,
+        itemId: towel.id,
+        num: 2,
+        nAlreadyPacked: 2,
+      })
+      const { user } = await openNewLuggage(repositories)
 
-      await user.type(input, 'Una{Enter}')
-      await screen.findByRole('link', { name: 'Una, Vacía' })
-      await user.type(input, 'Dos{Enter}')
-      await screen.findByRole('link', { name: 'Dos, Vacía' })
+      await user.type(screen.getByLabelText('Nombre'), 'Mallorca')
+      await user.selectOptions(
+        screen.getByRole('combobox', { name: 'Empezar con' }),
+        'Copia de «Maleta básica»',
+      )
+      expect(
+        screen.getByText(
+          'Con sus artículos y compartimentos, sin nada marcado como listo.',
+        ),
+      ).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: 'Crear maleta' }))
 
+      await screen.findByRole('heading', { name: 'Mallorca', level: 1 })
+      const copy = (await repositories.luggages.list()).find(
+        (l) => l.name === 'Mallorca',
+      )
+      // La descripción es la escrita aquí (vacía), no la de la plantilla.
+      expect(copy?.description).toBe('')
+      const lines = await repositories.quantities.listByLuggage(copy?.id ?? '')
+      expect(lines.map((l) => [l.itemId, l.num, l.nAlreadyPacked])).toEqual([
+        [towel.id, 2, 0],
+      ])
+      // Una sola maleta nueva: ninguna "Maleta básica (copia)" suelta.
       expect(await repositories.luggages.list()).toHaveLength(2)
     })
 
-    it('Enter con el campo vacío no crea nada ni muestra errores', async () => {
-      const user = userEvent.setup()
-      const { repositories } = renderApp('/')
+    it('"¿Tienes una lista en texto? Impórtala" lleva a Importar, que vuelve a "‹ Nueva maleta"', async () => {
+      const { user, router } = await openNewLuggage()
 
-      await user.type(
-        screen.getByLabelText('Nombre de la nueva maleta'),
-        '   {Enter}',
-      )
+      await user.click(screen.getByRole('link', { name: 'Impórtala' }))
 
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-      expect(await repositories.luggages.list()).toEqual([])
+      expect(
+        await screen.findByRole('textbox', { name: 'Pega aquí la lista' }),
+      ).toBeInTheDocument()
+      expect(router.state.location.pathname).toBe('/import')
+      expect(
+        screen.getByRole('link', { name: 'Nueva maleta' }),
+      ).toHaveAttribute('href', '/luggages/new')
     })
   })
 

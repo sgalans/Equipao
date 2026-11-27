@@ -156,12 +156,12 @@ describe('Compartir una maleta', () => {
 })
 
 describe('Importar una maleta', () => {
-  it('desde "Mis maletas" → pegar → vista previa → crea la maleta y la abre', async () => {
+  it('desde "Nueva maleta" → pegar → vista previa → crea la maleta y la abre', async () => {
     const repositories = createTestRepositories()
     const user = userEvent.setup()
-    const { router } = renderApp('/', repositories)
+    const { router } = renderApp('/luggages/new', repositories)
 
-    await user.click(await screen.findByRole('link', { name: 'Importar' }))
+    await user.click(await screen.findByRole('link', { name: 'Impórtala' }))
     const field = await screen.findByRole('textbox', {
       name: 'Pega aquí la lista',
     })

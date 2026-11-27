@@ -30,7 +30,15 @@ export interface LuggageRepository {
    * transacción. La copia se llama "Nombre (copia)" y empieza SIN nada
    * guardado (uso como plantilla). Lanza EntityNotFoundError si no existe.
    */
-  duplicate(id: string): Promise<Luggage>
+  duplicate(
+    id: string,
+    /**
+     * Nombre y descripción de la copia ("Nueva maleta" → "Empezar con"):
+     * se aplican en la MISMA transacción, así no queda nunca una "X (copia)"
+     * a medias si algo falla. Sin ellos, "X (copia)" y la descripción de X.
+     */
+    overrides?: { name?: string; description?: string },
+  ): Promise<Luggage>
   /** Cambia nombre y/o descripción. Lanza EntityNotFoundError si no existe. */
   update(
     id: string,

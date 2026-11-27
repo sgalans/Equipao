@@ -3,9 +3,9 @@ import { Link } from 'react-router'
 import { useRepositories } from '@/shared/di/repositories'
 import buttons from '@/shared/ui/buttons.module.css'
 import highlightStyles from '@/shared/ui/highlight.module.css'
+import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
 import page from '@/shared/ui/page.module.css'
 import { useTemporaryHighlight } from '@/shared/ui/useTemporaryHighlight'
-import { CreateLuggageForm } from './CreateLuggageForm'
 import { LuggageActions } from './LuggageActions'
 import { PackingProgress } from './PackingProgress'
 import { progressLabel } from './progressLabel'
@@ -36,22 +36,24 @@ export function LuggageListPage() {
     <section>
       <header className={page.header}>
         <h1 className={page.title}>Mis maletas</h1>
-        {/* Crear una maleta pegando una lista (p. ej. la que alguien ha
-            compartido por WhatsApp). */}
-        <Link to="/import" className={buttons.headerAction}>
-          Importar
-        </Link>
       </header>
 
-      {/* El formulario se muestra ya mientras carga: se puede escribir sin
-          esperar a la lista. */}
-      <CreateLuggageForm />
+      {/* Crear es algo de pocas veces (decisión del usuario): un botón claro
+          que lleva a "Nueva maleta" (nombre, descripción, "Empezar con" e
+          Importar), en vez del campo en línea. Visible ya mientras carga. */}
+      <Link
+        to="/luggages/new"
+        className={`${buttons.primary} ${styles.newLuggage}`}
+      >
+        <PlusIcon />
+        Nueva maleta
+      </Link>
 
       {luggageList === undefined ? (
         <p aria-busy="true">Cargando maletas…</p>
       ) : luggageList.length === 0 ? (
         <p className={styles.empty}>
-          Aún no tienes maletas. Escribe un nombre arriba para crear la primera.
+          Aún no tienes maletas. Toca «Nueva maleta» para crear la primera.
         </p>
       ) : (
         <ul className={styles.list}>

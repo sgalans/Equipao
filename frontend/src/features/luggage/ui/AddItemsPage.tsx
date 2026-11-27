@@ -9,12 +9,12 @@ import { CreateChoice } from '@/features/items/ui/CreateChoice'
 import { useRepositories } from '@/shared/di/repositories'
 import { DuplicateError } from '@/shared/domain/errors'
 import buttons from '@/shared/ui/buttons.module.css'
-import { ChevronDownIcon } from '@/shared/ui/icons/ChevronDownIcon'
 import {
   reportError,
   useNotifications,
 } from '@/shared/ui/notifications/notificationStore'
 import page from '@/shared/ui/page.module.css'
+import { SelectField } from '@/shared/ui/SelectField'
 import { addItemByName } from '../application/addItemByName'
 import { addedSummary } from './addedSummary'
 import styles from './AddItemsPage.module.css'
@@ -351,24 +351,19 @@ export function AddItemsPage() {
       <div className={styles.bar}>
         <div className={styles.destination}>
           <label htmlFor={destinationId}>Dónde</label>
-          {/* <select> nativo (en iOS, su menú), con aspecto de campo y una
-              flecha ▾ propia: que se vea que es un desplegable. */}
-          <span className={styles.selectWrap}>
-            <select
-              id={destinationId}
-              value={destination}
-              onChange={(event) => setChosenDestination(event.target.value)}
-            >
-              {destinationOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <span className={styles.chevron} aria-hidden="true">
-              <ChevronDownIcon />
-            </span>
-          </span>
+          {/* Desplegable compartido (SelectField): <select> nativo con
+              aspecto de campo y flecha ▾, que se vea que es un desplegable. */}
+          <SelectField
+            id={destinationId}
+            value={destination}
+            onChange={setChosenDestination}
+          >
+            {destinationOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </SelectField>
         </div>
         {containersGoingLoose.length > 0 && (
           <p className={styles.note}>
