@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { renderApp } from '@/test/render'
@@ -295,8 +295,14 @@ describe('Compartimentos en el catálogo', () => {
     expect(
       screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent),
     ).toEqual(['Compartimentos', 'Artículos'])
-    expect(within(containers!).getByText('Neceser')).toBeInTheDocument()
-    expect(within(regular!).getByText('Bañador')).toBeInTheDocument()
+    // Por la fila (botón): el título de su hoja de acciones, aunque cerrada,
+    // también lleva el nombre.
+    expect(
+      within(containers!).getByRole('button', { name: /^Neceser,/ }),
+    ).toBeInTheDocument()
+    expect(
+      within(regular!).getByRole('button', { name: /^Bañador,/ }),
+    ).toBeInTheDocument()
   })
 
   it('sin contenedores, una sola lista sin cabeceras', async () => {
@@ -330,23 +336,34 @@ describe('Compartimentos en el catálogo', () => {
       await repos.items.create({ name: 'Mochila' })
     })
 
-    await user.click(screen.getByRole('button', { name: 'Mochila, Sin usar' }))
+    const row = () => screen.getByRole('button', { name: 'Mochila, Sin usar' })
+    const sheet = () => screen.getByRole('dialog', { name: 'Mochila' })
+
+    // Fila → hoja de acciones → "Convertir en compartimento".
+    await user.click(row())
     await user.click(
-      screen.getByRole('button', { name: 'Convertir en compartimento' }),
+      within(sheet()).getByRole('button', {
+        name: 'Convertir en compartimento',
+      }),
     )
+    // Pasa a la sección de compartimentos.
     expect(
-      await screen.findByRole('button', { name: 'Convertir en artículo' }),
+      await screen.findByRole('heading', { name: 'Compartimentos' }),
     ).toBeInTheDocument()
     expect((await repositories.items.findByName('Mochila'))?.isContainer).toBe(
       true,
     )
 
+    // Al volver a abrir la hoja, la opción contraria.
+    await user.click(row())
     await user.click(
-      screen.getByRole('button', { name: 'Convertir en artículo' }),
+      within(sheet()).getByRole('button', { name: 'Convertir en artículo' }),
     )
-    expect(
-      await screen.findByRole('button', { name: 'Convertir en compartimento' }),
-    ).toBeInTheDocument()
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('heading', { name: 'Compartimentos' }),
+      ).not.toBeInTheDocument(),
+    )
   })
 
   it('si está en alguna maleta, explica qué hacer y no lo cambia (opción A)', async () => {

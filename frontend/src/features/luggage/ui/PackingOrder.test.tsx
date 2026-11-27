@@ -398,3 +398,22 @@ describe('Se recuerda', () => {
     )
   })
 })
+
+describe('Ventana "Listos": se cierra como la hoja del ⋯', () => {
+  it('tocando fuera se cierra; tocando dentro, no', async () => {
+    const { user } = await openLuggage(async (repos, luggageId) => {
+      await addItem(repos, luggageId, 'Camisetas', { packed: true })
+    })
+
+    const sheet = await openReadyList(user)
+    // Dentro (el título): sigue abierta.
+    await user.click(within(sheet).getByRole('heading', { name: 'Listos' }))
+    expect(sheet).toBeVisible()
+
+    // En el fondo: un toque ahí llega como clic sobre el propio <dialog>.
+    await user.click(sheet)
+    expect(
+      screen.queryByRole('dialog', { name: 'Listos' }),
+    ).not.toBeInTheDocument()
+  })
+})

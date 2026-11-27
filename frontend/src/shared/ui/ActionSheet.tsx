@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
 import styles from './ActionSheet.module.css'
+import { closeOnBackdrop } from './closeOnBackdrop'
+import sheet from './sheet.module.css'
 
 export interface SheetAction {
   label: string
@@ -45,23 +47,17 @@ export function ActionSheet({
   }, [open])
 
   return (
-    // Tocar fuera es solo un atajo táctil: con teclado ya se cierra con
-    // Escape (nativo del <dialog>) y con el botón "Cerrar".
+    // Tocar fuera es solo un atajo táctil (closeOnBackdrop): con teclado se
+    // cierra con Escape (nativo del <dialog>) y con el botón "Cerrar".
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
     <dialog
       ref={dialogRef}
-      className={styles.sheet}
+      className={sheet.sheet}
       aria-labelledby={titleId}
       onClose={onClose}
-      // Tocar fuera = cerrar. Un toque en el fondo (::backdrop) llega como
-      // clic sobre el PROPIO <dialog>; el contenido va en un <div> que lo
-      // llena entero, así un toque dentro tiene otro target. (El atributo
-      // `closedby="any"` lo haría solo, pero Safari aún no lo admite.)
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose()
-      }}
+      onClick={closeOnBackdrop(onClose)}
     >
-      <div className={styles.content}>
+      <div className={`${sheet.content} ${styles.content}`}>
         <h2 id={titleId} className={styles.title}>
           {title}
         </h2>

@@ -272,8 +272,6 @@ export function AddItemsPage() {
             <CatalogRow
               key={item.id}
               item={item}
-              isExpanded={false}
-              onToggleExpanded={() => {}}
               selection={{
                 isSelected: selected.has(item.id),
                 onToggle: () => toggleSelected(item.id),

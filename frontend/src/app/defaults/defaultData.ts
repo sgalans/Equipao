@@ -10,7 +10,8 @@
 /** "Maleta básica": plantilla general para duplicar en cada viaje. */
 export const BASIC_LUGGAGE = {
   name: 'Maleta básica',
-  description: 'Plantilla base: duplícala (⧉) para cada viaje.',
+  // El ⧉ del listado pasó al menú ⋯ (Duplicar): el texto guía hasta ahí.
+  description: 'Plantilla base: duplícala (⋯ → Duplicar) para cada viaje.',
   loose: [
     'DNI / Pasaporte',
     'Cartera',

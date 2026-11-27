@@ -26,8 +26,6 @@ export function ItemsCatalogPage() {
   const [query, setQuery] = useState('')
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  // Acordeón: una sola fila desplegada a la vez (igual que en la maleta).
-  const [expandedId, setExpandedId] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const inputId = useId()
   // Artículo recién creado (o el que ya existía): se resalta un momento.
@@ -111,10 +109,7 @@ export function ItemsCatalogPage() {
             className={buttons.headerAction}
             onClick={() => {
               if (isSelecting) exitSelection()
-              else {
-                setIsSelecting(true)
-                setExpandedId(null)
-              }
+              else setIsSelecting(true)
             }}
           >
             {isSelecting ? 'Cancelar' : 'Seleccionar'}
@@ -183,13 +178,7 @@ export function ItemsCatalogPage() {
             <CatalogRow
               key={item.id}
               item={item}
-              isExpanded={expandedId === item.id}
               isHighlighted={highlightedId === item.id}
-              onToggleExpanded={() =>
-                setExpandedId((current) =>
-                  current === item.id ? null : item.id,
-                )
-              }
               selection={
                 isSelecting
                   ? {

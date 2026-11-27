@@ -1,29 +1,8 @@
-/*
- * Hoja inferior, como la ventana "Listos": pegada abajo, a todo el ancho y
- * con las esquinas de arriba redondeadas.
- */
-.sheet {
-  /* El <dialog> modal se centra por defecto: lo bajamos al borde inferior. */
-  margin: auto 0 0;
-  width: 100%;
-  max-width: 100%;
-  /* Sin relleno: lo lleva .content, que así ocupa TODA la hoja (ver el
-     cierre al tocar fuera en ActionSheet.tsx). */
-  padding: 0;
-  border: 0;
-  border-top: 1px solid var(--border);
-  border-radius: 1rem 1rem 0 0;
-  /* Colores propios: el <dialog> trae blanco y negro del navegador. */
-  background: var(--bg);
-  color: var(--text);
-}
+/* La hoja en sí (fondo, esquinas, cierre) es la común: sheet.module.css. */
 
-.sheet::backdrop {
-  background: rgb(0 0 0 / 0.5);
-}
-
+/* Sin cabecera fija: el título va pegado arriba con su propio aire. */
 .content {
-  padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+  padding-top: 0.75rem;
 }
 
 /* Sobre qué se actúa, discreto (como el título de las hojas de iOS). */
