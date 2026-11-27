@@ -9,6 +9,10 @@ import {
   SCHEMA_V3,
   SCHEMA_V4,
   SCHEMA_V5,
+  SCHEMA_V6,
+  SCHEMA_V7,
+  BASIC_DESCRIPTION_V1_0_0,
+  BASIC_DESCRIPTION_V8,
 } from './db'
 
 /**
@@ -20,13 +24,21 @@ import {
  *   4. Comprobar que los datos siguen ahí y con la forma ACTUAL.
  */
 
-const CURRENT_VERSION = 7
-const SCHEMAS = [SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5]
+const CURRENT_VERSION = 8
+const SCHEMAS = [
+  SCHEMA_V1,
+  SCHEMA_V2,
+  SCHEMA_V3,
+  SCHEMA_V4,
+  SCHEMA_V5,
+  SCHEMA_V6,
+  SCHEMA_V7,
+]
 const base = { createdAt: TEST_TIMESTAMP, updatedAt: TEST_TIMESTAMP }
 const at = (second: number) =>
   `2026-01-01T00:00:${String(second).padStart(2, '0')}.000Z`
 
-/** Base de datos "antigua" hasta la versión `version` (1–5). */
+/** Base de datos "antigua" hasta la versión `version` (1–7). */
 function oldDb(name: string, version: number): Dexie {
   const db = new Dexie(name)
   SCHEMAS.slice(0, version).forEach((schema, index) =>
@@ -360,5 +372,50 @@ describe('Migración v5 → v6 (compartimentos → líneas contenedor)', () => {
       'Bolsa (compartimento)',
       'Mochila',
     ])
+  })
+})
+
+describe('Migración v7 → v8 (instrucciones en la "Maleta básica" sin editar)', () => {
+  it('pone las instrucciones solo donde la descripción sigue siendo la de v1.0.0', async () => {
+    const name = `test-migration-${uuidv7()}`
+    const untouched = uuidv7()
+    const edited = uuidv7()
+    const other = uuidv7()
+    const v7 = oldDb(name, 7)
+    await v7.table('luggages').bulkAdd([
+      {
+        id: untouched,
+        name: 'Maleta básica',
+        description: BASIC_DESCRIPTION_V1_0_0,
+        ...base,
+      },
+      {
+        // Editada (aunque sea un poco): no se toca.
+        id: edited,
+        name: 'Maleta básica',
+        description: `${BASIC_DESCRIPTION_V1_0_0} Y una nota mía.`,
+        ...base,
+      },
+      { id: other, name: 'Mallorca', description: '', ...base },
+    ])
+    v7.close()
+
+    const db = openCurrent(name)
+    const [a, b, c] = await db.luggages.bulkGet([untouched, edited, other])
+
+    expect(db.verno).toBe(CURRENT_VERSION)
+    expect(a?.description).toBe(BASIC_DESCRIPTION_V8)
+    expect(a?.updatedAt).not.toBe(TEST_TIMESTAMP)
+    // Lo editado por el usuario y las demás maletas, intactos (ni la fecha).
+    expect(b).toMatchObject({
+      description: `${BASIC_DESCRIPTION_V1_0_0} Y una nota mía.`,
+      updatedAt: TEST_TIMESTAMP,
+    })
+    expect(c).toMatchObject({ description: '', updatedAt: TEST_TIMESTAMP })
+  })
+
+  it('las instrucciones caben en una descripción (máx. 1000) y empiezan por "Instrucciones"', () => {
+    expect(BASIC_DESCRIPTION_V8.length).toBeLessThanOrEqual(1000)
+    expect(BASIC_DESCRIPTION_V8.split('\n')[0]).toMatch(/^Instrucciones/)
   })
 })

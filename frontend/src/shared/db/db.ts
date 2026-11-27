@@ -93,6 +93,62 @@ export const SCHEMA_V6 = {}
 /** v7: se elimina la tabla `compartments` (ya migrada en la v6). */
 export const SCHEMA_V7 = { compartments: null }
 
+/**
+ * v8 (v1.1.1): solo DATOS, ningún índice cambia. La "Maleta básica" que
+ * creó v1.0.0 recibe las instrucciones de uso nuevas, pero SOLO si su
+ * descripción sigue siendo EXACTAMENTE la que puso la app: eso prueba que
+ * nadie la ha editado. Si alguien cambió aunque sea una letra, no se toca
+ * (nunca se pierde nada escrito por el usuario). Se busca por descripción y
+ * no por nombre: la maleta pudo renombrarse, o una propia llamarse así.
+ * Solo cambia la descripción: los artículos pueden estar personalizados.
+ */
+export const SCHEMA_V8 = {}
+
+/** Descripción con la que v1.0.0 creaba la "Maleta básica". */
+export const BASIC_DESCRIPTION_V1_0_0 =
+  'Plantilla base: duplícala (⧉) para cada viaje.'
+
+/**
+ * Las instrucciones tal como eran al crear la v8: COPIA congelada a
+ * propósito, no un import de defaultData. Una migración es una foto de un
+ * momento (como en Alembic, que no importa los modelos de la app): si se
+ * importara el texto vivo, cambiarlo mañana cambiaría también lo que hace
+ * esta migración, y su test dejaría de describir lo que pasó.
+ */
+export const BASIC_DESCRIPTION_V8 = [
+  'Instrucciones básicas de uso, ábreme :)',
+  '',
+  'Esta maleta sirve de plantilla, ajústala a tu gusto: añadiendo, quitando o renombrando artículos y compartimentos.',
+  '',
+  'Crea tu primera maleta: «Mis maletas» → «Nueva maleta», y en «Empezar con» elige esta.',
+  '',
+  'Trucos:',
+  '• Toca la barra de progreso para ver todo lo que está listo.',
+  '• El ojo oculta los artículos y compartimentos listos sin mover nada.',
+  '• Toca un artículo para cambiar las unidades, renombrarlo o quitarlo.',
+  '• Arrastra usando ≡ para ordenar (o ↑ ↓ al tocar un artículo).',
+  '• ⋯ → Compartir: manda la lista por WhatsApp.',
+  '• ⋯ → Reiniciar maleta: desmarca todo para reutilizarla.',
+  '• Los compartimentos (neceser, mochila…) guardan artículos y se pliegan solos al estar todo listo.',
+  '• Consulta todos tus artículos y compartimentos en el catálogo: «Mis maletas» → «Catálogo».',
+  '',
+  'Espero que esta aplicación te sea útil.',
+  '¡Feliz viaje!',
+].join('\n')
+
+/** v8: instrucciones nuevas en la "Maleta básica" sin editar (ver SCHEMA_V8). */
+function updateBasicInstructions(tx: Transaction) {
+  const now = new Date().toISOString()
+  return tx
+    .table<Luggage>('luggages')
+    .toCollection()
+    .modify((luggage) => {
+      if (luggage.description !== BASIC_DESCRIPTION_V1_0_0) return
+      luggage.description = BASIC_DESCRIPTION_V8
+      luggage.updatedAt = now
+    })
+}
+
 interface LegacyCompartment {
   id: string
   luggageId: string
@@ -309,6 +365,10 @@ export class AppDb extends Dexie {
       .upgrade((tx) => migrateCompartmentsToContainers(tx))
 
     this.version(7).stores(SCHEMA_V7)
+
+    this.version(8)
+      .stores(SCHEMA_V8)
+      .upgrade((tx) => updateBasicInstructions(tx))
   }
 }
 
