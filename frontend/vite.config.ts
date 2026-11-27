@@ -105,7 +105,8 @@ export default defineConfig({
         test: {
           name: 'unit',
           // Lógica pura: dominio, repositorios, utilidades. Node puro, rápido.
-          include: ['src/**/*.test.ts'],
+          // scripts/: las reglas del test de humo del build (check-sw.js).
+          include: ['src/**/*.test.ts', 'scripts/**/*.test.js'],
           environment: 'node',
           setupFiles: ['./src/test/setup.unit.ts'],
         },

@@ -13,6 +13,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "typecheck": "tsc -b",
+    "check:sw": "node scripts/check-sw.js",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run test:run"
   },
   "dependencies": {

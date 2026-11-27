@@ -72,3 +72,8 @@ jobs:
       # El build de producción puede fallar aunque pase todo lo anterior
       # (p. ej. la configuración de Vite o del service worker).
       - run: npm run build
+
+      # Test de humo del service worker generado: precaché sin URLs
+      # repetidas (el fallo sin conexión de v1.0.0), completa y con la ruta
+      # de navegación. Ni los tests ni el build lo detectan por sí solos.
+      - run: npm run check:sw

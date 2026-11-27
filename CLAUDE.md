@@ -140,39 +140,38 @@ El backlog vive **aquí** (decisión del usuario: GitHub Issues/Projects se prob
 
 **Prioridad alta**
 - **En curso: rama `improvements/UI`** (sale de `develop`): últimos retoques de interfaz antes del deploy de v1.1.0. Después: PR a `develop`, *release* `develop` → `main` y *tag* `v1.1.0`.
-- **Test de humo del build en el CI** (recomendado antes de la *release*, que lleva migraciones): ver punto 4.
 
 **Prioridad media**
 1. **Artículos de "último momento"** (cepillo de dientes, cargador, gafas: no se pueden guardar hasta el día de salida): marca + recordatorio "⏰ Antes de salir: N cosas ›" bajo la barra de progreso, que abre una hoja como "Listos". Propuesta pendiente de decidir: marca en `Item` (catálogo: vale para todas las maletas) en vez de por maleta; marcar desde el panel de la fila; icono ⏰ en la fila.
 2. **"Por comprar"**: marca por maleta (`ItemQuantity`) para lo que aún no se tiene (protector solar, adaptador) y lista de la compra en una hoja ("🛒 Por comprar: N ›"). Al duplicar, no se copia. Hacerla junto con "último momento": **una sola migración (v8)** con su test.
 3. **Aviso al ocultar listos** (posible extra): las 1-2 primeras veces que se toca el ojo, un aviso breve que explique dónde verlos ("Toca la barra de progreso para verlos").
-4. **Test de humo del build en el CI** (tras el fallo sin conexión de v1.0.0): tras `npm run build`, comprobar que `dist/sw.js` no tiene URLs duplicadas en la precaché e incluye `index.html` y el `NavigationRoute`.
-5. **"Reiniciar maleta"**: desmarcar todo (artículos a 0 guardados, compartimentos sin "listo") para reutilizarla tras el viaje.
-6. **Organizar maletas: archivo o carpetas** (petición del usuario: carpeta "Viajes hechos"). **A decidir**: (A, recomendado, YAGNI) `Luggage.archivedAt` + migración, acción "Archivar" y sección plegable "Viajes hechos (N)"; o (B) entidad `Folder` + `Luggage.folderId` (SET NULL al borrar), un nivel, con gestión de carpetas y "Mover a…". A es un caso particular de B (migrable sin perder nada). Al archivar, ofrecer "Reiniciar maleta".
-7. **Familias de artículos** (petición del usuario): `Category` (id, name, orden) + `Item.categoryId` opcional (SET NULL) + migración; familias por defecto desde los grupos de `defaultData.ts`; catálogo en secciones plegables. A decidir si se ven dentro de la maleta (compartimento = DÓNDE va; familia = QUÉ ES).
-8. **Fecha del viaje (opcional)**: revisar "sin fechas en la maleta" si se quiere ordenar por fecha, archivar solo o cuenta atrás. Valorarlo con el punto 5. `'YYYY-MM-DD'`.
-9. **Recordatorio de olvidos típicos**: aviso si falta "DNI / Pasaporte" o "Cargador del móvil".
-10. **"Deshacer" al borrar** (snapshot + reinserción + aviso con botón): sustituiría a algunas confirmaciones.
-11. **Tests E2E con Playwright**: foco y Escape en `<dialog>`, blur en `InlineEditInput`, gestos táctiles, service worker y modo sin conexión.
-12. **Dependabot o Renovate** (con el CI comprobando las PRs).
-13. **Monitorización de errores** (p. ej. Sentry gratuito) en `reportError` y `RouteErrorPage`, sin enviar nombres de maletas ni de artículos.
-14. **Changelog y versiones automáticas** (release-please o changesets) a partir de los Conventional Commits.
+4. **"Reiniciar maleta"**: desmarcar todo (artículos a 0 guardados, compartimentos sin "listo") para reutilizarla tras el viaje.
+5. **Organizar maletas: archivo o carpetas** (petición del usuario: carpeta "Viajes hechos"). **A decidir**: (A, recomendado, YAGNI) `Luggage.archivedAt` + migración, acción "Archivar" y sección plegable "Viajes hechos (N)"; o (B) entidad `Folder` + `Luggage.folderId` (SET NULL al borrar), un nivel, con gestión de carpetas y "Mover a…". A es un caso particular de B (migrable sin perder nada). Al archivar, ofrecer "Reiniciar maleta".
+6. **Familias de artículos** (petición del usuario): `Category` (id, name, orden) + `Item.categoryId` opcional (SET NULL) + migración; familias por defecto desde los grupos de `defaultData.ts`; catálogo en secciones plegables. A decidir si se ven dentro de la maleta (compartimento = DÓNDE va; familia = QUÉ ES).
+7. **Fecha del viaje (opcional)**: revisar "sin fechas en la maleta" si se quiere ordenar por fecha, archivar solo o cuenta atrás. Valorarlo con el punto 4. `'YYYY-MM-DD'`.
+8. **Recordatorio de olvidos típicos**: aviso si falta "DNI / Pasaporte" o "Cargador del móvil".
+9. **"Deshacer" al borrar** (snapshot + reinserción + aviso con botón): sustituiría a algunas confirmaciones.
+10. **Tests E2E con Playwright**: foco y Escape en `<dialog>`, blur en `InlineEditInput`, gestos táctiles, service worker y modo sin conexión.
+11. **Dependabot o Renovate** (con el CI comprobando las PRs).
+12. **Monitorización de errores** (p. ej. Sentry gratuito) en `reportError` y `RouteErrorPage`, sin enviar nombres de maletas ni de artículos.
+13. **Changelog y versiones automáticas** (release-please o changesets) a partir de los Conventional Commits.
 
 **Prioridad baja / mejoras técnicas**
-15. **Celebración al completar una maleta** ("¡Cerrada!"), respetando "Reducir movimiento".
-16. **Buscar dentro de una maleta**.
-17. **`zod/mini`** para adelgazar `vendor` (Zod ≈ 19 %; exige reescribir los esquemas).
-18. **Mantenimiento de herramientas**: `overrides` de `eslint-plugin-jsx-a11y` (ESLint 10), avisos de `npm audit` (9 de `minimatch`; el CI ya muestra 12: revisar), npm 12.
-19. **Auditoría de accesibilidad** con VoiceOver y Lighthouse.
-20. **Ideas aparcadas**: maleta plantilla adicional, "copiar compartimento desde otra maleta", perfiles locales.
-21. **Mantener la pantalla encendida mientras se empaqueta** (Screen Wake Lock API). Lo último (decisión del usuario).
+14. **Celebración al completar una maleta** ("¡Cerrada!"), respetando "Reducir movimiento".
+15. **Buscar dentro de una maleta**.
+16. **`zod/mini`** para adelgazar `vendor` (Zod ≈ 19 %; exige reescribir los esquemas).
+17. **Mantenimiento de herramientas**: `overrides` de `eslint-plugin-jsx-a11y` (ESLint 10), avisos de `npm audit` (9 de `minimatch`; el CI ya muestra 12: revisar), npm 12.
+18. **Auditoría de accesibilidad** con VoiceOver y Lighthouse.
+19. **Ideas aparcadas**: maleta plantilla adicional, "copiar compartimento desde otra maleta", perfiles locales.
+20. **Mantener la pantalla encendida mientras se empaqueta** (Screen Wake Lock API). Lo último (decisión del usuario).
 
 ### Entorno y herramientas
 
 - Git 2.55, nvm-windows 2.0.1, Node.js 26 LTS (`.nvmrc`), npm 11. GitHub CLI (`gh`) para PRs y el CI.
-- Comandos en `frontend/`: `dev`, `build`, `lint`, `format`, `format:check`, `preview`, `test` (watch), `test:run`, `typecheck` y **`check`** (typecheck + lint + formato + tests; ejecutarlo antes de cada commit y antes de dar un paso por terminado).
-- **CI** (GitHub Actions, `.github/workflows/ci.yml`): un único job `check` (`npm ci` + `npm run check` + `npm run build`, Node desde `.nvmrc`) en cada PR a `develop`/`main` y en cada push a ellas; caché de `node_modules` con clave SO + `.nvmrc` + lockfile (sin caché, `npm ci` era ~37 de ~72 s; los tests, 8 s). **Ruleset "Proteger main y develop"**: exige PR (0 aprobaciones) y el check `check` en verde, sin *force push* ni borrado. Si se renombra el job, actualizar el ruleset.
+- Comandos en `frontend/`: `dev`, `build`, `lint`, `format`, `format:check`, `preview`, `test` (watch), `test:run`, `typecheck`, `check:sw` (test de humo del service worker; requiere `build`) y **`check`** (typecheck + lint + formato + tests; ejecutarlo antes de cada commit y antes de dar un paso por terminado).
+- **CI** (GitHub Actions, `.github/workflows/ci.yml`): un único job `check` (`npm ci` + `npm run check` + `npm run build` + `npm run check:sw`, Node desde `.nvmrc`) en cada PR a `develop`/`main` y en cada push a ellas; caché de `node_modules` con clave SO + `.nvmrc` + lockfile (sin caché, `npm ci` era ~37 de ~72 s; los tests, 8 s). **Ruleset "Proteger main y develop"**: exige PR (0 aprobaciones) y el check `check` en verde, sin *force push* ni borrado. Si se renombra el job, actualizar el ruleset.
 - TypeScript en la línea 6.0 por compatibilidad con `typescript-eslint`.
 - `npm audit`: 9 avisos moderados de `minimatch` solo en herramientas de lint (`npm audit --omit=dev` = 0). No aplicar `npm audit fix --force` (degradaría las herramientas); revisar cuando ESLint actualice.
 - Historial (una rama/PR por iteración): 0) setup · 1) capa de datos · 2) viajes (después eliminados) · 3) maleta como entidad principal · 4) artículos y empaquetado · 5) compartimentos · 6) duplicar maleta · 7) catálogo · 8) revisión general · 9) crear desde el catálogo, añadir varios, datos por defecto · 10) PWA y despliegue → **v1.0.0** · 11) CI con GitHub Actions (+ ruleset y caché) · 12) `feature/packing`: ventana "Listos" + ojo "Ocultar listos" (sustituye a "Solo lo que falta") · 13) `feature/unified-add`: un solo "añadir" desde el catálogo · 14) `feature/share-text`: compartir e importar maletas como texto · 15) `feature/drag-sort`: ordenar artículos y compartimentos arrastrando (migraciones v4 y v5) · 16) `refactor/compartments`: compartimentos = líneas contenedor (migraciones v6 y v7), renombrar y unir desde la maleta, compartimentos en el catálogo y en "Añadir artículos" (sin "Nuevo compartimento") · 17) `improvements/UI` (en curso): retoques antes de v1.1.0.
+- **Test de humo del build** (`npm run check:sw`, tras `npm run build`): `scripts/check-sw.js` lee `dist/sw.js` y aplica las reglas puras de `scripts/swChecks.js` (con tests en `swChecks.test.js`, en el proyecto `unit` de Vitest): precaché sin URLs repetidas (el fallo de v1.0.0), con `index.html` y el manifest, con todo `dist/assets/` (también los chunks `lazy`), sin URLs que no existan, y con el `NavigationRoute` a `index.html`. Si no encuentra la precaché (cambio de formato de Workbox), falla en vez de dar por bueno. Comprobado reintroduciendo el fallo de v1.0.0: sale en rojo.
 - Actualiza esta sección conforme avance el proyecto.
