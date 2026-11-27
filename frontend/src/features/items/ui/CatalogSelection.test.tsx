@@ -20,7 +20,7 @@ async function openCatalog(arrange?: (repos: Repos) => Promise<void>) {
   }
   await arrange?.(repositories)
   renderApp('/items', repositories)
-  await screen.findByRole('heading', { name: 'Artículos' })
+  await screen.findByRole('heading', { name: 'Catálogo', level: 1 })
   return { repositories, user: userEvent.setup() }
 }
 

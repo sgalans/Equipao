@@ -1,0 +1,30 @@
+.label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-weight: 600;
+}
+
+/* Como el resto de campos: 16px como mínimo (si no, iOS hace zoom). */
+.textarea {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: max(1rem, 16px);
+  resize: vertical;
+}
+
+.help {
+  margin: 0.375rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.preview {
+  min-height: 1.5rem;
+  margin: 1rem 0;
+}

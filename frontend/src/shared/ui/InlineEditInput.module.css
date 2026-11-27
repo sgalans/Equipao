@@ -1,0 +1,16 @@
+/* Varias líneas: botones debajo del campo. */
+.multiline {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.5rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* "Guardar", la acción principal, en negrita (como "OK" en iOS). */
+.save {
+  font-weight: 700;
+}

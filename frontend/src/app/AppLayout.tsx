@@ -40,7 +40,7 @@ export function AppLayout() {
             {/* Acceso al catálogo: un toque desde el inicio, sin ocupar
                 espacio fijo (decisión de producto). */}
             <Link to="/items" className={styles.navLink}>
-              Artículos
+              Catálogo
             </Link>
           </>
         ) : (

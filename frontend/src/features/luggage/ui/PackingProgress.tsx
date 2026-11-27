@@ -10,6 +10,11 @@ interface PackingProgressProps {
    *   porque el texto ya forma parte del nombre accesible del enlace.
    */
   variant?: 'full' | 'compact'
+  /**
+   * Si se pasa, el texto ("3 de 5 listos ›") es un botón que abre la
+   * ventana "Listos" (decisión de producto: tocas "listos" y ves cuáles).
+   */
+  onOpenDone?: () => void
 }
 
 /** "3 de 5 listos" + barra. Todo derivado de los datos: nada se guarda. */
@@ -17,6 +22,7 @@ export function PackingProgress({
   done,
   total,
   variant = 'full',
+  onOpenDone,
 }: PackingProgressProps) {
   const isCompact = variant === 'compact'
   // En el detalle, una maleta vacía ya lo dice la propia lista.
@@ -28,7 +34,20 @@ export function PackingProgress({
 
   return (
     <div className={isCompact ? styles.compact : styles.progress}>
-      <span className={isDone ? styles.done : undefined}>{label}</span>
+      {onOpenDone ? (
+        <button
+          type="button"
+          className={`${styles.open} ${isDone ? styles.done : ''}`}
+          // Nombre accesible con el porqué del botón, no solo la cifra.
+          aria-label={`${label}. Ver los listos`}
+          onClick={onOpenDone}
+        >
+          {label}
+          <span aria-hidden="true"> ›</span>
+        </button>
+      ) : (
+        <span className={isDone ? styles.done : undefined}>{label}</span>
+      )}
       {total > 0 && (
         <div
           className={styles.track}

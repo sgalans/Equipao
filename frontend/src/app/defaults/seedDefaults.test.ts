@@ -7,9 +7,9 @@ describe('seedDefaults', () => {
   it('la primera vez crea el catálogo y la "Maleta básica" con su neceser', async () => {
     const repos = createTestRepositories()
 
-    expect(await seedDefaults(repos.db, repos)).toBe(true)
+    expect(await seedDefaults(repos.db, repos)).toEqual(expect.any(String))
 
-    expect(await repos.items.list()).toHaveLength(DEFAULT_CATALOG.length)
+    expect(await repos.items.list()).toHaveLength(DEFAULT_CATALOG.length + 1) // + el contenedor «Neceser»
     const [luggage] = await repos.luggages.list()
     expect(luggage).toMatchObject({
       name: 'Maleta básica',
@@ -34,10 +34,10 @@ describe('seedDefaults', () => {
     const repos = createTestRepositories()
     await seedDefaults(repos.db, repos)
 
-    expect(await seedDefaults(repos.db, repos)).toBe(false)
+    expect(await seedDefaults(repos.db, repos)).toBeNull()
 
     expect(await repos.luggages.list()).toHaveLength(1)
-    expect(await repos.items.list()).toHaveLength(DEFAULT_CATALOG.length)
+    expect(await repos.items.list()).toHaveLength(DEFAULT_CATALOG.length + 1) // + el contenedor «Neceser»
   })
 
   it('lo que el usuario borra no vuelve a aparecer', async () => {
@@ -59,7 +59,7 @@ describe('seedDefaults', () => {
     await seedDefaults(repos.db, repos)
 
     const catalog = await repos.items.list()
-    expect(catalog).toHaveLength(DEFAULT_CATALOG.length)
+    expect(catalog).toHaveLength(DEFAULT_CATALOG.length + 1) // + el contenedor «Neceser»
     expect(
       catalog.filter((i) => i.name.toLowerCase() === 'calcetines'),
     ).toEqual([mine])
@@ -83,6 +83,15 @@ describe('seedDefaults', () => {
     expect(await repos.luggages.list()).toEqual([])
     expect(await repos.db.meta.get(DEFAULTS_SEEDED_KEY)).toBeUndefined()
     // …y la próxima vez lo reintenta y funciona.
-    expect(await seedDefaults(repos.db, repos)).toBe(true)
+    expect(await seedDefaults(repos.db, repos)).toEqual(expect.any(String))
+  })
+
+  it('devuelve el id de la "Maleta básica" creada (para abrir sus instrucciones)', async () => {
+    const repos = createTestRepositories()
+
+    const basicId = await seedDefaults(repos.db, repos)
+
+    const basic = await repos.luggages.getById(basicId ?? '')
+    expect(basic?.name).toBe('Maleta básica')
   })
 })

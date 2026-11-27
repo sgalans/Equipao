@@ -1,6 +1,7 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
+import { chooseLuggageAction } from '@/test/luggageActions'
 import { renderApp } from '@/test/render'
 import { createTestRepositories } from '@/test/repositories'
 
@@ -21,99 +22,6 @@ async function openLuggage(
   await screen.findByRole('heading', { name: 'Mochila' })
   return { repositories, luggage, user: userEvent.setup() }
 }
-
-const addInput = () =>
-  screen.getByRole('textbox', { name: 'Añadir a la maleta' })
-
-describe('Añadir artículos', () => {
-  it('Enter añade un artículo nuevo (y lo crea en el catálogo); el campo queda listo para otro', async () => {
-    const { repositories, user } = await openLuggage()
-
-    await user.type(addInput(), 'Toalla{Enter}')
-
-    expect(
-      await screen.findByRole('checkbox', { name: 'Toalla' }),
-    ).toBeInTheDocument()
-    expect(addInput()).toHaveValue('')
-    expect(addInput()).toHaveFocus()
-    expect((await repositories.items.list()).map((i) => i.name)).toEqual([
-      'Toalla',
-    ])
-  })
-
-  it('sugiere artículos del catálogo y tocar una sugerencia lo añade', async () => {
-    const { user } = await openLuggage(async (r) => {
-      await r.items.create({ name: 'Calcetines' })
-      await r.items.create({ name: 'Cámara' })
-      await r.items.create({ name: 'Pasaporte' })
-    })
-
-    await user.type(addInput(), 'ca')
-    const suggestions = await screen.findByRole('list', {
-      name: 'Sugerencias de tu catálogo',
-    })
-    expect(within(suggestions).getAllByRole('button')).toHaveLength(2)
-
-    await user.click(
-      within(suggestions).getByRole('button', { name: 'Añadir Cámara' }),
-    )
-
-    expect(
-      await screen.findByRole('checkbox', { name: 'Cámara' }),
-    ).toBeInTheDocument()
-    // Tras añadir, el campo se vacía y las sugerencias desaparecen.
-    expect(addInput()).toHaveValue('')
-    expect(
-      screen.queryByRole('list', { name: 'Sugerencias de tu catálogo' }),
-    ).not.toBeInTheDocument()
-  })
-
-  it('no sugiere lo que ya está en la maleta', async () => {
-    const { user } = await openLuggage(async (r, luggageId) => {
-      const socks = await r.items.create({ name: 'Calcetines' })
-      await r.items.create({ name: 'Cámara' })
-      await r.quantities.add({
-        luggageId,
-        itemId: socks.id,
-        num: 1,
-        nAlreadyPacked: 0,
-      })
-    })
-
-    await user.type(addInput(), 'ca')
-
-    const suggestions = await screen.findByRole('list', {
-      name: 'Sugerencias de tu catálogo',
-    })
-    expect(within(suggestions).getByRole('button')).toHaveAccessibleName(
-      'Añadir Cámara',
-    )
-  })
-
-  it('si ya está en la maleta, avisa y no lo duplica', async () => {
-    const { repositories, luggage, user } = await openLuggage()
-    await user.type(addInput(), 'Cargador{Enter}')
-    await screen.findByRole('checkbox', { name: 'Cargador' })
-
-    await user.type(addInput(), 'cargador{Enter}')
-
-    expect(
-      await screen.findByText('«cargador» ya está en la maleta.'),
-    ).toBeInTheDocument()
-    expect(
-      await repositories.quantities.listByLuggage(luggage.id),
-    ).toHaveLength(1)
-  })
-
-  it('Enter con el campo vacío no hace nada', async () => {
-    const { repositories, luggage, user } = await openLuggage()
-
-    await user.type(addInput(), '  {Enter}')
-
-    expect(await repositories.quantities.listByLuggage(luggage.id)).toEqual([])
-    expect(screen.getByText(/Esta maleta está vacía/)).toBeInTheDocument()
-  })
-})
 
 describe('Empaquetar (todo o nada) y progreso', () => {
   it('un toque guarda el artículo entero y otro lo saca; el progreso se actualiza', async () => {
@@ -151,41 +59,32 @@ describe('Empaquetar (todo o nada) y progreso', () => {
     ).not.toBeChecked()
   })
 
-  it('un artículo a medias (5/6) se muestra como "mixed" con el número guardado', async () => {
-    await openLuggage(async (r, luggageId) => {
+  it('cambiar las unidades de algo listo lo desmarca (sin número en el círculo); volver a ellas, lo marca', async () => {
+    const { user } = await openLuggage(async (r, luggageId) => {
       const socks = await r.items.create({ name: 'Calcetines' })
       await r.quantities.add({
         luggageId,
         itemId: socks.id,
-        num: 6,
+        num: 5,
         nAlreadyPacked: 5,
       })
     })
+    const socks = () => screen.getByRole('checkbox', { name: 'Calcetines' })
+    await user.click(
+      await screen.findByRole('button', { name: /^Calcetines,/ }),
+    )
 
-    const socks = await screen.findByRole('checkbox', { name: 'Calcetines' })
-    expect(socks).toHaveAttribute('aria-checked', 'mixed')
-    expect(socks).toHaveTextContent('5')
-  })
+    await user.click(
+      screen.getByRole('button', { name: 'Una unidad más de Calcetines' }),
+    )
+    await waitFor(() => expect(socks()).not.toBeChecked())
+    // Nada de "a medias" ni del número que tenía.
+    expect(socks()).toHaveTextContent('')
 
-  it('el orden no cambia al empaquetar (nada se mueve bajo el dedo)', async () => {
-    const { user } = await openLuggage(async (r, luggageId) => {
-      for (const name of ['Uno', 'Dos', 'Tres']) {
-        const item = await r.items.create({ name })
-        await r.quantities.add({
-          luggageId,
-          itemId: item.id,
-          num: 1,
-          nAlreadyPacked: 0,
-        })
-      }
-    })
-    const order = () =>
-      screen.getAllByRole('checkbox').map((c) => c.getAttribute('aria-label'))
-
-    await user.click(await screen.findByRole('checkbox', { name: 'Uno' }))
-    await screen.findByText('1 de 3 listos')
-
-    expect(order()).toEqual(['Uno', 'Dos', 'Tres'])
+    await user.click(
+      screen.getByRole('button', { name: 'Una unidad menos de Calcetines' }),
+    )
+    await waitFor(() => expect(socks()).toBeChecked())
   })
 })
 
@@ -233,8 +132,15 @@ describe('Cantidad y quitar (fila desplegada)', () => {
       screen.getByRole('button', { name: 'Una unidad más de Calcetines' }),
     )
 
-    expect(await screen.findByText('2 unidades')).toBeInTheDocument()
-    expect(screen.getByText('×2')).toBeInTheDocument()
+    // A la vista, solo el número; "unidades" está oculto a la vista pero en
+    // la región aria-live: VoiceOver anuncia "2 unidades".
+    expect(await screen.findByText('×2')).toBeInTheDocument()
+    const count = screen.getByText(
+      (_, element) =>
+        element?.getAttribute('aria-live') === 'polite' &&
+        element.textContent === '2 unidades',
+    )
+    expect(count.firstChild?.textContent).toBe('2')
     expect(minus).toBeEnabled()
   })
 
@@ -265,20 +171,82 @@ describe('Cantidad y quitar (fila desplegada)', () => {
     )
   })
 
-  it('la papelera quita el artículo sin confirmación; el catálogo lo conserva', async () => {
+  it('la papelera pide confirmación y quita el artículo; el catálogo lo conserva', async () => {
     const { repositories, user, details } = await openWithSocks()
     await user.click(details)
 
     await user.click(
       screen.getByRole('button', { name: 'Quitar Calcetines de la maleta' }),
     )
+    // Confirmación (decisión del usuario): el icono solo no lo dice todo.
+    const dialog = screen.getByRole('dialog', {
+      name: '¿Quitar «Calcetines» de la maleta?',
+    })
+    expect(dialog).toHaveTextContent('Seguirá en tu catálogo.')
+    await user.click(within(dialog).getByRole('button', { name: 'Quitar' }))
 
     expect(
-      await screen.findByText(/Esta maleta está vacía/),
+      await screen.findByText('Aún no hay nada en esta maleta.'),
     ).toBeInTheDocument()
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect((await repositories.items.list()).map((i) => i.name)).toEqual([
       'Calcetines',
     ])
+  })
+})
+
+describe('Maleta vacía', () => {
+  it('sin artículos ni compartimentos: icono, una frase y "Añadir artículos" (sin barra de progreso)', async () => {
+    await openLuggage()
+
+    expect(
+      screen.getByText('Aún no hay nada en esta maleta.'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Añadir a la maleta' }),
+    ).toBeInTheDocument()
+    // Nada que contar: ni "0 de 0 listos" ni la barra.
+    expect(screen.queryByText(/de 0 listos/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+  })
+})
+
+describe('Reiniciar maleta (⋯)', () => {
+  it('solo se ofrece si hay algo listo; desmarca todo tras confirmar', async () => {
+    const { user } = await openLuggage(async (r, luggageId) => {
+      for (const [name, packed] of [
+        ['Calcetines', 1],
+        ['Pasaporte', 0],
+      ] as const) {
+        const item = await r.items.create({ name })
+        await r.quantities.add({
+          luggageId,
+          itemId: item.id,
+          num: 1,
+          nAlreadyPacked: packed,
+        })
+      }
+    })
+    expect(await screen.findByText('1 de 2 listos')).toBeInTheDocument()
+
+    await chooseLuggageAction(user, 'Mochila', 'Reiniciar maleta')
+    const dialog = screen.getByRole('dialog', {
+      name: '¿Reiniciar «Mochila»?',
+    })
+    expect(dialog).toHaveTextContent('No se quita nada de la maleta.')
+    await user.click(within(dialog).getByRole('button', { name: 'Reiniciar' }))
+
+    expect(await screen.findByText('0 de 2 listos')).toBeInTheDocument()
+    expect(
+      screen.getByText('«Mochila» reiniciada: nada está listo.'),
+    ).toBeInTheDocument()
+
+    // Ya no hay nada listo: la opción desaparece.
+    await user.click(
+      screen.getByRole('button', { name: 'Acciones de Mochila' }),
+    )
+    const sheet = screen.getByRole('dialog', { name: 'Mochila' })
+    expect(
+      within(sheet).queryByRole('button', { name: 'Reiniciar maleta' }),
+    ).not.toBeInTheDocument()
   })
 })

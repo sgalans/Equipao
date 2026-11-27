@@ -1,6 +1,7 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { chooseLuggageAction } from '@/test/luggageActions'
 import { renderApp } from '@/test/render'
 import { createTestRepositories } from '@/test/repositories'
 
@@ -109,20 +110,62 @@ describe('LuggageDetailPage', () => {
   })
 
   describe('borrar', () => {
-    it('"Borrar maleta" es un botón con texto, al final de la maleta', async () => {
-      await openLuggage()
-
-      const button = screen.getByRole('button', { name: 'Borrar maleta' })
-      expect(button).toHaveTextContent('Borrar maleta')
-      // Va DESPUÉS de todo el contenido (incluido "Nuevo compartimento"):
-      // lejos de lo que se toca a menudo.
-      const newCompartment = screen.getByRole('button', {
-        name: 'Nuevo compartimento',
-      })
+    it('"Borrar maleta" está en ⋯ (en rojo), no al final de la página', async () => {
+      const user = userEvent.setup()
+      await openLuggage('Mochila Japón', 1)
       expect(
-        newCompartment.compareDocumentPosition(button) &
-          Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy()
+        screen.queryByRole('button', { name: 'Borrar maleta' }),
+      ).not.toBeInTheDocument()
+
+      await user.click(
+        screen.getByRole('button', { name: 'Acciones de Mochila Japón' }),
+      )
+
+      const sheet = screen.getByRole('dialog', { name: 'Mochila Japón' })
+      expect(
+        within(sheet)
+          .getAllByRole('button')
+          .map((b) => b.textContent),
+      ).toEqual([
+        'Seleccionar artículos',
+        'Duplicar',
+        'Compartir',
+        'Borrar maleta',
+        'Cerrar',
+      ])
+    })
+
+    it('la hoja del ⋯ se cierra con "Cerrar" y tocando fuera', async () => {
+      const user = userEvent.setup()
+      await openLuggage()
+      const open = () =>
+        user.click(
+          screen.getByRole('button', { name: 'Acciones de Mochila Japón' }),
+        )
+
+      await open()
+      await user.click(screen.getByRole('button', { name: 'Cerrar' }))
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+      await open()
+      // Un toque en el fondo llega como clic sobre el propio <dialog>.
+      await user.click(screen.getByRole('dialog', { name: 'Mochila Japón' }))
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('tocar DENTRO de la hoja (p. ej. el título) no la cierra', async () => {
+      const user = userEvent.setup()
+      await openLuggage()
+      await user.click(
+        screen.getByRole('button', { name: 'Acciones de Mochila Japón' }),
+      )
+      const sheet = screen.getByRole('dialog', { name: 'Mochila Japón' })
+
+      await user.click(
+        within(sheet).getByRole('heading', { name: 'Mochila Japón' }),
+      )
+
+      expect(sheet).toBeVisible()
     })
 
     it.each([
@@ -141,7 +184,7 @@ describe('LuggageDetailPage', () => {
         const user = userEvent.setup()
         await openLuggage('Mochila Japón', count)
 
-        await user.click(screen.getByRole('button', { name: 'Borrar maleta' }))
+        await chooseLuggageAction(user, 'Mochila Japón', 'Borrar maleta')
 
         const dialog = await screen.findByRole('dialog', {
           name: '¿Borrar «Mochila Japón»?',
@@ -156,7 +199,7 @@ describe('LuggageDetailPage', () => {
       const user = userEvent.setup()
       const { repositories, luggage } = await openLuggage()
 
-      await user.click(screen.getByRole('button', { name: 'Borrar maleta' }))
+      await chooseLuggageAction(user, 'Mochila Japón', 'Borrar maleta')
       // within(dialog): en el navegador, showModal() vuelve inerte el resto
       // de la página; Testing Library no modela `inert`.
       await user.click(
@@ -176,7 +219,7 @@ describe('LuggageDetailPage', () => {
         2,
       )
 
-      await user.click(screen.getByRole('button', { name: 'Borrar maleta' }))
+      await chooseLuggageAction(user, 'Mochila Japón', 'Borrar maleta')
       await user.click(
         within(screen.getByRole('dialog')).getByRole('button', {
           name: 'Borrar',
@@ -211,9 +254,7 @@ describe('LuggageDetailPage', () => {
       }
       const { router } = renderApp(`/luggages/${luggage.id}`, failing)
 
-      await user.click(
-        await screen.findByRole('button', { name: 'Borrar maleta' }),
-      )
+      await chooseLuggageAction(user, 'Neceser', 'Borrar maleta')
       await user.click(
         within(screen.getByRole('dialog')).getByRole('button', {
           name: 'Borrar',

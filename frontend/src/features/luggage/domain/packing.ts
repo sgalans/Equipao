@@ -8,28 +8,37 @@ import type { ItemQuantity } from './itemQuantity'
  */
 type Counts = Pick<ItemQuantity, 'num' | 'nAlreadyPacked'>
 
-/** Un artículo está listo cuando no le falta ninguna unidad por guardar. */
+/**
+ * Listo = se marcó con EXACTAMENTE las unidades que tiene ahora (decisión del
+ * usuario). `nAlreadyPacked` recuerda con cuántas se marcó: si después se
+ * cambia la cantidad (suba o baje) deja de estar listo, y si vuelve a esa
+ * cantidad vuelve a estarlo (5/5 → 6 = no listo → 5 = listo; 5/5 → 4 = no
+ * listo → 5 = listo). No hay estado "a medias".
+ */
 export function isFullyPacked(q: Counts): boolean {
-  return q.nAlreadyPacked >= q.num
+  return q.nAlreadyPacked === q.num
 }
 
 /**
- * Empaquetado "todo o nada" (decisión de producto): un toque guarda todas
- * las unidades; otro toque las saca todas. Si estaba a medias (p. ej. 5/6
- * tras subir la cantidad), un toque lo completa.
+ * Empaquetado "todo o nada" (decisión de producto): un toque lo marca como
+ * listo con las unidades que tiene; otro lo desmarca. Si no estaba listo
+ * (también tras cambiar la cantidad), un toque lo marca.
  */
 export function toggledPackedCount(q: Counts): number {
   return isFullyPacked(q) ? 0 : q.num
 }
 
 /**
- * Unidades guardadas tras cambiar la cantidad total a `newNum`.
- * - Subir (5/5 → 6): se conservan las 5 guardadas → 5/6 (la sexta falta).
- * - Bajar (5/5 → 4): se recorta a 4/4. Sin este recorte se violaría
- *   CHECK (nAlreadyPacked <= num).
+ * Al UNIR dos artículos del catálogo ("peolota" → "pelota"), una maleta que
+ * tenía los dos queda con UNA línea (decisión del usuario):
+ * - la cantidad MAYOR de las dos: no se pierde nada que se fuera a llevar;
+ * - lista solo si lo estaban LAS DOS (nunca se da por guardado algo que no
+ *   lo estaba).
  */
-export function packedCountAfterResize(q: Counts, newNum: number): number {
-  return Math.min(q.nAlreadyPacked, newNum)
+export function mergedCounts(a: Counts, b: Counts): Counts {
+  const num = Math.max(a.num, b.num)
+  const bothPacked = isFullyPacked(a) && isFullyPacked(b)
+  return { num, nAlreadyPacked: bothPacked ? num : 0 }
 }
 
 /**
@@ -64,6 +73,19 @@ export function packingProgress(
     done: loose.done + compartments.filter((c) => c.isReady).length,
     total: loose.total + compartments.length,
   }
+}
+
+/**
+ * ¿Hay ALGO listo en la maleta (un artículo o un compartimento)? Decide si
+ * tiene sentido "Reiniciar maleta". No vale `progress.done > 0`: la barra
+ * cuenta bloques, y un compartimento sin marcar puede tener dentro
+ * artículos guardados.
+ */
+export function hasAnythingPacked(
+  entries: Counts[],
+  compartments: { isReady: boolean }[],
+): boolean {
+  return entries.some(isFullyPacked) || compartments.some((c) => c.isReady)
 }
 
 /**

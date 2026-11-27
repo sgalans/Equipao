@@ -36,50 +36,15 @@ async function addItem(
 }
 
 describe('Crear compartimentos', () => {
-  it('sin compartimentos, explica qué son', async () => {
+  it('la maleta ya no tiene "Nuevo compartimento": se añaden desde "Añadir artículos"', async () => {
     await openLuggage()
 
     expect(
-      screen.getByText(
-        'Contenedor para meter artículos, como un neceser, una mochila o un maletín.',
-      ),
-    ).toBeInTheDocument()
-  })
-
-  it('"Nuevo compartimento" → escribir → OK lo crea; la ayuda desaparece', async () => {
-    const { user, repositories, luggage } = await openLuggage()
-
-    await user.click(
-      screen.getByRole('button', { name: 'Nuevo compartimento' }),
-    )
-    await user.keyboard('Neceser{Enter}')
-
-    expect(
-      await screen.findByRole('button', { name: 'Neceser, Vacío' }),
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByText(
-        'Contenedor para meter artículos, como un neceser, una mochila o un maletín.',
-      ),
+      screen.queryByRole('button', { name: 'Nuevo compartimento' }),
     ).not.toBeInTheDocument()
     expect(
-      await repositories.compartments.listByLuggage(luggage.id),
-    ).toHaveLength(1)
-  })
-
-  it('Escape o un nombre vacío no crean nada', async () => {
-    const { user, repositories, luggage } = await openLuggage()
-    const newButton = () =>
-      screen.getByRole('button', { name: 'Nuevo compartimento' })
-
-    await user.click(newButton())
-    await user.keyboard('Neceser{Escape}')
-    await user.click(newButton())
-    await user.keyboard('   {Enter}')
-
-    expect(await repositories.compartments.listByLuggage(luggage.id)).toEqual(
-      [],
-    )
+      screen.getByRole('link', { name: 'Añadir a la maleta' }),
+    ).toBeInTheDocument()
   })
 })
 
@@ -193,9 +158,11 @@ describe('Renombrar y borrar compartimentos', () => {
 
     await user.click(more)
     expect(more).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByRole('button', { name: 'Renombrar' })).toBeVisible()
     expect(
-      screen.getByRole('button', { name: 'Borrar compartimento' }),
+      screen.getByRole('button', { name: 'Renombrar Neceser' }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole('button', { name: 'Quitar Neceser de la maleta' }),
     ).toBeVisible()
 
     await user.click(more)
@@ -213,7 +180,7 @@ describe('Renombrar y borrar compartimentos', () => {
     await user.click(
       screen.getByRole('button', { name: 'Más acciones de Neceser' }),
     )
-    await user.click(screen.getByRole('button', { name: 'Renombrar' }))
+    await user.click(screen.getByRole('button', { name: 'Renombrar Neceser' }))
     await user.keyboard('Aseo{Enter}')
 
     expect(
@@ -229,7 +196,7 @@ describe('Renombrar y borrar compartimentos', () => {
     await user.click(
       screen.getByRole('button', { name: 'Más acciones de Neceser' }),
     )
-    await user.click(screen.getByRole('button', { name: 'Renombrar' }))
+    await user.click(screen.getByRole('button', { name: 'Renombrar Neceser' }))
     const input = screen.getByRole('textbox', {
       name: 'Nombre del compartimento',
     })
@@ -257,19 +224,21 @@ describe('Renombrar y borrar compartimentos', () => {
       screen.getByRole('button', { name: 'Más acciones de Neceser' }),
     )
     await user.click(
-      screen.getByRole('button', { name: 'Borrar compartimento' }),
+      screen.getByRole('button', { name: 'Quitar Neceser de la maleta' }),
     )
-    const dialog = screen.getByRole('dialog', { name: '¿Borrar «Neceser»?' })
+    const dialog = screen.getByRole('dialog', {
+      name: '¿Quitar «Neceser» de la maleta?',
+    })
     expect(dialog).toHaveTextContent(
       'Sus 2 artículos quedarán sueltos en la maleta.',
     )
-    await user.click(within(dialog).getByRole('button', { name: 'Borrar' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Quitar' }))
 
-    expect(
-      await screen.findByText(
-        'Contenedor para meter artículos, como un neceser, una mochila o un maletín.',
-      ),
-    ).toBeInTheDocument()
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('button', { name: /^Neceser,/ }),
+      ).not.toBeInTheDocument(),
+    )
     // Los artículos siguen en la maleta, ahora sueltos.
     expect(
       screen.getByRole('checkbox', { name: 'Cepillo' }),
@@ -277,109 +246,6 @@ describe('Renombrar y borrar compartimentos', () => {
     expect(screen.getByRole('checkbox', { name: 'Pasta' })).toBeInTheDocument()
     const entries = await repositories.quantities.listByLuggage(luggage.id)
     expect(entries.every((e) => e.compartmentId === null)).toBe(true)
-  })
-})
-
-describe('Añadir dentro de un compartimento ("+")', () => {
-  /** <section aria-label="Neceser"> tiene el rol accesible "region". */
-  const region = (name: string) => screen.getByRole('region', { name })
-
-  it('"+" abre un campo dentro, ya enfocado; lo añadido entra en el compartimento', async () => {
-    const { user, repositories, luggage } = await openLuggage(
-      async (repos, luggageId) => {
-        await repos.compartments.create({ luggageId, name: 'Neceser' })
-      },
-    )
-
-    await user.click(screen.getByRole('button', { name: 'Añadir a Neceser' }))
-    const input = within(region('Neceser')).getByRole('textbox', {
-      name: 'Añadir a Neceser',
-    })
-    expect(input).toHaveFocus()
-    await user.keyboard('Cepillo{Enter}')
-
-    expect(
-      await within(region('Neceser')).findByRole('checkbox', {
-        name: 'Cepillo',
-      }),
-    ).toBeInTheDocument()
-    // El campo sigue abierto y enfocado para añadir el siguiente.
-    expect(input).toHaveValue('')
-    expect(input).toHaveFocus()
-    const [kit] = await repositories.compartments.listByLuggage(luggage.id)
-    const [added] = await repositories.quantities.listByLuggage(luggage.id)
-    expect(added.compartmentId).toBe(kit.id)
-  })
-
-  it('"+" en un compartimento plegado lo despliega', async () => {
-    const { user } = await openLuggage(async (repos, luggageId) => {
-      await repos.compartments.create({ luggageId, name: 'Neceser' })
-    })
-    await user.click(screen.getByRole('button', { name: /^Neceser,/ }))
-    expect(screen.getByRole('button', { name: /^Neceser,/ })).toHaveAttribute(
-      'aria-expanded',
-      'false',
-    )
-
-    await user.click(screen.getByRole('button', { name: 'Añadir a Neceser' }))
-
-    expect(screen.getByRole('button', { name: /^Neceser,/ })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    )
-    expect(
-      screen.getByRole('textbox', { name: 'Añadir a Neceser' }),
-    ).toHaveFocus()
-  })
-
-  it('al abrirse, el mismo botón pasa a "Dejar de añadir…" y lo cierra', async () => {
-    const { user } = await openLuggage(async (repos, luggageId) => {
-      await repos.compartments.create({ luggageId, name: 'Neceser' })
-    })
-
-    await user.click(screen.getByRole('button', { name: 'Añadir a Neceser' }))
-    const closeButton = screen.getByRole('button', {
-      name: 'Dejar de añadir a Neceser',
-    })
-    expect(closeButton).toHaveAttribute('aria-expanded', 'true')
-
-    await user.click(closeButton)
-
-    expect(
-      screen.queryByRole('textbox', { name: 'Añadir a Neceser' }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: 'Añadir a Neceser' }),
-    ).toHaveAttribute('aria-expanded', 'false')
-  })
-
-  it('Escape cierra el campo del compartimento', async () => {
-    const { user } = await openLuggage(async (repos, luggageId) => {
-      await repos.compartments.create({ luggageId, name: 'Neceser' })
-    })
-
-    await user.click(screen.getByRole('button', { name: 'Añadir a Neceser' }))
-    await user.keyboard('{Escape}')
-
-    expect(
-      screen.queryByRole('textbox', { name: 'Añadir a Neceser' }),
-    ).not.toBeInTheDocument()
-  })
-
-  it('si el artículo ya está en la maleta (aunque sea suelto), avisa', async () => {
-    const { user } = await openLuggage(async (repos, luggageId) => {
-      await repos.compartments.create({ luggageId, name: 'Neceser' })
-      await addItem(repos, luggageId, 'Cepillo')
-    })
-
-    await user.click(screen.getByRole('button', { name: 'Añadir a Neceser' }))
-    await user.keyboard('cepillo{Enter}')
-
-    expect(
-      await within(region('Neceser')).findByText(
-        '«cepillo» ya está en la maleta.',
-      ),
-    ).toBeInTheDocument()
   })
 })
 
@@ -500,10 +366,11 @@ describe('Compartimento "listo" (estado propio)', () => {
         screen.getByRole('checkbox', { name: 'Neceser listo' }),
       ).toBeChecked(),
     )
-    // Decisión de producto: nada de "sin guardar", solo su progreso.
+    // Decisión de producto: nada de "sin guardar", solo su progreso. Y como
+    // le faltan artículos, NO se pliega: se queda a la vista.
     expect(
       screen.getByRole('button', { name: 'Neceser, 0 de 2' }),
-    ).toBeInTheDocument()
+    ).toHaveAttribute('aria-expanded', 'true')
     expect(screen.queryByText(/sin guardar/)).not.toBeInTheDocument()
     // Cuenta como bloque hecho igualmente (decisión de producto).
     expect(screen.getByText('¡Maleta lista!')).toBeInTheDocument()
@@ -516,7 +383,10 @@ describe('Compartimento "listo" (estado propio)', () => {
           luggageId,
           name: 'Neceser',
         })
-        await addItem(repos, luggageId, 'Cepillo', { compartmentId: kit.id })
+        await addItem(repos, luggageId, 'Cepillo', {
+          compartmentId: kit.id,
+          packed: true,
+        })
       },
     )
     const check = screen.getByRole('checkbox', { name: 'Neceser listo' })
@@ -530,9 +400,54 @@ describe('Compartimento "listo" (estado propio)', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Neceser listo' }))
 
     expect(
-      await screen.findByRole('button', { name: 'Neceser, 0 de 1' }),
+      await screen.findByRole('button', { name: 'Neceser, 1 de 1' }),
     ).toHaveAttribute('aria-expanded', 'false')
     const [cepillo] = await repositories.quantities.listByLuggage(luggage.id)
-    expect(cepillo.nAlreadyPacked).toBe(0)
+    expect(cepillo.nAlreadyPacked).toBe(1)
+  })
+})
+
+describe('Plegado automático', () => {
+  it('se pliega solo cuando su último artículo queda listo', async () => {
+    const { user } = await openLuggage(async (repos, luggageId) => {
+      const kit = await repos.compartments.create({
+        luggageId,
+        name: 'Neceser',
+      })
+      await addItem(repos, luggageId, 'Cepillo', {
+        compartmentId: kit.id,
+        packed: true,
+      })
+      await addItem(repos, luggageId, 'Pasta', { compartmentId: kit.id })
+    })
+    const toggle = () => screen.getByRole('button', { name: /^Neceser,/ })
+    expect(toggle()).toHaveAttribute('aria-expanded', 'true')
+
+    await user.click(screen.getByRole('checkbox', { name: 'Pasta' }))
+
+    await waitFor(() =>
+      expect(toggle()).toHaveAttribute('aria-expanded', 'false'),
+    )
+    // Si se despliega a mano, no se vuelve a plegar solo.
+    await user.click(toggle())
+    expect(toggle()).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('al abrir una maleta con un compartimento ya completo, no lo pliega', async () => {
+    await openLuggage(async (repos, luggageId) => {
+      const kit = await repos.compartments.create({
+        luggageId,
+        name: 'Neceser',
+      })
+      await addItem(repos, luggageId, 'Cepillo', {
+        compartmentId: kit.id,
+        packed: true,
+      })
+    })
+
+    expect(screen.getByRole('button', { name: /^Neceser,/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
   })
 })

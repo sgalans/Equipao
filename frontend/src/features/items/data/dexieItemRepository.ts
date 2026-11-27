@@ -1,6 +1,11 @@
 import { newEntityBase, nowIso } from '@/shared/data/entityBase'
 import type { AppDb } from '@/shared/db/db'
-import { DuplicateError, EntityNotFoundError } from '@/shared/domain/errors'
+import { mergedCounts } from '@/features/luggage/domain/packing'
+import {
+  ConsistencyError,
+  DuplicateError,
+  EntityNotFoundError,
+} from '@/shared/domain/errors'
 import { ItemSchema, NewItemSchema, type Item } from '../domain/item'
 import type { ItemRepository } from '../domain/itemRepository'
 import { compareItemNames, isSameItemName } from '../domain/itemName'
@@ -81,7 +86,7 @@ export function createDexieItemRepository(db: AppDb): ItemRepository {
     },
 
     update(id, changes) {
-      return db.transaction('rw', db.items, async () => {
+      return db.transaction('rw', [db.items, db.itemQuantities], async () => {
         const items = await db.items.toArray()
         const current = items.find((item) => item.id === id)
         if (!current) throw new EntityNotFoundError('Item', id)
@@ -98,8 +103,69 @@ export function createDexieItemRepository(db: AppDb): ItemRepository {
         // puede cambiar mayúsculas o tildes ("calcetines" → "Calcetines").
         const clash = findByNameIn(items, updated.name)
         if (clash && clash.id !== id) throw duplicateNameError(clash.name)
+        // Convertir en compartimento (o al revés) solo si no está en ninguna
+        // maleta (decisión del usuario, opción A): si no, habría que
+        // reorganizarlas (sacar lo de dentro, sacarlo de otro compartimento…)
+        // sin que se vea. La UI lo explica; aquí se garantiza.
+        if (updated.isContainer !== current.isContainer) {
+          const inUse = await db.itemQuantities
+            .where('itemId')
+            .equals(id)
+            .count()
+          if (inUse > 0) {
+            throw new ConsistencyError(
+              'Solo se puede cambiar si no está en ninguna maleta',
+            )
+          }
+        }
         await db.items.put(updated)
         return updated
+      })
+    },
+
+    merge(sourceId, targetId) {
+      return db.transaction('rw', [db.items, db.itemQuantities], async () => {
+        const [source, target] = await db.items.bulkGet([sourceId, targetId])
+        if (!source) throw new EntityNotFoundError('Item', sourceId)
+        if (!target) throw new EntityNotFoundError('Item', targetId)
+        if (source.id === target.id) return target
+        if (source.isContainer !== target.isContainer) {
+          throw new ConsistencyError(
+            'No se puede unir un artículo con un compartimento',
+          )
+        }
+        const now = nowIso()
+        const sourceLines = await db.itemQuantities
+          .where('itemId')
+          .equals(sourceId)
+          .toArray()
+        for (const line of sourceLines) {
+          // ¿Esta maleta ya tenía el artículo destino? (UNIQUE luggage+item)
+          const existing = await db.itemQuantities
+            .where('[luggageId+itemId]')
+            .equals([line.luggageId, targetId])
+            .first()
+          if (!existing) {
+            await db.itemQuantities.update(line.id, {
+              itemId: targetId,
+              updatedAt: now,
+            })
+            continue
+          }
+          // Tenía los dos: una sola línea (la del destino, en su sitio).
+          await db.itemQuantities.update(existing.id, {
+            ...mergedCounts(existing, line),
+            updatedAt: now,
+          })
+          // Si eran compartimentos, lo de dentro pasa al que se queda.
+          await db.itemQuantities
+            .where('compartmentId')
+            .equals(line.id)
+            .modify({ compartmentId: existing.id, updatedAt: now })
+          await db.itemQuantities.delete(line.id)
+        }
+        await db.items.delete(sourceId)
+        return target
       })
     },
 
@@ -108,7 +174,21 @@ export function createDexieItemRepository(db: AppDb): ItemRepository {
       // no debe obligar a ir maleta por maleta). Hijos primero y después el
       // artículo, en una transacción: o se borra todo o nada.
       return db.transaction('rw', [db.items, db.itemQuantities], async () => {
-        await db.itemQuantities.where('itemId').equals(id).delete()
+        const lines = await db.itemQuantities
+          .where('itemId')
+          .equals(id)
+          .toArray()
+        // Si es un CONTENEDOR, sus líneas son compartimentos: lo que llevaban
+        // dentro pasa a suelto (ON DELETE SET NULL), no se queda apuntando a
+        // una línea que ya no existe.
+        const lineIds = lines.map((line) => line.id)
+        if (lineIds.length > 0) {
+          await db.itemQuantities
+            .where('compartmentId')
+            .anyOf(lineIds)
+            .modify({ compartmentId: null, updatedAt: nowIso() })
+        }
+        await db.itemQuantities.bulkDelete(lineIds)
         await db.items.delete(id)
       })
     },

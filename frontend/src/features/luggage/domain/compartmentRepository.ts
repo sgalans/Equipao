@@ -2,9 +2,12 @@ import type { Compartment, NewCompartment } from './compartment'
 
 /** Port de los compartimentos de una maleta. */
 export interface CompartmentRepository {
-  /** Compartimentos de una maleta, en orden de creación. */
+  /** Compartimentos de una maleta, en su orden manual (`position`). */
   listByLuggage(luggageId: string): Promise<Compartment[]>
-  /** Lanza EntityNotFoundError si la maleta no existe (FOREIGN KEY). */
+  /**
+   * Crea el compartimento AL FINAL de la maleta. Lanza EntityNotFoundError
+   * si la maleta no existe (FOREIGN KEY).
+   */
   create(input: NewCompartment): Promise<Compartment>
   /**
    * Crea un compartimento y mete en él artículos que ya están en esa maleta,
@@ -15,6 +18,17 @@ export interface CompartmentRepository {
   createWithQuantities(
     input: NewCompartment,
     quantityIds: string[],
+  ): Promise<Compartment>
+  /**
+   * Orden manual: coloca el compartimento `id` ENTRE `beforeId` y `afterId`
+   * (null = principio o final). Cambia solo esa fila (fractional indexing).
+   * EntityNotFoundError si alguno no existe; ConsistencyError si son de
+   * maletas distintas.
+   */
+  reorder(
+    id: string,
+    beforeId: string | null,
+    afterId: string | null,
   ): Promise<Compartment>
   /** Marca o desmarca el compartimento como listo. EntityNotFoundError si no existe. */
   toggleReady(id: string): Promise<Compartment>

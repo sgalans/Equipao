@@ -131,8 +131,8 @@ describe('DexieLuggageRepository.listSummaries', () => {
 
     // Mismo orden que list() (más recientes primero) y sin mezclar maletas.
     expect(summaries).toEqual([
-      { ...empty, done: 0, total: 0 },
-      { ...big, done: 1, total: 2 },
+      { ...empty, done: 0, total: 0, hasPacked: false },
+      { ...big, done: 1, total: 2, hasPacked: true },
     ])
   })
 })
@@ -291,5 +291,102 @@ describe('Descripción y compartimentos "listos" en el repositorio de maletas', 
     expect(copy.description).toBe('Plantilla de finde')
     const [copiedKit] = await compartments.listByLuggage(copy.id)
     expect(copiedKit.isReady).toBe(false)
+  })
+})
+
+describe('DexieLuggageRepository.resetPacked ("Reiniciar maleta")', () => {
+  /** Maleta con un artículo listo, otro recordado (5 de 6) y un Neceser listo con algo dentro. */
+  async function setup() {
+    const repos = createTestRepositories()
+    const big = await repos.luggages.create({ name: 'Grande' })
+    const other = await repos.luggages.create({ name: 'Otra' })
+    const kit = await repos.compartments.create({
+      luggageId: big.id,
+      name: 'Neceser',
+    })
+    await repos.compartments.toggleReady(kit.id)
+    const add = async (
+      luggageId: string,
+      name: string,
+      num: number,
+      nAlreadyPacked: number,
+      compartmentId: string | null = null,
+    ) => {
+      const item =
+        (await repos.items.findByName(name)) ??
+        (await repos.items.create({ name }))
+      return repos.quantities.add({
+        luggageId,
+        itemId: item.id,
+        num,
+        nAlreadyPacked,
+        compartmentId,
+      })
+    }
+    const socks = await add(big.id, 'Calcetines', 5, 5)
+    const shirts = await add(big.id, 'Camisetas', 5, 5)
+    // Se marcó con 5 y luego se subió a 6: no está listo, pero se recuerda.
+    await repos.quantities.resize(shirts.id, 6)
+    await add(big.id, 'Cepillo', 1, 1, kit.id)
+    await add(other.id, 'Calcetines', 1, 1)
+    return { ...repos, big, other, kit, socks }
+  }
+
+  it('desmarca TODO (artículos, lo recordado y compartimentos) sin quitar nada', async () => {
+    const { luggages, quantities, compartments, big } = await setup()
+
+    await luggages.resetPacked(big.id)
+
+    const lines = await quantities.listByLuggage(big.id)
+    expect(lines).toHaveLength(3)
+    expect(lines.every((line) => line.nAlreadyPacked === 0)).toBe(true)
+    const [kit] = await compartments.listByLuggage(big.id)
+    expect(kit?.isReady).toBe(false)
+    const [summary] = (await luggages.listSummaries()).filter(
+      (l) => l.id === big.id,
+    )
+    expect(summary).toMatchObject({ done: 0, hasPacked: false })
+  })
+
+  it('no toca otras maletas', async () => {
+    const { luggages, quantities, big, other } = await setup()
+
+    await luggages.resetPacked(big.id)
+
+    const [otherSocks] = await quantities.listByLuggage(other.id)
+    expect(otherSocks?.nAlreadyPacked).toBe(1)
+  })
+
+  it('si la maleta no existe, EntityNotFoundError', async () => {
+    const { luggages } = createTestRepositories()
+
+    await expect(luggages.resetPacked(MISSING_ID)).rejects.toThrow(
+      EntityNotFoundError,
+    )
+  })
+
+  it('hasPacked cuenta lo guardado dentro de un compartimento SIN marcar (la barra no)', async () => {
+    const { luggages, items, quantities, compartments } =
+      createTestRepositories()
+    const big = await luggages.create({ name: 'Grande' })
+    const kit = await compartments.create({
+      luggageId: big.id,
+      name: 'Neceser',
+    })
+    const brush = await items.create({ name: 'Cepillo' })
+    await quantities.add({
+      luggageId: big.id,
+      itemId: brush.id,
+      compartmentId: kit.id,
+      num: 1,
+      nAlreadyPacked: 1,
+    })
+
+    const [summary] = await luggages.listSummaries()
+
+    // La barra cuenta bloques: el Neceser sin marcar no cuenta como hecho…
+    expect(summary).toMatchObject({ done: 0, total: 1 })
+    // …pero hay algo listo: tiene sentido reiniciar.
+    expect(summary?.hasPacked).toBe(true)
   })
 })

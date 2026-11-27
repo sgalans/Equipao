@@ -1,6 +1,8 @@
-import { Dexie, type EntityTable } from 'dexie'
+import { Dexie, type EntityTable, type Table, type Transaction } from 'dexie'
+import { v7 as uuidv7 } from 'uuid'
+import { isSameItemName } from '@/features/items/domain/itemName'
+import { positionsAfter } from '@/features/luggage/domain/position'
 import type { Item } from '@/features/items/domain/item'
-import type { Compartment } from '@/features/luggage/domain/compartment'
 import type { ItemQuantity } from '@/features/luggage/domain/itemQuantity'
 import type { Luggage } from '@/features/luggage/domain/luggage'
 
@@ -63,6 +65,182 @@ export const SCHEMA_V2 = {
 export const SCHEMA_V3 = {}
 
 /**
+ * v4 (orden manual, arrastrando): `ItemQuantity.position` (fractional
+ * indexing, ver domain/position.ts). Sin índice nuevo: se ordena en memoria
+ * con sortBy dentro de cada maleta (listas cortas). Hay que dar posición a
+ * las líneas existentes (ver upgrade() en AppDb).
+ */
+export const SCHEMA_V4 = {}
+
+/**
+ * v5 (ordenar compartimentos arrastrando): `Compartment.position`, igual que
+ * las líneas en la v4. Nueva versión y no ampliar la v4: aunque la v4 aún no
+ * esté publicada, ya puede estar en bases de datos de desarrollo, y una
+ * versión que ya se ha abierto no vuelve a migrarse.
+ */
+export const SCHEMA_V5 = {}
+
+/**
+ * v6 (refactor/compartments): los compartimentos pasan a ser LÍNEAS de la
+ * maleta cuyo artículo es un CONTENEDOR del catálogo (`Item.isContainer`;
+ * patrón Composite). Ningún índice cambia; la conversión de datos está en
+ * migrateCompartmentsToContainers. La tabla `compartments` NO se borra
+ * aquí: se borra en la v7, para no depender de poder leer una tabla en la
+ * misma versión en la que se elimina.
+ */
+export const SCHEMA_V6 = {}
+
+/** v7: se elimina la tabla `compartments` (ya migrada en la v6). */
+export const SCHEMA_V7 = { compartments: null }
+
+interface LegacyCompartment {
+  id: string
+  luggageId: string
+  name: string
+  isReady: boolean
+  position: string
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * Migración v6: cada compartimento se convierte en una línea contenedor.
+ * - La línea conserva el MISMO id que el compartimento: sus artículos (que
+ *   apuntan a él con compartmentId) no se tocan, y lo plegado u oculto en
+ *   localStorage (claves por id) se conserva.
+ * - El contenedor del catálogo se reutiliza entre maletas por nombre
+ *   (isSameItemName: "Neceser" = "neceser").
+ * - Si ya había un artículo NORMAL con ese nombre: si no se usa en ninguna
+ *   maleta, se convierte en contenedor; si se usa, se crea el contenedor
+ *   "Nombre (compartimento)" (un artículo en uso no puede pasar a contener
+ *   cosas sin romper sus maletas).
+ * - Un compartimento por maleta y contenedor: si una maleta tenía dos con el
+ *   mismo nombre, el segundo se FUSIONA en el primero (sus artículos pasan a
+ *   él).
+ * - "Listo" del compartimento → la línea guardada (1 de 1).
+ */
+async function migrateCompartmentsToContainers(tx: Transaction) {
+  const items: { id: string; name: string; isContainer?: boolean }[] = await tx
+    .table('items')
+    .toArray()
+  const lines: { itemId: string; luggageId: string }[] = await tx
+    .table('itemQuantities')
+    .toArray()
+  const compartments: LegacyCompartment[] = await tx
+    .table('compartments')
+    .toArray()
+  compartments.sort(
+    (a, b) => a.createdAt.localeCompare(b.createdAt) || (a.id < b.id ? -1 : 1),
+  )
+
+  const usedItemIds = new Set(lines.map((line) => line.itemId))
+  const containers: { id: string; name: string }[] = []
+  const toConvert = new Set<string>()
+  const newItems: object[] = []
+
+  /** Contenedor del catálogo para un nombre (lo busca o lo crea). */
+  function containerFor(compartment: LegacyCompartment): string {
+    const name = compartment.name
+    const known = containers.find((c) => isSameItemName(c.name, name))
+    if (known) return known.id
+    const existing = items.find((item) => isSameItemName(item.name, name))
+    let id: string
+    let finalName = name
+    if (existing && !usedItemIds.has(existing.id)) {
+      toConvert.add(existing.id)
+      id = existing.id
+      finalName = existing.name
+    } else {
+      if (existing) finalName = `${name} (compartimento)`
+      id = uuidv7()
+      newItems.push({
+        id,
+        name: finalName,
+        isContainer: true,
+        createdAt: compartment.createdAt,
+        updatedAt: compartment.createdAt,
+      })
+    }
+    containers.push({ id, name: finalName })
+    return id
+  }
+
+  /** "maleta|contenedor" → id de la línea contenedor ya creada. */
+  const lineByLuggageAndItem = new Map<string, string>()
+  const newLines: object[] = []
+  /** compartimento fusionado → línea en la que se fusiona. */
+  const mergedInto = new Map<string, string>()
+
+  for (const compartment of compartments) {
+    const itemId = containerFor(compartment)
+    const key = `${compartment.luggageId}|${itemId}`
+    const existingLine = lineByLuggageAndItem.get(key)
+    if (existingLine) {
+      mergedInto.set(compartment.id, existingLine)
+      continue
+    }
+    lineByLuggageAndItem.set(key, compartment.id)
+    newLines.push({
+      id: compartment.id,
+      luggageId: compartment.luggageId,
+      itemId,
+      compartmentId: null,
+      num: 1,
+      nAlreadyPacked: compartment.isReady ? 1 : 0,
+      position: compartment.position,
+      createdAt: compartment.createdAt,
+      updatedAt: compartment.updatedAt,
+    })
+  }
+
+  await tx
+    .table('items')
+    .toCollection()
+    .modify((item: { id: string; isContainer?: boolean }) => {
+      item.isContainer = toConvert.has(item.id)
+    })
+  await tx.table('items').bulkAdd(newItems)
+  await tx
+    .table('itemQuantities')
+    .toCollection()
+    .modify((line: { compartmentId: string | null }) => {
+      const target =
+        line.compartmentId !== null
+          ? mergedInto.get(line.compartmentId)
+          : undefined
+      if (target) line.compartmentId = target
+    })
+  await tx.table('itemQuantities').bulkAdd(newLines)
+}
+
+/**
+ * Reparte claves de orden crecientes por maleta, en orden de añadido
+ * (createdAt; empate → id, que es UUID v7). Lo usan las migraciones v4 y v5.
+ */
+async function assignPositionsByCreation(table: Table) {
+  const rows: { id: string; luggageId: string; createdAt: string }[] =
+    await table.toArray()
+  const byLuggage = new Map<string, typeof rows>()
+  for (const row of rows) {
+    byLuggage.set(row.luggageId, [...(byLuggage.get(row.luggageId) ?? []), row])
+  }
+  const positionById = new Map<string, string>()
+  for (const group of byLuggage.values()) {
+    group.sort(
+      (a, b) =>
+        a.createdAt.localeCompare(b.createdAt) || (a.id < b.id ? -1 : 1),
+    )
+    const keys = positionsAfter(null, group.length)
+    group.forEach((row, index) => positionById.set(row.id, keys[index]))
+  }
+  await table
+    .toCollection()
+    .modify((row: { id: string; position?: string }) => {
+      row.position = positionById.get(row.id)
+    })
+}
+
+/**
  * Base de datos local (IndexedDB) de la app.
  *
  * Solo la capa `data` (repositorios) debe usar esta clase; la UI nunca habla
@@ -75,7 +253,6 @@ export class AppDb extends Dexie {
   declare luggages: EntityTable<Luggage, 'id'>
   declare items: EntityTable<Item, 'id'>
   declare itemQuantities: EntityTable<ItemQuantity, 'id'>
-  declare compartments: EntityTable<Compartment, 'id'>
   declare meta: EntityTable<MetaEntry, 'key'>
 
   // El nombre es configurable para que cada test use su propia base de datos.
@@ -117,6 +294,21 @@ export class AppDb extends Dexie {
             compartment.isReady = false
           })
       })
+
+    this.version(4)
+      .stores(SCHEMA_V4)
+      // Cada maleta conserva el orden que tenía (el de añadido).
+      .upgrade((tx) => assignPositionsByCreation(tx.table('itemQuantities')))
+
+    this.version(5)
+      .stores(SCHEMA_V5)
+      .upgrade((tx) => assignPositionsByCreation(tx.table('compartments')))
+
+    this.version(6)
+      .stores(SCHEMA_V6)
+      .upgrade((tx) => migrateCompartmentsToContainers(tx))
+
+    this.version(7).stores(SCHEMA_V7)
   }
 }
 

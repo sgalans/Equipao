@@ -35,12 +35,55 @@ export interface ItemQuantityRepository {
    * una transacción. Lanza EntityNotFoundError si la maleta, algún artículo
    * o el compartimento no existen, y ConsistencyError si el compartimento es
    * de otra maleta.
+   *
+   * Los CONTENEDORES de la lista (Mochila, Neceser…) se añaden siempre como
+   * compartimentos de la maleta (de primer nivel), aunque se indique un
+   * compartimento: uno no puede ir dentro de otro, y así "añadir estos a la
+   * maleta" funciona con una mezcla de artículos y compartimentos.
    */
   addMany(
     luggageId: string,
     itemIds: string[],
     compartmentId?: string | null,
   ): Promise<AddManyResult>
+  /**
+   * Como addMany, pero metiendo los artículos en un compartimento que se
+   * añade EN LA MISMA operación: `containerItemId` es un contenedor de la
+   * lista que aún no está en la maleta ("Dónde: Mochila (compartimento
+   * nuevo)"). Una sola transacción: o entra todo o nada (si se hiciera en
+   * dos pasos, un fallo a medias dejaría la Mochila sin sus cosas). Los
+   * demás contenedores de la lista quedan de primer nivel, como en addMany.
+   * ConsistencyError si `containerItemId` no es un contenedor de la lista o
+   * ya está en la maleta.
+   */
+  addManyIntoNewCompartment(
+    luggageId: string,
+    itemIds: string[],
+    containerItemId: string,
+  ): Promise<AddManyResult>
+  /**
+   * Orden manual: coloca la línea `id` ENTRE `beforeId` y `afterId` (null =
+   * sin vecino por ese lado: el principio o el final). Cambia solo esa fila
+   * (fractional indexing, ver domain/position.ts). EntityNotFoundError si
+   * alguna no existe; ConsistencyError si son de maletas distintas.
+   */
+  reorder(
+    id: string,
+    beforeId: string | null,
+    afterId: string | null,
+  ): Promise<ItemQuantity>
+  /**
+   * Arrastrar entre grupos: mete la línea en `compartmentId` (null = suelta)
+   * y la coloca ENTRE `beforeId` y `afterId`, todo en UNA escritura (nunca
+   * queda en el compartimento nuevo con el orden viejo). Mismos errores que
+   * `reorder` y `moveTo`.
+   */
+  place(
+    id: string,
+    compartmentId: string | null,
+    beforeId: string | null,
+    afterId: string | null,
+  ): Promise<ItemQuantity>
   /** Empaquetado "todo o nada" (ver domain/packing.ts). */
   togglePacked(id: string): Promise<ItemQuantity>
   /** Cambia la cantidad total ajustando lo ya guardado (ver packing.ts). */

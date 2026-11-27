@@ -31,7 +31,7 @@
 }
 
 /*
- * Contenido del compartimento (filas, campo de añadir, "vacío") con una
+ * Contenido del compartimento (filas o "vacío") con una
  * pequeña sangría: se ve de un vistazo qué va DENTRO y qué va suelto. Se
  * aplica al contenedor y no a las filas, porque las filas sueltas usan el
  * mismo componente y no deben moverse.
@@ -44,14 +44,10 @@
  * El último artículo de un compartimento no lleva su línea inferior: justo
  * debajo está la que cierra el compartimento y se verían dos pegadas.
  * Selector preciso (> ul > li): solo la lista de artículos del
- * compartimento, no la de sugerencias del campo de añadir.
+ * compartimento.
  */
 .content > ul > li:last-child {
   border-bottom: none;
-}
-
-.addForm {
-  padding-left: 0.75rem;
 }
 
 /* Toda la cabecera es el botón de plegar: zona táctil grande. */
@@ -107,30 +103,50 @@
 }
 
 /* Acciones poco frecuentes, visibles solo tras tocar ⋯ (estilo buttons.textAction). */
+/* La barra de ⋯ (toolbar.module.css), con la MISMA sangría que el panel
+   de un artículo: los botones quedan alineados bajo el nombre. */
 .actions {
-  display: flex;
-  gap: 1rem;
-  padding: 0 0 0.5rem 2rem;
-}
-
-/* "+" que se convierte en "×" al abrir el campo de añadir: el mismo
-   botón cierra. Girar el icono (en vez de cambiarlo por otro) deja claro
-   que es el MISMO control en otro estado. */
-.addToggle svg {
-  transition: transform 0.15s ease-out;
-}
-
-.addToggle[aria-expanded='true'] {
-  color: var(--accent);
-}
-
-.addToggle[aria-expanded='true'] svg {
-  transform: rotate(45deg);
+  padding: 0 0 0.5rem 3.25rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .chevron,
-  .addToggle svg {
+  .chevron {
     transition: none;
   }
+}
+
+/* Asa ≡ del compartimento: como la de los artículos (touch-action: none
+   para que en iOS el gesto sea arrastrar y no hacer scroll). */
+.handle {
+  flex: none;
+  touch-action: none;
+  cursor: grab;
+}
+
+/* El compartimento que se arrastra: por encima y con fondo propio. */
+.dragging {
+  background: var(--bg);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
+}
+
+/* Subir/Bajar desactivados con COLOR, nunca con opacity (stacking context). */
+
+.error {
+  margin: 0 0 0.5rem 3.25rem;
+  color: var(--danger);
+  font-size: 0.875rem;
+}
+
+.hint {
+  margin: 0 0 0.5rem 3.25rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+/* ⋯ abierto: se ve "activado" (color de acento y fondo suave). Se engancha
+   a aria-expanded: el estado visual y el que oye VoiceOver salen del mismo
+   atributo y nunca se desincronizan. */
+.moreToggle[aria-expanded='true'] {
+  background: var(--highlight);
+  color: var(--accent);
 }

@@ -43,6 +43,14 @@
   box-sizing: border-box;
 }
 
+/* Con un diálogo abierto, la página de detrás NO se desplaza: en iOS, un
+   gesto que empezaba en una zona de la hoja que no se desplaza (el título)
+   movía la maleta en vez de la ventana. :has() = "el html que contiene un
+   <dialog> abierto" (Safari 15.4+). Vale para todos los diálogos. */
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+
 body {
   margin: 0;
   /* iOS pinta un destello gris al tocar enlaces y botones: fuera. Nuestros

@@ -22,6 +22,15 @@ export const routes: RouteObject[] = [
     children: [
       // index: la ruta hija que se pinta en "/" exactamente.
       { index: true, Component: LuggageListPage },
+      {
+        // Ruta estática: React Router la prefiere a 'luggages/:luggageId'
+        // (más específica), así "new" nunca se toma por un id.
+        path: 'luggages/new',
+        lazy: async () => ({
+          Component: (await import('@/features/luggage/ui/NewLuggagePage'))
+            .NewLuggagePage,
+        }),
+      },
       { path: 'luggages/:luggageId', Component: LuggageDetailPage },
       {
         path: 'luggages/:luggageId/add-items',
@@ -37,6 +46,17 @@ export const routes: RouteObject[] = [
             to: `/luggages/${params.luggageId}`,
             label: 'Maleta',
           }),
+        } satisfies RouteHandle,
+      },
+      {
+        path: 'import',
+        lazy: async () => ({
+          Component: (await import('@/features/luggage/ui/ImportLuggagePage'))
+            .ImportLuggagePage,
+        }),
+        // Se llega desde "Nueva maleta" ("¿Tienes una lista en texto?").
+        handle: {
+          back: () => ({ to: '/luggages/new', label: 'Nueva maleta' }),
         } satisfies RouteHandle,
       },
       {

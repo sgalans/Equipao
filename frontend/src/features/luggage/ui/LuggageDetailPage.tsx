@@ -1,24 +1,35 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { isSameItemName } from '@/features/items/domain/itemName'
 import { useRepositories } from '@/shared/di/repositories'
 import buttons from '@/shared/ui/buttons.module.css'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { EditableTitle } from '@/shared/ui/EditableTitle'
+import { LuggageIcon } from '@/shared/ui/icons/LuggageIcon'
+import { PackedVisibilityIcon } from '@/shared/ui/icons/PackedVisibilityIcon'
+import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
 import { useNotifications } from '@/shared/ui/notifications/notificationStore'
 import page from '@/shared/ui/page.module.css'
-import { useTemporaryHighlight } from '@/shared/ui/useTemporaryHighlight'
-import { packingProgress } from '../domain/packing'
-import { AddItemForm } from './AddItemForm'
+import {
+  hasAnythingPacked,
+  isFullyPacked,
+  packingProgress,
+} from '../domain/packing'
 import { articles } from './addedSummary'
 import { removedSummary } from './bulkSummary'
-import { DeleteLuggageButton } from './DeleteLuggageButton'
+import { LuggageActions } from './LuggageActions'
 import { LuggageDescription } from './LuggageDescription'
 import { MoveItemsDialog } from './MoveItemsDialog'
 import { PackingList } from './PackingList'
 import styles from './LuggageDetailPage.module.css'
+import {
+  doneIds,
+  hiddenState,
+  usePackingOrder,
+  useStoredHidden,
+} from './packingOrderStore'
 import { PackingProgress } from './PackingProgress'
+import { ReadyListDialog } from './ReadyListDialog'
 
 /** Pantalla /luggages/:luggageId: la lista de artículos de una maleta. */
 export function LuggageDetailPage() {
@@ -26,6 +37,17 @@ export function LuggageDetailPage() {
   const { luggages, quantities, compartments } = useRepositories()
   const navigate = useNavigate()
   const show = useNotifications((state) => state.show)
+  // Artículos listos ocultos con el ojo (ver packingOrderStore). useMemo:
+  // el Set se crea solo cuando cambia lo guardado, no en cada render.
+  const storedHidden = useStoredHidden(luggageId)
+  const hidden = useMemo(
+    () => storedHidden && new Set(storedHidden),
+    [storedHidden],
+  )
+  const hide = usePackingOrder((state) => state.hide)
+  const showAll = usePackingOrder((state) => state.show)
+  // Ventana "Listos": ids listos al abrirla (null = cerrada).
+  const [readyListIds, setReadyListIds] = useState<string[] | null>(null)
 
   // Modo selección: reorganizar la maleta (mover a un compartimento, a
   // sueltos o a uno nuevo) o quitar varios de golpe. Mover ENTRE maletas no
@@ -70,9 +92,6 @@ export function LuggageDetailPage() {
     return { entries, compartmentList }
   }, [quantities, compartments, luggageId])
 
-  // Fila resaltada brevemente (al intentar añadir algo que ya estaba).
-  const { highlightedId, highlight } = useTemporaryHighlight()
-
   // OJO: todos los hooks van ANTES de los `return` tempranos. Las reglas de
   // los hooks exigen llamarlos siempre en el mismo orden en cada render.
   if (luggage === undefined || contents === undefined) {
@@ -90,16 +109,16 @@ export function LuggageDetailPage() {
   }
 
   const { entries, compartmentList } = contents
-
-  /** Resalta la fila del artículo que se ha intentado añadir de nuevo. */
-  function highlightExisting(name: string) {
-    // MISMO criterio que el repositorio usa para decidir que es un
-    // duplicado: así se resalta exactamente la fila que lo ha provocado.
-    const existing = entries.find((entry) =>
-      isSameItemName(entry.itemName, name),
-    )
-    highlight(existing?.id ?? null)
-  }
+  const doneNow = doneIds(entries, compartmentList)
+  // Interruptor "Ocultar listos": sin nada hecho (artículos listos o
+  // compartimentos completos) no hay botón; activado = todo lo hecho está
+  // oculto. En modo selección, fuera (solo se eligen artículos).
+  const showVisibilityToggle = !isSelecting && doneNow.size > 0
+  const hiding = hiddenState(entries, compartmentList, hidden)
+  // Sin artículos ni compartimentos: estado vacío (ni barra "0 de 0" ni
+  // listas vacías; solo lo que se puede hacer: añadir).
+  const isEmpty = entries.length === 0 && compartmentList.length === 0
+  const addItemsPath = `/luggages/${luggage.id}/add-items`
 
   return (
     <section>
@@ -114,49 +133,135 @@ export function LuggageDetailPage() {
             await luggages.update(luggage.id, { name })
           }}
         />
-        {entries.length > 0 && (
+        {isSelecting ? (
+          // Mientras se selecciona, "Cancelar" donde estaba ⋯ (convención
+          // de iOS); "Mover" y "Quitar" están en la barra de abajo.
           <button
             type="button"
             className={buttons.headerAction}
-            onClick={() =>
-              isSelecting ? exitSelection() : setIsSelecting(true)
-            }
+            onClick={exitSelection}
           >
-            {isSelecting ? 'Cancelar' : 'Seleccionar'}
+            Cancelar
           </button>
+        ) : (
+          // ⋯: Seleccionar artículos, Duplicar, Compartir y Borrar maleta;
+          // la MISMA hoja que en el listado (decisión del usuario).
+          <LuggageActions
+            luggage={luggage}
+            // Sin artículos no hay nada que seleccionar (como antes).
+            onSelectItems={
+              entries.length > 0 ? () => setIsSelecting(true) : undefined
+            }
+            // Desde dentro, se abre la copia: lo normal es renombrarla y
+            // ajustarla para el viaje (p. ej. desde "Maleta básica").
+            onDuplicated={(copy) => {
+              show(`Copia creada: «${copy.name}».`)
+              navigate(`/luggages/${copy.id}`)
+            }}
+            // replace: la pantalla de una maleta borrada no queda en el
+            // historial; "atrás" no lleva a una maleta que ya no existe.
+            onDeleted={() => navigate('/', { replace: true })}
+            canReset={hasAnythingPacked(entries, compartmentList)}
+          />
         )}
       </header>
       <LuggageDescription
         // key: si cambia de maleta, el editor empieza de cero.
         key={luggage.id}
+        luggageId={luggage.id}
         value={luggage.description}
         onSave={async (description) => {
           await luggages.update(luggage.id, { description })
         }}
       />
 
-      <PackingProgress {...packingProgress(entries, compartmentList)} />
-      {/* En modo selección solo se eligen artículos: fuera lo demás. */}
-      {!isSelecting && (
-        <AddItemForm
-          luggageId={luggage.id}
-          entries={entries}
-          onDuplicate={highlightExisting}
-          catalogLink={`/luggages/${luggage.id}/add-items`}
-        />
+      {isEmpty ? (
+        // Estado vacío (lo primero que se ve al crear una maleta): una sola
+        // cosa que decir y una sola acción, grande y en el centro.
+        <div className={styles.emptyState}>
+          <span className={styles.emptyIcon}>
+            <LuggageIcon />
+          </span>
+          <p className={styles.emptyText}>Aún no hay nada en esta maleta.</p>
+          <Link
+            to={addItemsPath}
+            className={`${buttons.primary} ${styles.addLink}`}
+          >
+            <PlusIcon />
+            Añadir a la maleta
+          </Link>
+        </div>
+      ) : (
+        <>
+          {/* El ojo, al lado de la barra (decisión del usuario): los dos
+            hablan de lo listo (proximidad), y no ocupa una fila propia. */}
+          <div className={styles.progressRow}>
+            <PackingProgress
+              {...packingProgress(entries, compartmentList)}
+              onOpenDone={() =>
+                setReadyListIds(
+                  entries.filter(isFullyPacked).map((entry) => entry.id),
+                )
+              }
+            />
+            {showVisibilityToggle && (
+              <button
+                type="button"
+                className={`${buttons.iconGhost} ${styles.visibility}`}
+                // El icono muestra el ESTADO ACTUAL, no lo que pasará al
+                // tocarlo (decisión de producto), con tres estados: abierto y
+                // gris = nada oculto; tachado y gris = algo oculto (lo marcado
+                // después se ve); tachado y azul = todo lo listo oculto. Lo
+                // oculto se consulta en "Listos", tocando la barra de progreso.
+                // Interruptor: nombre fijo + aria-pressed ("mixed" = a medias),
+                // y el color sale de ese mismo atributo (CSS), así nunca se
+                // desincronizan lo que se ve y lo que oye VoiceOver.
+                aria-label="Ocultar listos"
+                title="Ocultar listos"
+                aria-pressed={
+                  hiding === 'all' ? true : hiding === 'some' ? 'mixed' : false
+                }
+                // A medias o sin ocultar: oculta TODO lo listo de ahora.
+                onClick={() =>
+                  hiding === 'all'
+                    ? showAll(luggage.id)
+                    : hide(luggage.id, doneNow)
+                }
+              >
+                <PackedVisibilityIcon crossed={hiding !== 'none'} />
+              </button>
+            )}
+          </div>
+          {/* En modo selección solo se eligen artículos: fuera lo demás. */}
+          {!isSelecting && (
+            // ÚNICA forma de añadir (decisión de producto): la pantalla del
+            // catálogo, donde se busca, se elige y se crea lo que falte.
+            <Link
+              to={addItemsPath}
+              className={`${buttons.primary} ${styles.addLink}`}
+            >
+              <PlusIcon />
+              Añadir a la maleta
+            </Link>
+          )}
+          <PackingList
+            entries={entries}
+            compartments={compartmentList}
+            hidden={hidden}
+            selection={
+              isSelecting ? { selected, onToggle: toggleSelected } : undefined
+            }
+          />
+        </>
       )}
-      <PackingList
-        luggageId={luggage.id}
+      <ReadyListDialog
+        quantityIds={readyListIds}
         entries={entries}
         compartments={compartmentList}
-        highlightedId={highlightedId}
-        onDuplicate={highlightExisting}
-        selection={
-          isSelecting ? { selected, onToggle: toggleSelected } : undefined
-        }
+        onClose={() => setReadyListIds(null)}
       />
 
-      {isSelecting ? (
+      {isSelecting && (
         // Barra fija abajo, al alcance del pulgar (como en el catálogo).
         <div className={styles.selectionBar}>
           <button
@@ -176,15 +281,6 @@ export function LuggageDetailPage() {
             Quitar{selected.size > 0 && ` ${selected.size}`}
           </button>
         </div>
-      ) : (
-        <footer className={styles.footer}>
-          <DeleteLuggageButton
-            luggage={luggage}
-            // replace: la pantalla de una maleta borrada no queda en el
-            // historial; "atrás" no lleva a una maleta que ya no existe.
-            onDeleted={() => navigate('/', { replace: true })}
-          />
-        </footer>
       )}
 
       <MoveItemsDialog

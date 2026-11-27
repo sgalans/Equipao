@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { errorPaths } from '@/test/zod'
-import { NewLuggageSchema } from './luggage'
+import { DESCRIPTION_MAX_LENGTH, NewLuggageSchema } from './luggage'
 
 describe('NewLuggageSchema', () => {
   it('acepta una maleta válida y recorta el nombre', () => {
@@ -24,12 +24,15 @@ describe('NewLuggageSchema', () => {
     expect(description).toBe('Japón, 2 semanas.\nHace frío.')
   })
 
-  it('rechaza una descripción de más de 500 caracteres', () => {
-    const result = NewLuggageSchema.safeParse({
-      name: 'Mochila',
-      description: 'a'.repeat(501),
-    })
+  it('acepta hasta DESCRIPTION_MAX_LENGTH (1000) caracteres y rechaza uno más', () => {
+    const at = (length: number) =>
+      NewLuggageSchema.safeParse({
+        name: 'Mochila',
+        description: 'a'.repeat(length),
+      })
 
-    expect(errorPaths(result)).toEqual(['description'])
+    expect(DESCRIPTION_MAX_LENGTH).toBe(1000)
+    expect(at(DESCRIPTION_MAX_LENGTH).success).toBe(true)
+    expect(errorPaths(at(DESCRIPTION_MAX_LENGTH + 1))).toEqual(['description'])
   })
 })

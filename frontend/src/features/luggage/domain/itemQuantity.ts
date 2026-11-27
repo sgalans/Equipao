@@ -3,13 +3,19 @@ import { entityBaseShape, IdSchema } from '@/shared/domain/schemas'
 
 /**
  * ItemQuantity es la junction table entre Luggage e Item: cuántas unidades de
- * un ítem van en una maleta y cuántas están ya guardadas.
+ * un ítem van en una maleta y si está listo.
+ *
+ * `nAlreadyPacked` = con cuántas unidades se marcó como listo (0 = sin
+ * marcar). Listo = coincide con `num` (ver isFullyPacked). Puede ser MAYOR
+ * que `num` tras bajar la cantidad: se recuerda para que, al volver a esa
+ * cantidad, vuelva a estar listo (decisión del usuario). Por eso ya no hay
+ * CHECK (nAlreadyPacked <= num) en lo guardado.
  *
  * Las restricciones CHECK del modelo (Architecture.md) se implementan aquí,
  * porque IndexedDB no las impone:
  *   CHECK (num >= 0)
  *   CHECK (nAlreadyPacked >= 0)
- *   CHECK (nAlreadyPacked <= num)
+ *   al CREAR: CHECK (nAlreadyPacked <= num)
  */
 const itemQuantityFields = {
   luggageId: IdSchema,
@@ -32,9 +38,16 @@ const packedWithinTotalError = {
   path: ['nAlreadyPacked'],
 }
 
-export const ItemQuantitySchema = z
-  .object({ ...entityBaseShape, ...itemQuantityFields })
-  .refine(packedWithinTotal, packedWithinTotalError)
+// Solo al CREAR: una línea nueva no puede nacer "marcada con más unidades
+// de las que tiene". Después sí puede pasar (al bajar la cantidad).
+
+export const ItemQuantitySchema = z.object({
+  ...entityBaseShape,
+  ...itemQuantityFields,
+  // Orden manual dentro de la maleta (fractional indexing, ver
+  // domain/position.ts). Lo asigna el repositorio: no va en NewItemQuantity.
+  position: z.string().min(1),
+})
 
 export const NewItemQuantitySchema = z
   .object({

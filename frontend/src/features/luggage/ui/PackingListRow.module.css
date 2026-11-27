@@ -52,12 +52,6 @@
   padding: 0 0 0.75rem 3.25rem;
 }
 
-.panelRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
 .move {
   display: flex;
   align-items: center;
@@ -79,17 +73,6 @@
   font-size: max(1rem, 16px);
 }
 
-.stepper {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.count {
-  min-width: 5.5rem;
-  text-align: center;
-}
-
 /* Fila en modo selección: casilla + nombre + cantidad, todo un botón. */
 .selectable {
   composes: details;
@@ -99,4 +82,44 @@
 
 .selectable .quantity {
   margin-left: auto;
+}
+
+/*
+ * Asa ≡ para arrastrar. touch-action: none → en iOS, un gesto que empieza
+ * en el asa es un ARRASTRE, no un scroll de la página (el resto de la fila
+ * sigue haciendo scroll con normalidad).
+ */
+.handle {
+  flex: none;
+  touch-action: none;
+  cursor: grab;
+}
+
+/* La fila que se arrastra: por encima de las demás y con fondo propio. */
+.dragging {
+  background: var(--bg);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
+}
+
+.dragging .handle {
+  cursor: grabbing;
+}
+
+/* Campo de renombrar en el sitio del nombre (16px: sin zoom en iOS). */
+.renameInput {
+  flex: 1;
+  min-width: 0;
+}
+
+/* "Cambia en todas tus maletas": el nombre es del artículo. */
+.hint {
+  margin: 0 0 0.5rem 3.25rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.error {
+  margin: 0 0 0.5rem 3.25rem;
+  color: var(--danger);
+  font-size: 0.875rem;
 }
