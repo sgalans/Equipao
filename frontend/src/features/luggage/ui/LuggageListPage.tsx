@@ -97,6 +97,7 @@ export function LuggageListPage() {
               <LuggageActions
                 luggage={luggage}
                 onDuplicated={(copy) => highlight(copy.id)}
+                canReset={luggage.hasPacked}
                 // La lista se actualiza sola (useLiveQuery): nada que hacer.
                 onDeleted={() => {}}
               />

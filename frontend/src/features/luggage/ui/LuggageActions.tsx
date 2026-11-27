@@ -8,6 +8,7 @@ import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { CopyTextDialog } from '@/shared/ui/CopyTextDialog'
 import { CopyIcon } from '@/shared/ui/icons/CopyIcon'
 import { MoreIcon } from '@/shared/ui/icons/MoreIcon'
+import { ResetIcon } from '@/shared/ui/icons/ResetIcon'
 import { SelectItemsIcon } from '@/shared/ui/icons/SelectItemsIcon'
 import { ShareIcon } from '@/shared/ui/icons/ShareIcon'
 import { TrashIcon } from '@/shared/ui/icons/TrashIcon'
@@ -25,20 +26,23 @@ interface LuggageActionsProps {
   onDuplicated: (copy: Luggage) => void
   /** Tras borrar (la página decide adónde ir). */
   onDeleted: () => void
+  /** Hay algo listo: se ofrece "Reiniciar maleta" (si no, no aportaría nada). */
+  canReset: boolean
   /** Solo dentro de la maleta: "Seleccionar artículos" (mover/quitar varios). */
   onSelectItems?: () => void
 }
 
 /**
  * Botón ⋯ de una maleta + su hoja de acciones (decisión del usuario): el
- * MISMO en el listado y en la cabecera de la maleta. Duplicar, Compartir y
- * Borrar maleta (y, dentro, Seleccionar artículos). Aquí irían también
- * "Reiniciar" o "Archivar" (backlog).
+ * MISMO en el listado y en la cabecera de la maleta. Duplicar, Compartir,
+ * Reiniciar (si hay algo listo) y Borrar maleta (y, dentro, Seleccionar
+ * artículos). Aquí iría también "Archivar" (backlog).
  */
 export function LuggageActions({
   luggage,
   onDuplicated,
   onDeleted,
+  canReset,
   onSelectItems,
 }: LuggageActionsProps) {
   const { luggages, quantities, compartments } = useRepositories()
@@ -46,6 +50,7 @@ export function LuggageActions({
   const showAllPacked = usePackingOrder((state) => state.show)
   const [isOpen, setIsOpen] = useState(false)
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
+  const [isConfirmingReset, setIsConfirmingReset] = useState(false)
   const [isDuplicating, setIsDuplicating] = useState(false)
   // Último recurso de "Compartir": texto para copiar a mano (null = cerrado).
   const [manualText, setManualText] = useState<string | null>(null)
@@ -125,6 +130,15 @@ export function LuggageActions({
       onSelect: () => void duplicate(),
     },
     { label: 'Compartir', icon: <ShareIcon />, onSelect: () => void share() },
+    ...(canReset
+      ? [
+          {
+            label: 'Reiniciar maleta',
+            icon: <ResetIcon />,
+            onSelect: () => setIsConfirmingReset(true),
+          },
+        ]
+      : []),
     {
       label: 'Borrar maleta',
       icon: <TrashIcon />,
@@ -171,6 +185,27 @@ export function LuggageActions({
       >
         <p>{describeCascade(prepared?.itemCount)}</p>
         <p>Esta acción no se puede deshacer.</p>
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        open={isConfirmingReset}
+        title={`¿Reiniciar «${luggage.name}»?`}
+        confirmLabel="Reiniciar"
+        // No borra nada (no es rojo), pero deshace trabajo: se confirma.
+        confirmVariant="primary"
+        onCancel={() => setIsConfirmingReset(false)}
+        onConfirm={async () => {
+          await luggages.resetPacked(luggage.id)
+          // Sin nada listo, lo oculto con el ojo ya no sirve: fuera.
+          showAllPacked(luggage.id)
+          setIsConfirmingReset(false)
+          show(`«${luggage.name}» reiniciada: nada está listo.`)
+        }}
+      >
+        <p>
+          Se desmarcará todo lo que esté listo, para volver a prepararla. No se
+          quita nada de la maleta.
+        </p>
       </ConfirmDialog>
 
       <CopyTextDialog

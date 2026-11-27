@@ -296,7 +296,6 @@ export function PackingList({
     )
   }
 
-  const isEmpty = entries.length === 0 && compartments.length === 0
   const shownCompartments = groups.compartmentIds
     .map((id) => compartmentById.get(id))
     .filter((c) => c !== undefined)
@@ -322,12 +321,6 @@ export function PackingList({
 
   return (
     <div className={styles.contents}>
-      {isEmpty && (
-        <p className={styles.empty}>
-          Esta maleta está vacía. Toca «Añadir artículos» para llenarla.
-        </p>
-      )}
-
       {selection ? (
         content
       ) : (

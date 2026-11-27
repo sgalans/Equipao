@@ -2,9 +2,14 @@ import type { Luggage, NewLuggage } from './luggage'
 
 /**
  * Maleta + su progreso, para la pantalla de inicio. "Read model": se calcula
- * al leer (no se guarda: single source of truth).
+ * al leer (no se guarda: single source of truth). `hasPacked`: hay algo
+ * listo (ver hasAnythingPacked), para ofrecer "Reiniciar maleta".
  */
-export type LuggageSummary = Luggage & { done: number; total: number }
+export type LuggageSummary = Luggage & {
+  done: number
+  total: number
+  hasPacked: boolean
+}
 
 /**
  * Port (clean architecture / ports & adapters): QUÉ se puede hacer con las
@@ -31,6 +36,13 @@ export interface LuggageRepository {
     id: string,
     changes: { name?: string; description?: string },
   ): Promise<Luggage>
+  /**
+   * "Reiniciar maleta" (para reutilizarla tras el viaje): desmarca TODO,
+   * artículos (0 guardados, también lo que se recordaba tras cambiar la
+   * cantidad) y compartimentos. No quita nada. Una transacción. Lanza
+   * EntityNotFoundError si no existe.
+   */
+  resetPacked(id: string): Promise<void>
   /**
    * Borra la maleta y su contenido (ON DELETE CASCADE sobre ItemQuantity).
    * Los Items del catálogo no se tocan. Idempotente.

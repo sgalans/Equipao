@@ -12,6 +12,10 @@
   max-width: 100%;
   max-height: 80dvh;
   overflow-y: auto;
+  /* Al llegar al final del scroll de la hoja, NO se pasa a la página de
+     detrás (scroll chaining: en iOS se movía la maleta en vez de la
+     ventana). Ver también html:has(dialog[open]) en index.css. */
+  overscroll-behavior: contain;
   /* Sin relleno: lo lleva .content, que así ocupa TODA la hoja y un toque
      en el <dialog> mismo solo puede ser en el fondo (closeOnBackdrop). */
   padding: 0;

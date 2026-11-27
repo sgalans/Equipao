@@ -5,11 +5,16 @@ import { useRepositories } from '@/shared/di/repositories'
 import buttons from '@/shared/ui/buttons.module.css'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { EditableTitle } from '@/shared/ui/EditableTitle'
+import { LuggageIcon } from '@/shared/ui/icons/LuggageIcon'
 import { PackedVisibilityIcon } from '@/shared/ui/icons/PackedVisibilityIcon'
 import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
 import { useNotifications } from '@/shared/ui/notifications/notificationStore'
 import page from '@/shared/ui/page.module.css'
-import { isFullyPacked, packingProgress } from '../domain/packing'
+import {
+  hasAnythingPacked,
+  isFullyPacked,
+  packingProgress,
+} from '../domain/packing'
 import { articles } from './addedSummary'
 import { removedSummary } from './bulkSummary'
 import { LuggageActions } from './LuggageActions'
@@ -110,6 +115,10 @@ export function LuggageDetailPage() {
   // oculto. En modo selección, fuera (solo se eligen artículos).
   const showVisibilityToggle = !isSelecting && doneNow.size > 0
   const hiding = hiddenState(entries, compartmentList, hidden)
+  // Sin artículos ni compartimentos: estado vacío (ni barra "0 de 0" ni
+  // listas vacías; solo lo que se puede hacer: añadir).
+  const isEmpty = entries.length === 0 && compartmentList.length === 0
+  const addItemsPath = `/luggages/${luggage.id}/add-items`
 
   return (
     <section>
@@ -152,6 +161,7 @@ export function LuggageDetailPage() {
             // replace: la pantalla de una maleta borrada no queda en el
             // historial; "atrás" no lleva a una maleta que ya no existe.
             onDeleted={() => navigate('/', { replace: true })}
+            canReset={hasAnythingPacked(entries, compartmentList)}
           />
         )}
       </header>
@@ -164,63 +174,85 @@ export function LuggageDetailPage() {
         }}
       />
 
-      {/* El ojo, al lado de la barra (decisión del usuario): los dos
-          hablan de lo listo (proximidad), y no ocupa una fila propia. */}
-      <div className={styles.progressRow}>
-        <PackingProgress
-          {...packingProgress(entries, compartmentList)}
-          onOpenDone={() =>
-            setReadyListIds(
-              entries.filter(isFullyPacked).map((entry) => entry.id),
-            )
-          }
-        />
-        {showVisibilityToggle && (
-          <button
-            type="button"
-            className={`${buttons.iconGhost} ${styles.visibility}`}
-            // El icono muestra el ESTADO ACTUAL, no lo que pasará al
-            // tocarlo (decisión de producto), con tres estados: abierto y
-            // gris = nada oculto; tachado y gris = algo oculto (lo marcado
-            // después se ve); tachado y azul = todo lo listo oculto. Lo
-            // oculto se consulta en "Listos", tocando la barra de progreso.
-            // Interruptor: nombre fijo + aria-pressed ("mixed" = a medias),
-            // y el color sale de ese mismo atributo (CSS), así nunca se
-            // desincronizan lo que se ve y lo que oye VoiceOver.
-            aria-label="Ocultar listos"
-            title="Ocultar listos"
-            aria-pressed={
-              hiding === 'all' ? true : hiding === 'some' ? 'mixed' : false
-            }
-            // A medias o sin ocultar: oculta TODO lo listo de ahora.
-            onClick={() =>
-              hiding === 'all' ? showAll(luggage.id) : hide(luggage.id, doneNow)
-            }
+      {isEmpty ? (
+        // Estado vacío (lo primero que se ve al crear una maleta): una sola
+        // cosa que decir y una sola acción, grande y en el centro.
+        <div className={styles.emptyState}>
+          <span className={styles.emptyIcon}>
+            <LuggageIcon />
+          </span>
+          <p className={styles.emptyText}>Aún no hay nada en esta maleta.</p>
+          <Link
+            to={addItemsPath}
+            className={`${buttons.primary} ${styles.addLink}`}
           >
-            <PackedVisibilityIcon crossed={hiding !== 'none'} />
-          </button>
-        )}
-      </div>
-      {/* En modo selección solo se eligen artículos: fuera lo demás. */}
-      {!isSelecting && (
-        // ÚNICA forma de añadir (decisión de producto): la pantalla del
-        // catálogo, donde se busca, se elige y se crea lo que falte.
-        <Link
-          to={`/luggages/${luggage.id}/add-items`}
-          className={`${buttons.secondary} ${styles.addLink}`}
-        >
-          <PlusIcon />
-          Añadir artículos
-        </Link>
+            <PlusIcon />
+            Añadir artículos
+          </Link>
+        </div>
+      ) : (
+        <>
+          {/* El ojo, al lado de la barra (decisión del usuario): los dos
+            hablan de lo listo (proximidad), y no ocupa una fila propia. */}
+          <div className={styles.progressRow}>
+            <PackingProgress
+              {...packingProgress(entries, compartmentList)}
+              onOpenDone={() =>
+                setReadyListIds(
+                  entries.filter(isFullyPacked).map((entry) => entry.id),
+                )
+              }
+            />
+            {showVisibilityToggle && (
+              <button
+                type="button"
+                className={`${buttons.iconGhost} ${styles.visibility}`}
+                // El icono muestra el ESTADO ACTUAL, no lo que pasará al
+                // tocarlo (decisión de producto), con tres estados: abierto y
+                // gris = nada oculto; tachado y gris = algo oculto (lo marcado
+                // después se ve); tachado y azul = todo lo listo oculto. Lo
+                // oculto se consulta en "Listos", tocando la barra de progreso.
+                // Interruptor: nombre fijo + aria-pressed ("mixed" = a medias),
+                // y el color sale de ese mismo atributo (CSS), así nunca se
+                // desincronizan lo que se ve y lo que oye VoiceOver.
+                aria-label="Ocultar listos"
+                title="Ocultar listos"
+                aria-pressed={
+                  hiding === 'all' ? true : hiding === 'some' ? 'mixed' : false
+                }
+                // A medias o sin ocultar: oculta TODO lo listo de ahora.
+                onClick={() =>
+                  hiding === 'all'
+                    ? showAll(luggage.id)
+                    : hide(luggage.id, doneNow)
+                }
+              >
+                <PackedVisibilityIcon crossed={hiding !== 'none'} />
+              </button>
+            )}
+          </div>
+          {/* En modo selección solo se eligen artículos: fuera lo demás. */}
+          {!isSelecting && (
+            // ÚNICA forma de añadir (decisión de producto): la pantalla del
+            // catálogo, donde se busca, se elige y se crea lo que falte.
+            <Link
+              to={addItemsPath}
+              className={`${buttons.secondary} ${styles.addLink}`}
+            >
+              <PlusIcon />
+              Añadir artículos
+            </Link>
+          )}
+          <PackingList
+            entries={entries}
+            compartments={compartmentList}
+            hidden={hidden}
+            selection={
+              isSelecting ? { selected, onToggle: toggleSelected } : undefined
+            }
+          />
+        </>
       )}
-      <PackingList
-        entries={entries}
-        compartments={compartmentList}
-        hidden={hidden}
-        selection={
-          isSelecting ? { selected, onToggle: toggleSelected } : undefined
-        }
-      />
       <ReadyListDialog
         quantityIds={readyListIds}
         entries={entries}
