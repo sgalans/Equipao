@@ -31,7 +31,12 @@
   background: rgb(0 0 0 / 0.5);
 }
 
-/* Todo el contenido de la hoja; respeta la barra de inicio del iPhone. */
+/* Todo el contenido de la hoja; respeta la barra de inicio del iPhone.
+   Sin padding-top a propósito (ni con el atajo `padding`): cada hoja pone
+   el suyo. Si se definiera aquí, ganaría o perdería frente al de cada hoja
+   según el ORDEN en que se cargan los CSS (misma especificidad), y el de la
+   hoja de acciones se anulaba sin que se viera. */
 .content {
-  padding: 0 1rem calc(1rem + env(safe-area-inset-bottom));
+  padding-inline: 1rem;
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
 }

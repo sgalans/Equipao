@@ -2,14 +2,16 @@
 
 /* Sin cabecera fija: el título va pegado arriba con su propio aire. */
 .content {
-  padding-top: 0.75rem;
+  /* Aire arriba: el título no va pegado al borde de la hoja. */
+  padding-top: 1.5rem;
 }
 
-/* Sobre qué se actúa, discreto (como el título de las hojas de iOS). */
+/* Sobre qué se actúa (el nombre de la maleta), centrado y en gris, pero
+   legible: al tamaño del texto normal (antes 14 px, demasiado pequeño). */
 .title {
-  margin: 0 0 0.25rem;
+  margin: 0 0 0.75rem;
   color: var(--text-muted);
-  font-size: 0.875rem;
+  font-size: 1rem;
   font-weight: 600;
   text-align: center;
   overflow-wrap: anywhere;
