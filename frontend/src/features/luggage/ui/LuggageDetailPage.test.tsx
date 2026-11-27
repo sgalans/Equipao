@@ -114,14 +114,11 @@ describe('LuggageDetailPage', () => {
 
       const button = screen.getByRole('button', { name: 'Borrar maleta' })
       expect(button).toHaveTextContent('Borrar maleta')
-      // Va DESPUÉS de todo el contenido (incluido "Nuevo compartimento"):
-      // lejos de lo que se toca a menudo.
-      const newCompartment = screen.getByRole('button', {
-        name: 'Nuevo compartimento',
-      })
+      // Va DESPUÉS de todo el contenido (y de "Añadir artículos"): lejos
+      // de lo que se toca a menudo.
+      const add = screen.getByRole('link', { name: 'Añadir artículos' })
       expect(
-        newCompartment.compareDocumentPosition(button) &
-          Node.DOCUMENT_POSITION_FOLLOWING,
+        add.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy()
     })
 

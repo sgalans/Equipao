@@ -4,6 +4,7 @@ import type { ItemQuantityRepository } from '../domain/itemQuantityRepository'
 import type { Luggage } from '../domain/luggage'
 import type { LuggageRepository } from '../domain/luggageRepository'
 import type { LuggageText } from '../domain/luggageText'
+import { DuplicateError } from '@/shared/domain/errors'
 import { addItemByName } from './addItemByName'
 
 /** Nombre si el texto no traía "🧳 Nombre" (una lista cualquiera). */
@@ -33,6 +34,20 @@ export async function importLuggage(
   luggageText: LuggageText,
 ): Promise<Luggage> {
   const { luggages, compartments } = repositories
+
+  /**
+   * Si el nombre es el de un artículo NORMAL del catálogo (no puede ser un
+   * compartimento), se crea «Nombre (compartimento)», como en la migración
+   * v6: mejor eso que hacer fallar toda la importación.
+   */
+  async function createCompartment(luggageId: string, name: string) {
+    try {
+      return await compartments.create({ luggageId, name })
+    } catch (error) {
+      if (!(error instanceof DuplicateError)) throw error
+      return compartments.create({ luggageId, name: `${name} (compartimento)` })
+    }
+  }
   const luggage = await luggages.create({
     name: luggageText.name ?? IMPORTED_LUGGAGE_NAME,
   })
@@ -42,10 +57,7 @@ export async function importLuggage(
       await addItemByName(repositories, luggage.id, item.name, null, item.num)
     }
     for (const block of luggageText.compartments) {
-      const compartment = await compartments.create({
-        luggageId: luggage.id,
-        name: block.name,
-      })
+      const compartment = await createCompartment(luggage.id, block.name)
       for (const item of block.items) {
         await addItemByName(
           repositories,

@@ -36,50 +36,15 @@ async function addItem(
 }
 
 describe('Crear compartimentos', () => {
-  it('sin compartimentos, explica qué son', async () => {
+  it('la maleta ya no tiene "Nuevo compartimento": se añaden desde "Añadir artículos"', async () => {
     await openLuggage()
 
     expect(
-      screen.getByText(
-        'Contenedor para meter artículos, como un neceser, una mochila o un maletín.',
-      ),
-    ).toBeInTheDocument()
-  })
-
-  it('"Nuevo compartimento" → escribir → OK lo crea; la ayuda desaparece', async () => {
-    const { user, repositories, luggage } = await openLuggage()
-
-    await user.click(
-      screen.getByRole('button', { name: 'Nuevo compartimento' }),
-    )
-    await user.keyboard('Neceser{Enter}')
-
-    expect(
-      await screen.findByRole('button', { name: 'Neceser, Vacío' }),
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByText(
-        'Contenedor para meter artículos, como un neceser, una mochila o un maletín.',
-      ),
+      screen.queryByRole('button', { name: 'Nuevo compartimento' }),
     ).not.toBeInTheDocument()
     expect(
-      await repositories.compartments.listByLuggage(luggage.id),
-    ).toHaveLength(1)
-  })
-
-  it('Escape o un nombre vacío no crean nada', async () => {
-    const { user, repositories, luggage } = await openLuggage()
-    const newButton = () =>
-      screen.getByRole('button', { name: 'Nuevo compartimento' })
-
-    await user.click(newButton())
-    await user.keyboard('Neceser{Escape}')
-    await user.click(newButton())
-    await user.keyboard('   {Enter}')
-
-    expect(await repositories.compartments.listByLuggage(luggage.id)).toEqual(
-      [],
-    )
+      screen.getByRole('link', { name: 'Añadir artículos' }),
+    ).toBeInTheDocument()
   })
 })
 
@@ -193,9 +158,11 @@ describe('Renombrar y borrar compartimentos', () => {
 
     await user.click(more)
     expect(more).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByRole('button', { name: 'Renombrar' })).toBeVisible()
     expect(
-      screen.getByRole('button', { name: 'Borrar compartimento' }),
+      screen.getByRole('button', { name: 'Renombrar Neceser' }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole('button', { name: 'Quitar Neceser de la maleta' }),
     ).toBeVisible()
 
     await user.click(more)
@@ -213,7 +180,7 @@ describe('Renombrar y borrar compartimentos', () => {
     await user.click(
       screen.getByRole('button', { name: 'Más acciones de Neceser' }),
     )
-    await user.click(screen.getByRole('button', { name: 'Renombrar' }))
+    await user.click(screen.getByRole('button', { name: 'Renombrar Neceser' }))
     await user.keyboard('Aseo{Enter}')
 
     expect(
@@ -229,7 +196,7 @@ describe('Renombrar y borrar compartimentos', () => {
     await user.click(
       screen.getByRole('button', { name: 'Más acciones de Neceser' }),
     )
-    await user.click(screen.getByRole('button', { name: 'Renombrar' }))
+    await user.click(screen.getByRole('button', { name: 'Renombrar Neceser' }))
     const input = screen.getByRole('textbox', {
       name: 'Nombre del compartimento',
     })
@@ -257,19 +224,21 @@ describe('Renombrar y borrar compartimentos', () => {
       screen.getByRole('button', { name: 'Más acciones de Neceser' }),
     )
     await user.click(
-      screen.getByRole('button', { name: 'Borrar compartimento' }),
+      screen.getByRole('button', { name: 'Quitar Neceser de la maleta' }),
     )
-    const dialog = screen.getByRole('dialog', { name: '¿Borrar «Neceser»?' })
+    const dialog = screen.getByRole('dialog', {
+      name: '¿Quitar «Neceser» de la maleta?',
+    })
     expect(dialog).toHaveTextContent(
       'Sus 2 artículos quedarán sueltos en la maleta.',
     )
-    await user.click(within(dialog).getByRole('button', { name: 'Borrar' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Quitar' }))
 
-    expect(
-      await screen.findByText(
-        'Contenedor para meter artículos, como un neceser, una mochila o un maletín.',
-      ),
-    ).toBeInTheDocument()
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('button', { name: /^Neceser,/ }),
+      ).not.toBeInTheDocument(),
+    )
     // Los artículos siguen en la maleta, ahora sueltos.
     expect(
       screen.getByRole('checkbox', { name: 'Cepillo' }),

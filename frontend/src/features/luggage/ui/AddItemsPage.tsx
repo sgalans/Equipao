@@ -4,10 +4,11 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { isSameItemName } from '@/features/items/domain/itemName'
 import { normalizeForSearch } from '@/features/items/domain/search'
 import { CatalogRow } from '@/features/items/ui/CatalogRow'
+import { CatalogSections } from '@/features/items/ui/CatalogSections'
+import { CreateChoice } from '@/features/items/ui/CreateChoice'
 import { useRepositories } from '@/shared/di/repositories'
 import { DuplicateError } from '@/shared/domain/errors'
 import buttons from '@/shared/ui/buttons.module.css'
-import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
 import {
   reportError,
   useNotifications,
@@ -30,6 +31,11 @@ export const COMPARTMENT_PARAM = 'compartment'
  *
  * ?compartment=<id> (desde el "+" de un compartimento): se añade ahí, sin
  * preguntar el destino.
+ *
+ * También es el único sitio para añadir COMPARTIMENTOS (decisión del
+ * usuario: se quitó "Nuevo compartimento" de la maleta): los contenedores
+ * del catálogo salen en su sección, arriba, y elegirlos los añade como
+ * compartimentos; uno nuevo se crea con "+ Compartimento" (CreateChoice).
  */
 export function AddItemsPage() {
   const { luggageId = '' } = useParams<{ luggageId: string }>()
@@ -58,7 +64,12 @@ export function AddItemsPage() {
     return {
       luggage: luggage ?? null,
       catalog,
-      inLuggage: new Set(entries.map((entry) => entry.itemId)),
+      // listByLuggage no incluye las líneas contenedor: se suman los
+      // compartimentos (su itemId es el del contenedor del catálogo).
+      inLuggage: new Set([
+        ...entries.map((entry) => entry.itemId),
+        ...compartmentList.map((compartment) => compartment.itemId),
+      ]),
       compartmentList,
     }
   }, [luggages, items, quantities, compartments, luggageId])
@@ -110,43 +121,26 @@ export function AddItemsPage() {
     })
   }
 
-  /** Marca un artículo (sin desmarcarlo si ya lo estaba). */
-  function select(itemId: string) {
-    setSelected((current) => new Set(current).add(itemId))
-  }
-
   /**
-   * "+" (decisión de producto):
-   * - nombre nuevo → crea el artículo Y LO AÑADE a la maleta (o al
-   *   compartimento de destino) al momento; se queda en esta pantalla para
-   *   seguir añadiendo (la fila pasa a "Ya en la maleta");
-   * - ya existe en el catálogo → no se duplica: se marca;
-   * - ya está en la maleta → se avisa.
+   * "+ Artículo" (solo con un nombre NUEVO: con uno que ya existe, la lista
+   * filtrada ya lo muestra para elegirlo): crea el artículo Y LO AÑADE a la
+   * maleta (o al compartimento de destino) al momento, y se queda en esta
+   * pantalla para seguir añadiendo (la fila pasa a "Ya en la maleta").
    */
-  async function create() {
-    if (name === '') return
+  async function createItem() {
+    if (name === '' || exactMatch) return
     try {
-      if (exactMatch) {
-        if (data?.inLuggage.has(exactMatch.id)) {
-          setMessage(`«${exactMatch.name}» ya está en esta maleta.`)
-          return
-        }
-        select(exactMatch.id)
-        setMessage(`«${exactMatch.name}» ya estaba en tu catálogo: marcado.`)
-      } else {
-        // Caso de uso "busca o crea, y añade" (capa application).
-        await addItemByName(
-          repositories,
-          luggage.id,
-          name,
-          targetCompartment?.id ?? null,
-        )
-        setMessage(
-          `«${name}» creado y añadido a «${targetCompartment?.name ?? luggage.name}».`,
-        )
-      }
-      // Se vacía el campo (y con él el filtro): se ve la lista entera, con
-      // el artículo marcado.
+      // Caso de uso "busca o crea, y añade" (capa application).
+      await addItemByName(
+        repositories,
+        luggage.id,
+        name,
+        targetCompartment?.id ?? null,
+      )
+      setMessage(
+        `«${name}» creado y añadido a «${targetCompartment?.name ?? luggage.name}».`,
+      )
+      // Se vacía el campo (y con él el filtro): se ve la lista entera.
       setQuery('')
     } catch (error) {
       // Otra pestaña pudo crearlo justo antes: el repositorio lo impide.
@@ -157,10 +151,37 @@ export function AddItemsPage() {
     }
   }
 
+  /** "+ Compartimento": crea el contenedor y lo añade ya a la maleta. */
+  async function createCompartment() {
+    if (name === '' || exactMatch) return
+    try {
+      await compartments.create({ luggageId: luggage.id, name })
+      setMessage(`«${name}» creado y añadido como compartimento.`)
+      setQuery('')
+    } catch (error) {
+      if (error instanceof DuplicateError) setMessage(`${error.message}.`)
+      else reportError(error)
+    } finally {
+      inputRef.current?.focus()
+    }
+  }
+
+  // Elegidos que son artículos normales (los contenedores no van "dentro"
+  // de nada: addMany los deja siempre como compartimentos de la maleta).
+  const catalogById = new Map(data.catalog.map((item) => [item.id, item]))
+  const hasRegularSelected = [...selected].some(
+    (id) => catalogById.get(id)?.isContainer === false,
+  )
+
   async function add() {
     // Sin destino fijo y con compartimentos, se pregunta "¿dónde?". Sin
     // compartimentos sería un paso inútil: van sueltos.
-    if (!targetCompartment && data?.compartmentList.length) {
+    // Solo compartimentos elegidos: tampoco hay nada que preguntar.
+    if (
+      !targetCompartment &&
+      hasRegularSelected &&
+      data?.compartmentList.length
+    ) {
       setIsChoosingDestination(true)
       return
     }
@@ -196,7 +217,7 @@ export function AddItemsPage() {
 
       <form
         className={styles.field}
-        // Intro no crea (como en el catálogo): solo el botón "+".
+        // Intro no crea (como en el catálogo): solo los botones de crear.
         onSubmit={(event) => event.preventDefault()}
       >
         <label htmlFor={searchId} className="visually-hidden">
@@ -217,20 +238,18 @@ export function AddItemsPage() {
           autoCorrect="off"
           maxLength={100}
         />
-        <button
-          type="button"
-          className={buttons.iconPrimary}
-          aria-label="Crear artículo"
-          title="Crear artículo"
-          disabled={name === ''}
-          // Sin esto, en iOS el toque quita el foco del campo y se cierra
-          // el teclado antes de crear.
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => void create()}
-        >
-          <PlusIcon />
-        </button>
       </form>
+      {/* Siempre visibles (atenuados sin un nombre nuevo): la lista no salta. */}
+      <CreateChoice
+        name={name}
+        canCreate={name !== '' && !exactMatch}
+        onCreateItem={() => void createItem()}
+        // Desde un compartimento, solo "Artículo": uno no va dentro de otro.
+        onCreateCompartment={
+          targetCompartment ? undefined : () => void createCompartment()
+        }
+        showHelp={!data.catalog.some((item) => item.isContainer)}
+      />
       {/* role="status": se anuncia sin interrumpir. Hueco reservado para que
           la lista no "salte" al aparecer el mensaje. */}
       <p role="status" className={styles.message}>
@@ -239,16 +258,14 @@ export function AddItemsPage() {
 
       {data.catalog.length === 0 ? (
         <p className={styles.empty}>
-          Aún no tienes artículos. Escribe arriba y toca + para crear el
-          primero.
+          Aún no tienes artículos. Escribe arriba para crear el primero.
         </p>
       ) : visible.length === 0 ? (
-        <p className={styles.empty}>
-          Ningún artículo coincide con «{name}». Toca + para crearlo.
-        </p>
+        <p className={styles.empty}>Ningún artículo coincide con «{name}».</p>
       ) : (
-        <ul className={styles.list}>
-          {visible.map((item) => (
+        <CatalogSections
+          items={visible}
+          renderRow={(item) => (
             // Misma fila con casilla que el modo selección del catálogo. Lo
             // que ya está en la maleta se ve (orienta al buscar) pero no se
             // puede elegir.
@@ -262,11 +279,15 @@ export function AddItemsPage() {
                 onToggle: () => toggleSelected(item.id),
                 disabledReason: data.inLuggage.has(item.id)
                   ? 'Ya en la maleta'
-                  : undefined,
+                  : // Desde el "Añadir" de un compartimento: otro
+                    // compartimento no puede ir dentro.
+                    item.isContainer && targetCompartment
+                    ? 'Es un compartimento'
+                    : undefined,
               }}
             />
-          ))}
-        </ul>
+          )}
+        />
       )}
 
       <div className={styles.bar}>

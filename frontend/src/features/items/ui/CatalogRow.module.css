@@ -36,7 +36,9 @@
 
 .actions {
   display: flex;
-  gap: 1rem;
+  /* Tres acciones: en un iPhone estrecho, la tercera pasa a otra línea. */
+  flex-wrap: wrap;
+  column-gap: 1rem;
   padding-bottom: 0.5rem;
 }
 

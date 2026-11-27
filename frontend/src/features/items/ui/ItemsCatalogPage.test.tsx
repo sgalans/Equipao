@@ -11,7 +11,7 @@ async function openCatalog(arrange?: (repos: Repos) => Promise<void>) {
   const repositories = createTestRepositories()
   await arrange?.(repositories)
   const rendered = renderApp('/items', repositories)
-  await screen.findByRole('heading', { name: 'Artículos' })
+  await screen.findByRole('heading', { name: 'Artículos', level: 1 })
   return { ...rendered, repositories, user: userEvent.setup() }
 }
 
@@ -38,7 +38,7 @@ describe('Acceso al catálogo', () => {
     // demanda (code splitting) y React Router no cambia de pantalla ni de URL
     // hasta tenerlo descargado (así nunca hay una pantalla en blanco).
     expect(
-      await screen.findByRole('heading', { name: 'Artículos' }),
+      await screen.findByRole('heading', { name: 'Artículos', level: 1 }),
     ).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/items')
 
@@ -91,7 +91,7 @@ describe('Renombrar', () => {
     ).toBeInTheDocument()
   })
 
-  it('no permite el nombre de otro artículo: avisa y no cambia nada', async () => {
+  it('con el nombre de otro artículo, propone UNIRLOS; cancelar no cambia nada', async () => {
     const { user, repositories } = await openCatalog(async (repos) => {
       await repos.items.create({ name: 'Calcetines' })
       await repos.items.create({ name: 'Calcetnes' })
@@ -101,13 +101,42 @@ describe('Renombrar', () => {
     await user.click(screen.getByRole('button', { name: 'Renombrar' }))
     await user.keyboard('calcetines{Enter}')
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Ya existe un artículo llamado «Calcetines».',
-    )
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Ya existe «Calcetines»',
+    })
+    expect(dialog).toHaveTextContent('¿Unir «Calcetnes» con «Calcetines»?')
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
+
     expect((await repositories.items.list()).map((i) => i.name)).toEqual([
       'Calcetines',
       'Calcetnes',
     ])
+  })
+
+  it('"Unir" deja solo el destino, también en las maletas', async () => {
+    let luggageId = ''
+    const { user, repositories } = await openCatalog(async (repos) => {
+      await repos.items.create({ name: 'Calcetines' })
+      const typo = await repos.items.create({ name: 'Calcetnes' })
+      luggageId = (await useInLuggage(repos, typo.id, 'Grande')).id
+    })
+
+    await user.click(screen.getByRole('button', { name: /^Calcetnes,/ }))
+    await user.click(screen.getByRole('button', { name: 'Renombrar' }))
+    await user.keyboard('calcetines{Enter}')
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Ya existe «Calcetines»',
+    })
+    await user.click(within(dialog).getByRole('button', { name: 'Unir' }))
+
+    expect(
+      await screen.findByRole('button', { name: 'Calcetines, En 1 maleta' }),
+    ).toBeInTheDocument()
+    expect((await repositories.items.list()).map((i) => i.name)).toEqual([
+      'Calcetines',
+    ])
+    const [line] = await repositories.quantities.listEntriesByLuggage(luggageId)
+    expect(line.itemName).toBe('Calcetines')
   })
 })
 
@@ -161,7 +190,7 @@ describe('Campo único "Buscar o crear"', () => {
   const field = () =>
     screen.getByRole('searchbox', { name: 'Buscar o crear artículos' })
   const createButton = () =>
-    screen.getByRole('button', { name: 'Crear artículo' })
+    screen.getByRole('button', { name: /como artículo$/ })
 
   it('escribir filtra sin distinguir tildes, y avisa si no hay resultados', async () => {
     const { user } = await openCatalog(async (repos) => {
@@ -178,11 +207,16 @@ describe('Campo único "Buscar o crear"', () => {
     expect(
       screen.getByText('Ningún artículo coincide con «zzz».'),
     ).toBeInTheDocument()
-    // Sin fila "Crear «X»" (decisión de producto): se crea con el "+".
-    expect(screen.queryByText(/Crear «/)).not.toBeInTheDocument()
+    // Con un nombre nuevo, las dos formas de crearlo, una al lado de otra.
+    expect(
+      screen.getByRole('button', { name: 'Crear «zzz» como artículo' }),
+    ).toHaveTextContent('Artículo')
+    expect(
+      screen.getByRole('button', { name: 'Crear «zzz» como compartimento' }),
+    ).toHaveTextContent('Compartimento')
   })
 
-  it('"+" crea el artículo, vacía el campo y mantiene el foco', async () => {
+  it('"+ Artículo" crea el artículo, vacía el campo y mantiene el foco', async () => {
     const { user, repositories } = await openCatalog()
 
     await user.type(field(), 'Toalla')
@@ -207,23 +241,132 @@ describe('Campo único "Buscar o crear"', () => {
     expect(field()).toHaveValue('Toalla')
   })
 
-  it('si el nombre ya existe, "+" lo señala y avisa en vez de duplicarlo', async () => {
-    const { user, repositories } = await openCatalog(async (repos) => {
+  it('si el nombre ya existe, no se puede crear (atenuados): la lista ya lo muestra', async () => {
+    const { user } = await openCatalog(async (repos) => {
       await repos.items.create({ name: 'Cámara' })
     })
 
     await user.type(field(), 'camara')
-    await user.click(createButton())
 
-    expect(
-      await screen.findByText('«Cámara» ya está en tu catálogo.'),
-    ).toBeInTheDocument()
-    expect(await repositories.items.list()).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'Artículo' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Compartimento' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /^Cámara,/ })).toBeInTheDocument()
   })
 
-  it('"+" está desactivado con el campo vacío', async () => {
+  it('con el campo vacío los botones de crear se ven, pero desactivados (la lista no salta al escribir)', async () => {
     await openCatalog()
 
-    expect(createButton()).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Artículo' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Compartimento' })).toBeDisabled()
+  })
+
+  it('la ayuda de qué es un compartimento sale solo si aún no tienes ninguno', async () => {
+    const { user } = await openCatalog()
+
+    await user.type(field(), 'Mochila')
+    expect(
+      screen.getByText(
+        'Compartimento: contenedor para meter artículos, como un neceser, una mochila o un maletín.',
+      ),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Crear «Mochila» como compartimento',
+      }),
+    )
+    await user.type(field(), 'Riñonera')
+    expect(
+      screen.queryByText(
+        'Compartimento: contenedor para meter artículos, como un neceser, una mochila o un maletín.',
+      ),
+    ).toBeNull()
+  })
+})
+
+describe('Compartimentos en el catálogo', () => {
+  it('los contenedores salen en su sección, arriba', async () => {
+    await openCatalog(async (repos) => {
+      await repos.items.create({ name: 'Bañador' })
+      await repos.items.create({ name: 'Neceser', isContainer: true })
+    })
+
+    const [containers, regular] = screen.getAllByRole('list')
+    expect(
+      screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent),
+    ).toEqual(['Compartimentos', 'Artículos'])
+    expect(within(containers!).getByText('Neceser')).toBeInTheDocument()
+    expect(within(regular!).getByText('Bañador')).toBeInTheDocument()
+  })
+
+  it('sin contenedores, una sola lista sin cabeceras', async () => {
+    await openCatalog(async (repos) => {
+      await repos.items.create({ name: 'Bañador' })
+    })
+
+    expect(screen.queryByRole('heading', { level: 2 })).not.toBeInTheDocument()
+  })
+
+  it('"Crear «X» como compartimento" crea un contenedor', async () => {
+    const { user, repositories } = await openCatalog()
+
+    await user.type(screen.getByRole('searchbox'), 'Mochila')
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Crear «Mochila» como compartimento',
+      }),
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: 'Compartimentos' }),
+    ).toBeInTheDocument()
+    expect((await repositories.items.findByName('Mochila'))?.isContainer).toBe(
+      true,
+    )
+  })
+
+  it('sin usar, "Convertir en compartimento" lo marca (y se puede deshacer)', async () => {
+    const { user, repositories } = await openCatalog(async (repos) => {
+      await repos.items.create({ name: 'Mochila' })
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Mochila, Sin usar' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Convertir en compartimento' }),
+    )
+    expect(
+      await screen.findByRole('button', { name: 'Convertir en artículo' }),
+    ).toBeInTheDocument()
+    expect((await repositories.items.findByName('Mochila'))?.isContainer).toBe(
+      true,
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: 'Convertir en artículo' }),
+    )
+    expect(
+      await screen.findByRole('button', { name: 'Convertir en compartimento' }),
+    ).toBeInTheDocument()
+  })
+
+  it('si está en alguna maleta, explica qué hacer y no lo cambia (opción A)', async () => {
+    const { user, repositories } = await openCatalog(async (repos) => {
+      const bag = await repos.items.create({ name: 'Mochila' })
+      await useInLuggage(repos, bag.id, 'Grande')
+    })
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Mochila, En 1 maleta' }),
+    )
+    await user.click(
+      screen.getByRole('button', { name: 'Convertir en compartimento' }),
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Para convertirlo, quítalo antes de la maleta Grande.',
+    )
+    expect((await repositories.items.findByName('Mochila'))?.isContainer).toBe(
+      false,
+    )
   })
 })

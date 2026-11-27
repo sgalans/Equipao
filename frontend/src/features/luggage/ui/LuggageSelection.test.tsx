@@ -167,7 +167,8 @@ describe('Seleccionar dentro de una maleta', () => {
     ).toBeInTheDocument()
     const lines = await repositories.quantities.listEntriesByLuggage(luggage.id)
     expect(lines.map((e) => e.itemName)).toEqual(['Pasta'])
-    expect(await repositories.items.list()).toHaveLength(3)
+    // 3 artículos + el contenedor del compartimento del setup.
+    expect(await repositories.items.list()).toHaveLength(4)
   })
 
   it('"Cancelar" sale del modo selección sin hacer nada', async () => {

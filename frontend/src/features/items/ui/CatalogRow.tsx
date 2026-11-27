@@ -1,6 +1,9 @@
 import { useId, useState } from 'react'
 import { useRepositories } from '@/shared/di/repositories'
-import { DuplicateError } from '@/shared/domain/errors'
+import { ConsistencyError } from '@/shared/domain/errors'
+import { reportError } from '@/shared/ui/notifications/notificationStore'
+import { MergeItemsDialog } from './MergeItemsDialog'
+import { useItemRename } from './useItemRename'
 import buttons from '@/shared/ui/buttons.module.css'
 import checkCircle from '@/shared/ui/checkCircle.module.css'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
@@ -63,19 +66,35 @@ export function CatalogRow({
   const panelId = useId()
   const usage = usageLabel(item.luggageNames.length)
 
-  async function rename(name: string | null) {
+  // Mismo renombrar que en la maleta (useItemRename): si el nombre es el
+  // de otro artículo, se propone UNIRLOS en vez de fallar.
+  const renaming = useItemRename()
+  function rename(name: string | null) {
     setIsRenaming(false)
-    if (name === null || name === '' || name === item.name) return
+    if (name !== null) void renaming.rename(item.id, item.name, name)
+  }
+  const shownError = renaming.error ?? error
+
+  /**
+   * Marcar o desmarcar como compartimento. Solo si no está en ninguna
+   * maleta (decisión del usuario, opción A): si no, se explica por qué y
+   * qué hacer, en vez de reorganizar sus maletas sin que se vea.
+   */
+  async function toggleContainer() {
+    setError(null)
+    const count = item.luggageNames.length
+    if (count > 0) {
+      setError(
+        `Para convertirlo, quítalo antes de ${count === 1 ? 'la maleta' : 'las maletas'} ${listFormat.format(item.luggageNames)}.`,
+      )
+      return
+    }
     try {
-      await items.update(item.id, { name })
+      await items.update(item.id, { isContainer: !item.isContainer })
     } catch (e) {
-      // Nombre de otro artículo: no es un fallo, se explica al usuario.
-      if (e instanceof DuplicateError) {
-        setError(`${e.message}.`)
-      } else {
-        console.error(e)
-        setError('No se ha podido renombrar. Inténtalo de nuevo.')
-      }
+      // Otra pestaña lo acaba de añadir a una maleta.
+      if (e instanceof ConsistencyError) setError(`${e.message}.`)
+      else reportError(e)
     }
   }
 
@@ -139,9 +158,9 @@ export function CatalogRow({
         </button>
       )}
 
-      {error && (
+      {shownError && (
         <p role="alert" className={styles.error}>
-          {error}
+          {shownError}
         </p>
       )}
 
@@ -166,6 +185,15 @@ export function CatalogRow({
             <TrashIcon />
             Borrar
           </button>
+          <button
+            type="button"
+            className={buttons.textAction}
+            onClick={() => void toggleContainer()}
+          >
+            {item.isContainer
+              ? 'Convertir en artículo'
+              : 'Convertir en compartimento'}
+          </button>
         </div>
       )}
 
@@ -184,8 +212,16 @@ export function CatalogRow({
             ? 'No está en ninguna maleta.'
             : `Se quitará de ${item.luggageNames.length === 1 ? 'la maleta' : 'las maletas'} ${listFormat.format(item.luggageNames)}.`}
         </p>
+        {item.isContainer && item.luggageNames.length > 0 && (
+          <p>Lo que lleve dentro pasará a suelto.</p>
+        )}
         <p>Esta acción no se puede deshacer.</p>
       </ConfirmDialog>
+      <MergeItemsDialog
+        pending={renaming.pending}
+        onConfirm={renaming.confirmMerge}
+        onCancel={renaming.cancelMerge}
+      />
     </li>
   )
 }

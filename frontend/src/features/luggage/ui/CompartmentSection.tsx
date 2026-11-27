@@ -1,15 +1,19 @@
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
+import { MergeItemsDialog } from '@/features/items/ui/MergeItemsDialog'
+import { useItemRename } from '@/features/items/ui/useItemRename'
 import { useRepositories } from '@/shared/di/repositories'
 import { reportError } from '@/shared/ui/notifications/notificationStore'
 import buttons from '@/shared/ui/buttons.module.css'
 import checkCircle from '@/shared/ui/checkCircle.module.css'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
+import { ArrowIcon } from '@/shared/ui/icons/ArrowIcon'
 import { CheckIcon } from '@/shared/ui/icons/CheckIcon'
 import { ChevronDownIcon } from '@/shared/ui/icons/ChevronDownIcon'
 import { GripIcon } from '@/shared/ui/icons/GripIcon'
 import { MoreIcon } from '@/shared/ui/icons/MoreIcon'
-import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
+import { ListPlusIcon } from '@/shared/ui/icons/ListPlusIcon'
 import { PencilIcon } from '@/shared/ui/icons/PencilIcon'
 import { TrashIcon } from '@/shared/ui/icons/TrashIcon'
 import { InlineEditInput } from '@/shared/ui/InlineEditInput'
@@ -21,6 +25,7 @@ import {
   useCollapsedCompartments,
   useIsCollapsed,
 } from './collapsedCompartmentsStore'
+import toolbar from '@/shared/ui/toolbar.module.css'
 import styles from './CompartmentSection.module.css'
 import type { DragHandle } from './packingDndLogic'
 import { compartmentStatus } from './progressLabel'
@@ -63,7 +68,7 @@ interface CompartmentSectionProps {
  *   ▾ Neceser · 2 de 3   [+] [⋯] [≡]  ← tocar = plegar; + = añadir (abre
  *                                       el catálogo con este destino);
  *                                       ⋯ = acciones; ≡ = arrastrar
- *     ✎ Renombrar  🗑 Borrar  ↑ Subir  ↓ Bajar   ← solo tras tocar ⋯
+ *     ✎  🗑  ↑  ↓                        ← solo tras tocar ⋯
  *     (filas de artículos)
  */
 export function CompartmentSection({
@@ -118,13 +123,26 @@ export function CompartmentSection({
     }
   }
 
-  async function rename(name: string | null) {
+  // Renombrar = renombrar su CONTENEDOR del catálogo, como un artículo:
+  // cambia en todas las maletas, y si ya hay otro compartimento con ese
+  // nombre se propone unirlos (useItemRename, decisión del usuario).
+  const renaming = useItemRename()
+  // Solo mientras se renombra: ¿está en OTRAS maletas? (el nombre cambia en
+  // todas: es del contenedor del catálogo).
+  const { items } = useRepositories()
+  const usedElsewhere = useLiveQuery(
+    async () =>
+      isRenaming
+        ? ((await items.listWithUsage()).find(
+            (i) => i.id === compartment.itemId,
+          )?.luggageNames.length ?? 0) > 1
+        : false,
+    [isRenaming, items, compartment.itemId],
+  )
+  function rename(name: string | null) {
     setIsRenaming(false)
-    if (name === null || name === '' || name === compartment.name) return
-    try {
-      await compartments.update(compartment.id, { name })
-    } catch (error) {
-      reportError(error)
+    if (name !== null) {
+      void renaming.rename(compartment.itemId, compartment.name, name)
     }
   }
 
@@ -158,7 +176,7 @@ export function CompartmentSection({
               className={styles.renameInput}
               initialValue={compartment.name}
               ariaLabel="Nombre del compartimento"
-              onFinish={(name) => void rename(name)}
+              onFinish={rename}
             />
           ) : (
             <button
@@ -178,19 +196,11 @@ export function CompartmentSection({
         </h2>
         {!isSelecting && (
           <>
-            <Link
-              // Misma pantalla que "Añadir artículos", con ESTE compartimento
-              // como destino (decisión de producto: un solo "añadir").
-              to={`/luggages/${compartment.luggageId}/add-items?${COMPARTMENT_PARAM}=${compartment.id}`}
-              className={`${buttons.iconGhost} ${styles.headerButton}`}
-              aria-label={`Añadir a ${compartment.name}`}
-              title={`Añadir a ${compartment.name}`}
-            >
-              <PlusIcon />
-            </Link>
             <button
               type="button"
-              className={`${buttons.iconGhost} ${styles.headerButton}`}
+              // Dos estados a la vista (como a VoiceOver, con aria-expanded):
+              // abierto = acento con fondo suave (ver .moreToggle en el CSS).
+              className={`${buttons.iconGhost} ${styles.headerButton} ${styles.moreToggle}`}
               aria-label={`Más acciones de ${compartment.name}`}
               title="Más acciones"
               aria-expanded={showActions}
@@ -215,48 +225,80 @@ export function CompartmentSection({
 
       {/* Fuera del contenido plegable: se puede renombrar o borrar un
           compartimento sin desplegarlo. */}
+      {isRenaming && usedElsewhere && (
+        <p className={styles.hint}>Cambia en todas tus maletas.</p>
+      )}
+      {renaming.error && (
+        <p role="alert" className={styles.error}>
+          {renaming.error}
+        </p>
+      )}
+
       {showActions && !isSelecting && (
-        <div id={actionsId} className={styles.actions}>
-          <button
-            type="button"
-            className={buttons.textAction}
-            onClick={() => {
-              setShowActions(false)
-              setIsRenaming(true)
-            }}
-          >
-            <PencilIcon />
-            Renombrar
-          </button>
-          <button
-            type="button"
-            className={buttons.textAction}
-            onClick={() => {
-              setShowActions(false)
-              setIsConfirmingDelete(true)
-            }}
-          >
-            <TrashIcon />
-            Borrar compartimento
-          </button>
-          <button
-            type="button"
-            className={buttons.textAction}
-            aria-label={`Subir ${compartment.name}`}
-            disabled={onMoveUp === null}
-            onClick={() => onMoveUp?.()}
-          >
-            <span aria-hidden="true">↑</span> Subir
-          </button>
-          <button
-            type="button"
-            className={buttons.textAction}
-            aria-label={`Bajar ${compartment.name}`}
-            disabled={onMoveDown === null}
-            onClick={() => onMoveDown?.()}
-          >
-            <span aria-hidden="true">↓</span> Bajar
-          </button>
+        // Barra común con el panel de los artículos (toolbar.module.css):
+        // mismo aspecto y orden. Izquierda: añadir; derecha: ↑ ↓ ✎ 🗑.
+        <div id={actionsId} className={`${toolbar.toolbar} ${styles.actions}`}>
+          <div className={toolbar.group}>
+            <Link
+              // Misma pantalla que "Añadir artículos", con ESTE compartimento
+              // como destino (un solo "añadir"). Icono de lista con +: no se
+              // confunde con el + de las unidades de un artículo.
+              to={`/luggages/${compartment.luggageId}/add-items?${COMPARTMENT_PARAM}=${compartment.id}`}
+              className={toolbar.tool}
+              aria-label={`Añadir a ${compartment.name}`}
+              title={`Añadir a ${compartment.name}`}
+            >
+              <ListPlusIcon />
+            </Link>
+          </div>
+          {/* Solo iconos, con el nombre completo en aria-label. */}
+          <div className={toolbar.group}>
+            <button
+              type="button"
+              className={toolbar.tool}
+              aria-label={`Subir ${compartment.name}`}
+              title="Subir"
+              disabled={onMoveUp === null}
+              onClick={() => onMoveUp?.()}
+            >
+              <ArrowIcon direction="up" />
+            </button>
+            <button
+              type="button"
+              className={toolbar.tool}
+              aria-label={`Bajar ${compartment.name}`}
+              title="Bajar"
+              disabled={onMoveDown === null}
+              onClick={() => onMoveDown?.()}
+            >
+              <ArrowIcon direction="down" />
+            </button>
+            <button
+              type="button"
+              className={toolbar.tool}
+              aria-label={`Renombrar ${compartment.name}`}
+              title="Renombrar"
+              onClick={() => {
+                setShowActions(false)
+                renaming.clearError()
+                setIsRenaming(true)
+              }}
+            >
+              <PencilIcon />
+            </button>
+            <button
+              type="button"
+              className={toolbar.tool}
+              aria-label={`Quitar ${compartment.name} de la maleta`}
+              title="Quitar de la maleta"
+              onClick={() => {
+                setShowActions(false)
+                setIsConfirmingDelete(true)
+              }}
+            >
+              <TrashIcon />
+            </button>
+          </div>
         </div>
       )}
 
@@ -278,8 +320,8 @@ export function CompartmentSection({
 
       <ConfirmDialog
         open={isConfirmingDelete}
-        title={`¿Borrar «${compartment.name}»?`}
-        confirmLabel="Borrar"
+        title={`¿Quitar «${compartment.name}» de la maleta?`}
+        confirmLabel="Quitar"
         onCancel={() => setIsConfirmingDelete(false)}
         onConfirm={async () => {
           await compartments.remove(compartment.id)
@@ -290,9 +332,17 @@ export function CompartmentSection({
             ? 'El compartimento está vacío.'
             : total === 1
               ? 'Su artículo quedará suelto en la maleta.'
-              : `Sus ${total} artículos quedarán sueltos en la maleta.`}
+              : `Sus ${total} artículos quedarán sueltos en la maleta.`}{' '}
+          {/* Es un contenedor del catálogo: se quita de ESTA maleta, no se
+              borra (se puede volver a usar en esta u otras). */}
+          «{compartment.name}» seguirá en tu catálogo.
         </p>
       </ConfirmDialog>
+      <MergeItemsDialog
+        pending={renaming.pending}
+        onConfirm={renaming.confirmMerge}
+        onCancel={renaming.cancelMerge}
+      />
     </section>
   )
 }

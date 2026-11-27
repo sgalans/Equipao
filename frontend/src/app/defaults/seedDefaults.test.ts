@@ -9,7 +9,7 @@ describe('seedDefaults', () => {
 
     expect(await seedDefaults(repos.db, repos)).toBe(true)
 
-    expect(await repos.items.list()).toHaveLength(DEFAULT_CATALOG.length)
+    expect(await repos.items.list()).toHaveLength(DEFAULT_CATALOG.length + 1) // + el contenedor «Neceser»
     const [luggage] = await repos.luggages.list()
     expect(luggage).toMatchObject({
       name: 'Maleta básica',
@@ -37,7 +37,7 @@ describe('seedDefaults', () => {
     expect(await seedDefaults(repos.db, repos)).toBe(false)
 
     expect(await repos.luggages.list()).toHaveLength(1)
-    expect(await repos.items.list()).toHaveLength(DEFAULT_CATALOG.length)
+    expect(await repos.items.list()).toHaveLength(DEFAULT_CATALOG.length + 1) // + el contenedor «Neceser»
   })
 
   it('lo que el usuario borra no vuelve a aparecer', async () => {
@@ -59,7 +59,7 @@ describe('seedDefaults', () => {
     await seedDefaults(repos.db, repos)
 
     const catalog = await repos.items.list()
-    expect(catalog).toHaveLength(DEFAULT_CATALOG.length)
+    expect(catalog).toHaveLength(DEFAULT_CATALOG.length + 1) // + el contenedor «Neceser»
     expect(
       catalog.filter((i) => i.name.toLowerCase() === 'calcetines'),
     ).toEqual([mine])

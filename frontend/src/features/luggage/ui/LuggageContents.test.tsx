@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { renderApp } from '@/test/render'
@@ -58,20 +58,32 @@ describe('Empaquetar (todo o nada) y progreso', () => {
     ).not.toBeChecked()
   })
 
-  it('un artículo a medias (5/6) se muestra como "mixed" con el número guardado', async () => {
-    await openLuggage(async (r, luggageId) => {
+  it('cambiar las unidades de algo listo lo desmarca (sin número en el círculo); volver a ellas, lo marca', async () => {
+    const { user } = await openLuggage(async (r, luggageId) => {
       const socks = await r.items.create({ name: 'Calcetines' })
       await r.quantities.add({
         luggageId,
         itemId: socks.id,
-        num: 6,
+        num: 5,
         nAlreadyPacked: 5,
       })
     })
+    const socks = () => screen.getByRole('checkbox', { name: 'Calcetines' })
+    await user.click(
+      await screen.findByRole('button', { name: /^Calcetines,/ }),
+    )
 
-    const socks = await screen.findByRole('checkbox', { name: 'Calcetines' })
-    expect(socks).toHaveAttribute('aria-checked', 'mixed')
-    expect(socks).toHaveTextContent('5')
+    await user.click(
+      screen.getByRole('button', { name: 'Una unidad más de Calcetines' }),
+    )
+    await waitFor(() => expect(socks()).not.toBeChecked())
+    // Nada de "a medias" ni del número que tenía.
+    expect(socks()).toHaveTextContent('')
+
+    await user.click(
+      screen.getByRole('button', { name: 'Una unidad menos de Calcetines' }),
+    )
+    await waitFor(() => expect(socks()).toBeChecked())
   })
 })
 
@@ -119,8 +131,15 @@ describe('Cantidad y quitar (fila desplegada)', () => {
       screen.getByRole('button', { name: 'Una unidad más de Calcetines' }),
     )
 
-    expect(await screen.findByText('2 unidades')).toBeInTheDocument()
-    expect(screen.getByText('×2')).toBeInTheDocument()
+    // A la vista, solo el número; "unidades" está oculto a la vista pero en
+    // la región aria-live: VoiceOver anuncia "2 unidades".
+    expect(await screen.findByText('×2')).toBeInTheDocument()
+    const count = screen.getByText(
+      (_, element) =>
+        element?.getAttribute('aria-live') === 'polite' &&
+        element.textContent === '2 unidades',
+    )
+    expect(count.firstChild?.textContent).toBe('2')
     expect(minus).toBeEnabled()
   })
 
@@ -151,18 +170,23 @@ describe('Cantidad y quitar (fila desplegada)', () => {
     )
   })
 
-  it('la papelera quita el artículo sin confirmación; el catálogo lo conserva', async () => {
+  it('la papelera pide confirmación y quita el artículo; el catálogo lo conserva', async () => {
     const { repositories, user, details } = await openWithSocks()
     await user.click(details)
 
     await user.click(
       screen.getByRole('button', { name: 'Quitar Calcetines de la maleta' }),
     )
+    // Confirmación (decisión del usuario): el icono solo no lo dice todo.
+    const dialog = screen.getByRole('dialog', {
+      name: '¿Quitar «Calcetines» de la maleta?',
+    })
+    expect(dialog).toHaveTextContent('Seguirá en tu catálogo.')
+    await user.click(within(dialog).getByRole('button', { name: 'Quitar' }))
 
     expect(
       await screen.findByText(/Esta maleta está vacía/),
     ).toBeInTheDocument()
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect((await repositories.items.list()).map((i) => i.name)).toEqual([
       'Calcetines',
     ])

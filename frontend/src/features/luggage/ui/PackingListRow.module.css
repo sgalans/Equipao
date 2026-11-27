@@ -52,25 +52,6 @@
   padding: 0 0 0.75rem 3.25rem;
 }
 
-.panelRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-/* "↑ Subir  ↓ Bajar": alternativa a arrastrar con el asa. */
-.reorder {
-  display: flex;
-  gap: 0.5rem;
-}
-
-/* Desactivado con COLOR, no con opacity (crearía un stacking context que
-   se pinta encima de la cabecera sticky al hacer scroll). */
-.reorder button:disabled {
-  color: var(--border);
-  cursor: default;
-}
-
 .move {
   display: flex;
   align-items: center;
@@ -90,17 +71,6 @@
   color: var(--text);
   font: inherit;
   font-size: max(1rem, 16px);
-}
-
-.stepper {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.count {
-  min-width: 5.5rem;
-  text-align: center;
 }
 
 /* Fila en modo selección: casilla + nombre + cantidad, todo un botón. */
@@ -133,4 +103,23 @@
 
 .dragging .handle {
   cursor: grabbing;
+}
+
+/* Campo de renombrar en el sitio del nombre (16px: sin zoom en iOS). */
+.renameInput {
+  flex: 1;
+  min-width: 0;
+}
+
+/* "Cambia en todas tus maletas": el nombre es del artículo. */
+.hint {
+  margin: 0 0 0.5rem 3.25rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.error {
+  margin: 0 0 0.5rem 3.25rem;
+  color: var(--danger);
+  font-size: 0.875rem;
 }

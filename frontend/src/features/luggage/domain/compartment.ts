@@ -21,6 +21,9 @@ export const CompartmentSchema = z.object({
   // Orden manual dentro de la maleta (fractional indexing, como los
   // artículos: ver domain/position.ts). Lo asigna el repositorio.
   position: z.string().min(1),
+  // Contenedor del catálogo que es este compartimento (refactor/
+  // compartments): para renombrarlo o unirlo como cualquier artículo.
+  itemId: IdSchema,
 })
 export const NewCompartmentSchema = z.object({
   ...compartmentFields,

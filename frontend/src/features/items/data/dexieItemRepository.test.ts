@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { ConsistencyError } from '@/shared/domain/errors'
 import { createTestRepositories } from '@/test/repositories'
 
 describe('DexieItemRepository', () => {
@@ -167,5 +168,40 @@ describe('DexieItemRepository.create: sin duplicados en el catálogo', () => {
       message: 'Ya existe un artículo llamado «Cámara»',
     })
     expect(await items.list()).toHaveLength(1)
+  })
+})
+
+describe('DexieItemRepository.update: marcar como compartimento (opción A)', () => {
+  it('sin usar, se puede convertir en compartimento y volver a artículo', async () => {
+    const { items } = createTestRepositories()
+    const bag = await items.create({ name: 'Mochila' })
+
+    expect(
+      (await items.update(bag.id, { isContainer: true })).isContainer,
+    ).toBe(true)
+    expect(
+      (await items.update(bag.id, { isContainer: false })).isContainer,
+    ).toBe(false)
+  })
+
+  it('si está en alguna maleta, no se puede cambiar (ConsistencyError) y no cambia nada', async () => {
+    const { items, luggages, quantities } = createTestRepositories()
+    const luggage = await luggages.create({ name: 'Grande' })
+    const bag = await items.create({ name: 'Mochila' })
+    await quantities.add({
+      luggageId: luggage.id,
+      itemId: bag.id,
+      num: 1,
+      nAlreadyPacked: 0,
+    })
+
+    await expect(items.update(bag.id, { isContainer: true })).rejects.toThrow(
+      ConsistencyError,
+    )
+    expect((await items.getById(bag.id))?.isContainer).toBe(false)
+    // Renombrar sigue funcionando aunque esté en uso.
+    await expect(
+      items.update(bag.id, { name: 'Mochila azul' }),
+    ).resolves.toBeTruthy()
   })
 })

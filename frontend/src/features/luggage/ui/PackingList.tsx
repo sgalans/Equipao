@@ -20,7 +20,6 @@ import type { Compartment } from '../domain/compartment'
 import type { LuggageEntry } from '../domain/itemQuantityRepository'
 import { useCollapsedCompartments } from './collapsedCompartmentsStore'
 import { CompartmentSection } from './CompartmentSection'
-import { NewCompartment } from './NewCompartment'
 import { Draggable } from './packingDnd'
 import {
   dndAccessibility,
@@ -37,7 +36,6 @@ import styles from './PackingList.module.css'
 import { PackingListRow } from './PackingListRow'
 
 interface PackingListProps {
-  luggageId: string
   entries: LuggageEntry[]
   compartments: Compartment[]
   /** Artículos listos ocultos (ver packingOrderStore); undefined = ninguno. */
@@ -51,8 +49,7 @@ interface PackingListProps {
 
 /**
  * Contenido de la maleta, SIEMPRE en el orden del usuario: artículos
- * sueltos, compartimentos y "Nuevo compartimento". Nada cambia de sitio
- * solo: "Ocultar listos" solo deja de pintar lo listo.
+ * sueltos y compartimentos. Nada cambia de sitio solo: "Ocultar listos" solo deja de pintar lo listo.
  *
  * Arrastre (decisión del usuario): la maleta es UNA sola lista ordenable
  * ("árbol aplanado", ver packingDndLogic.ts): sueltos, y cada compartimento
@@ -63,7 +60,6 @@ interface PackingListProps {
  * anidamiento del DOM.
  */
 export function PackingList({
-  luggageId,
   entries,
   compartments,
   hidden,
@@ -328,7 +324,7 @@ export function PackingList({
     <div className={styles.contents}>
       {isEmpty && (
         <p className={styles.empty}>
-          Esta maleta está vacía. Escribe arriba lo que quieras llevar.
+          Esta maleta está vacía. Toca «Añadir artículos» para llenarla.
         </p>
       )}
 
@@ -348,13 +344,6 @@ export function PackingList({
             {content}
           </SortableContext>
         </DndContext>
-      )}
-
-      {selection === undefined && (
-        <NewCompartment
-          luggageId={luggageId}
-          showHelp={compartments.length === 0}
-        />
       )}
     </div>
   )

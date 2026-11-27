@@ -1,19 +1,20 @@
 import { newEntityBase, nowIso } from '@/shared/data/entityBase'
 import type { AppDb } from '@/shared/db/db'
-import {
-  ConsistencyError,
-  DuplicateError,
-  EntityNotFoundError,
-} from '@/shared/domain/errors'
+import { DuplicateError, EntityNotFoundError } from '@/shared/domain/errors'
 import {
   ItemQuantitySchema,
   NewItemQuantitySchema,
   type ItemQuantity,
 } from '../domain/itemQuantity'
 import type { ItemQuantityRepository } from '../domain/itemQuantityRepository'
-import { packedCountAfterResize, toggledPackedCount } from '../domain/packing'
+import { toggledPackedCount } from '../domain/packing'
 import { lastPosition, positionAfter, positionsAfter } from '../domain/position'
 import { loadQuantitiesOfOneLuggage } from './loadQuantities'
+import {
+  assertIsCompartmentOf,
+  assertNotNested,
+  containerItemIds,
+} from './containers'
 import { reorderRow } from './reorderRow'
 
 type CountChanges = { num?: number; nAlreadyPacked?: number }
@@ -50,35 +51,30 @@ export function createDexieItemQuantityRepository(
     })
   }
 
-  /**
-   * Invariante: un artículo solo puede ir en un compartimento de SU maleta.
-   * IndexedDB no sabe expresar esta regla (no hay FOREIGN KEY compuestas ni
-   * CHECK entre tablas), así que la comprobamos aquí. Debe llamarse dentro
-   * de una transacción que incluya la tabla compartments.
-   */
-  async function assertCompartmentBelongsTo(
+  /** Invariante del compartimento (ver containers.ts). */
+  function assertCompartmentBelongsTo(
     compartmentId: string | null,
     luggageId: string,
   ) {
-    if (compartmentId === null) return // suelto: siempre válido
-    const compartment = await db.compartments.get(compartmentId)
-    if (!compartment) {
-      throw new EntityNotFoundError('Compartment', compartmentId)
-    }
-    if (compartment.luggageId !== luggageId) {
-      throw new ConsistencyError('El compartimento pertenece a otra maleta')
-    }
+    return assertIsCompartmentOf(db, compartmentId, luggageId)
   }
 
-  // Función local (no `this.listByLuggage`): `this` dentro de un objeto
-  // literal se pierde si alguien desestructura el método, y fallaría.
   // Orden = el del usuario (`position`, fractional indexing). sortBy compara
   // las claves como IndexedDB, por unidades de código: el orden correcto.
-  function listByLuggage(luggageId: string) {
-    return db.itemQuantities
+  // Solo ARTÍCULOS: las líneas contenedor son los compartimentos y las
+  // gestiona su propio repositorio (el port de líneas no cambia).
+  async function listByLuggage(luggageId: string) {
+    const containers = await containerItemIds(db)
+    const lines = await db.itemQuantities
       .where('luggageId')
       .equals(luggageId)
       .sortBy('position')
+    return lines.filter((line) => !containers.has(line.itemId))
+  }
+
+  /** TODAS las líneas (también contenedores): para posiciones y unicidad. */
+  function allLinesOf(luggageId: string) {
+    return db.itemQuantities.where('luggageId').equals(luggageId).toArray()
   }
 
   return {
@@ -105,7 +101,7 @@ export function createDexieItemQuantityRepository(
       try {
         return await db.transaction(
           'rw',
-          [db.itemQuantities, db.luggages, db.items, db.compartments],
+          [db.itemQuantities, db.luggages, db.items],
           async () => {
             // FOREIGN KEY (luggageId) y FOREIGN KEY (itemId)
             if (!(await db.luggages.get(data.luggageId))) {
@@ -115,9 +111,10 @@ export function createDexieItemQuantityRepository(
               throw new EntityNotFoundError('Item', data.itemId)
             }
             await assertCompartmentBelongsTo(data.compartmentId, data.luggageId)
+            await assertNotNested(db, [data.itemId], data.compartmentId)
             // Al final de la maleta (detrás de la última clave).
             const position = positionAfter(
-              lastPosition(await listByLuggage(data.luggageId)),
+              lastPosition(await allLinesOf(data.luggageId)),
             )
             const quantity = { ...newEntityBase(), ...data, position }
             await db.itemQuantities.add(quantity)
@@ -140,7 +137,7 @@ export function createDexieItemQuantityRepository(
     addMany(luggageId, itemIds, compartmentId = null) {
       return db.transaction(
         'rw',
-        [db.itemQuantities, db.luggages, db.items, db.compartments],
+        [db.itemQuantities, db.luggages, db.items],
         async () => {
           // FOREIGN KEY (luggageId), invariante del compartimento y
           // FOREIGN KEY (itemId) de CADA artículo: si algo no existe es un
@@ -154,10 +151,13 @@ export function createDexieItemQuantityRepository(
           const items = await db.items.bulkGet(uniqueItemIds)
           const missing = uniqueItemIds.find((_, index) => !items[index])
           if (missing) throw new EntityNotFoundError('Item', missing)
+          const containers = new Set(
+            items.flatMap((item) => (item?.isContainer ? [item.id] : [])),
+          )
 
           // Lo que ya está en la maleta se salta (decisión de producto: ni
           // se vuelve a añadir ni se suma cantidad).
-          const current = await listByLuggage(luggageId)
+          const current = await allLinesOf(luggageId)
           const alreadyIn = new Set(current.map((q) => q.itemId))
           const toAdd = uniqueItemIds.filter((itemId) => !alreadyIn.has(itemId))
           // Todas al final, en el orden en que llegan.
@@ -167,7 +167,8 @@ export function createDexieItemQuantityRepository(
               ...newEntityBase(),
               luggageId,
               itemId,
-              compartmentId,
+              // Un contenedor es un compartimento: siempre de primer nivel.
+              compartmentId: containers.has(itemId) ? null : compartmentId,
               num: 1,
               nAlreadyPacked: 0,
               position: positions[index],
@@ -191,10 +192,10 @@ export function createDexieItemQuantityRepository(
     },
 
     resize(id, num) {
-      return modify(id, (current) => ({
-        num,
-        nAlreadyPacked: packedCountAfterResize(current, num),
-      }))
+      // Solo cambia la cantidad: `nAlreadyPacked` recuerda con cuántas se
+      // marcó, así que deja de estar listo (suba o baje) y vuelve a estarlo
+      // si se vuelve a esa cantidad (ver isFullyPacked).
+      return modify(id, () => ({ num }))
     },
 
     reorder(id, beforeId, afterId) {
@@ -204,59 +205,47 @@ export function createDexieItemQuantityRepository(
     },
 
     place(id, compartmentId, beforeId, afterId) {
-      return db.transaction(
-        'rw',
-        [db.itemQuantities, db.compartments],
-        async () => {
-          const current = await db.itemQuantities.get(id)
-          if (!current) throw new EntityNotFoundError('ItemQuantity', id)
-          await assertCompartmentBelongsTo(compartmentId, current.luggageId)
-          return reorderRow(
-            db.itemQuantities,
-            'ItemQuantity',
-            id,
-            beforeId,
-            afterId,
-            { compartmentId },
-          )
-        },
-      )
+      return db.transaction('rw', [db.itemQuantities, db.items], async () => {
+        const current = await db.itemQuantities.get(id)
+        if (!current) throw new EntityNotFoundError('ItemQuantity', id)
+        await assertCompartmentBelongsTo(compartmentId, current.luggageId)
+        return reorderRow(
+          db.itemQuantities,
+          'ItemQuantity',
+          id,
+          beforeId,
+          afterId,
+          { compartmentId },
+        )
+      })
     },
 
     moveTo(id, compartmentId) {
-      return db.transaction(
-        'rw',
-        [db.itemQuantities, db.compartments],
-        async () => {
-          const current = await db.itemQuantities.get(id)
-          if (!current) throw new EntityNotFoundError('ItemQuantity', id)
-          await assertCompartmentBelongsTo(compartmentId, current.luggageId)
+      return db.transaction('rw', [db.itemQuantities, db.items], async () => {
+        const current = await db.itemQuantities.get(id)
+        if (!current) throw new EntityNotFoundError('ItemQuantity', id)
+        await assertCompartmentBelongsTo(compartmentId, current.luggageId)
 
-          const updated = { ...current, compartmentId, updatedAt: nowIso() }
-          await db.itemQuantities.put(updated)
-          return updated
-        },
-      )
+        const updated = { ...current, compartmentId, updatedAt: nowIso() }
+        await db.itemQuantities.put(updated)
+        return updated
+      })
     },
 
     moveMany(ids, compartmentId) {
-      return db.transaction(
-        'rw',
-        [db.itemQuantities, db.compartments],
-        async () => {
-          const rows = await loadQuantitiesOfOneLuggage(db, ids)
-          if (rows.length === 0) return []
-          await assertCompartmentBelongsTo(compartmentId, rows[0].luggageId)
-          const now = nowIso()
-          const moved = rows.map((row) => ({
-            ...row,
-            compartmentId,
-            updatedAt: now,
-          }))
-          await db.itemQuantities.bulkPut(moved)
-          return moved
-        },
-      )
+      return db.transaction('rw', [db.itemQuantities, db.items], async () => {
+        const rows = await loadQuantitiesOfOneLuggage(db, ids)
+        if (rows.length === 0) return []
+        await assertCompartmentBelongsTo(compartmentId, rows[0].luggageId)
+        const now = nowIso()
+        const moved = rows.map((row) => ({
+          ...row,
+          compartmentId,
+          updatedAt: now,
+        }))
+        await db.itemQuantities.bulkPut(moved)
+        return moved
+      })
     },
 
     async removeMany(ids) {

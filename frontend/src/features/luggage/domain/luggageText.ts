@@ -139,8 +139,13 @@ export function parseLuggageText(text: string): LuggageText {
     if (line.endsWith(':') && !BULLET.test(line)) {
       const name = line.slice(0, -1).trim().slice(0, MAX_NAME)
       if (name !== '') {
-        const compartment = { name, items: [] as TextItem[] }
-        result.compartments.push(compartment)
+        // Un compartimento por nombre (un Neceser por maleta): si se repite,
+        // lo que viene después se suma al primero.
+        const existing = result.compartments.find((c) =>
+          isSameItemName(c.name, name),
+        )
+        const compartment = existing ?? { name, items: [] as TextItem[] }
+        if (!existing) result.compartments.push(compartment)
         current = compartment.items
       }
       continue
