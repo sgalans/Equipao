@@ -13,7 +13,7 @@
 
 /*
  * La FILA es el rectángulo visible (borde y esquinas). Dentro van, uno al
- * lado del otro, el enlace (casi todo el ancho) y el botón ⧉. Así el botón
+ * lado del otro, el enlace (casi todo el ancho) y el botón ⋯. Así el botón
  * se ve DENTRO de la tarjeta sin estar dentro del enlace (HTML no permite
  * anidar elementos interactivos).
  */
@@ -22,7 +22,7 @@
   align-items: center;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
-  /* Respiro a la derecha para que el ⧉ no toque el borde. */
+  /* Respiro a la derecha para que el ⋯ no toque el borde. */
   padding-right: 0.25rem;
 }
 

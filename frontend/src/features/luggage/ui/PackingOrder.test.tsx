@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
+import { chooseLuggageAction } from '@/test/luggageActions'
 import { renderApp } from '@/test/render'
 import { createTestRepositories } from '@/test/repositories'
 import { usePackingOrder } from './packingOrderStore'
@@ -115,7 +116,7 @@ describe('Ojo "Ocultar listos"', () => {
     expect(pageOrder()).toEqual(['Camisetas', 'Bañador', 'Gafas', 'Crema'])
   })
 
-  it('con el ojo tachado, lo que se marca se queda a la vista y el ojo vuelve a abierto', async () => {
+  it('con el ojo tachado, lo que se marca se queda a la vista y el ojo queda a medias (tachado y gris)', async () => {
     const { user } = await openLuggage(async (repos, luggageId) => {
       await addItem(repos, luggageId, 'Camisetas', { packed: true })
       await addItem(repos, luggageId, 'Bañador')
@@ -125,12 +126,15 @@ describe('Ojo "Ocultar listos"', () => {
 
     await togglePacked(user, 'Bañador')
 
-    // Marcado pero a la vista: nada desaparece bajo el dedo.
+    // Marcado pero a la vista: nada desaparece bajo el dedo. Algo sigue
+    // oculto (Camisetas) y algo no: a medias ("mixed").
     expect(pageOrder()).toEqual(['Bañador', 'Crema'])
-    expect(eye()).toHaveAttribute('aria-pressed', 'false')
+    expect(eye()).toHaveAttribute('aria-pressed', 'mixed')
 
+    // A medias, un toque oculta TODO lo listo (pasa a azul).
     await user.click(eye())
     expect(pageOrder()).toEqual(['Crema'])
+    expect(eye()).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('va por artículos: dentro de un compartimento se ocultan sus listos y la cabecera se queda', async () => {
@@ -234,14 +238,14 @@ describe('Compartimentos completos (listos y con todo listo)', () => {
     expect(pageOrder()).toEqual(['Bañador', 'Neceser listo', 'Pasta'])
   })
 
-  it('completado con el ojo tachado, se queda a la vista y el ojo vuelve a abierto', async () => {
+  it('completado con el ojo tachado, se queda a la vista y el ojo queda a medias', async () => {
     const { user } = await openLuggage((repos, luggageId) =>
       withKit(repos, luggageId, { ready: false, allPacked: true }),
     )
     await user.click(eye())
 
     await user.click(screen.getByRole('checkbox', { name: 'Neceser listo' }))
-    await waitFor(() => expect(eye()).toHaveAttribute('aria-pressed', 'false'))
+    await waitFor(() => expect(eye()).toHaveAttribute('aria-pressed', 'mixed'))
     // Nada desaparece bajo el dedo: el compartimento sigue ahí.
     expect(pageOrder()).toContain('Neceser listo')
 
@@ -355,7 +359,7 @@ describe('Se recuerda', () => {
     await user.click(eye())
 
     await router.navigate('/')
-    await screen.findByText(/Grande/)
+    await screen.findByRole('link', { name: /^Grande,/ })
     await router.navigate(`/luggages/${luggage.id}`)
     await screen.findByRole('heading', { name: 'Grande', level: 1 })
 
@@ -382,7 +386,7 @@ describe('Se recuerda', () => {
     })
     await user.click(eye())
 
-    await user.click(screen.getByRole('button', { name: /Borrar maleta/ }))
+    await chooseLuggageAction(user, 'Grande', 'Borrar maleta')
     await user.click(
       within(screen.getByRole('dialog')).getByRole('button', {
         name: 'Borrar',

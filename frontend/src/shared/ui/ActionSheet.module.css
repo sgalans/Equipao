@@ -1,0 +1,79 @@
+/*
+ * Hoja inferior, como la ventana "Listos": pegada abajo, a todo el ancho y
+ * con las esquinas de arriba redondeadas.
+ */
+.sheet {
+  /* El <dialog> modal se centra por defecto: lo bajamos al borde inferior. */
+  margin: auto 0 0;
+  width: 100%;
+  max-width: 100%;
+  /* Sin relleno: lo lleva .content, que así ocupa TODA la hoja (ver el
+     cierre al tocar fuera en ActionSheet.tsx). */
+  padding: 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 1rem 1rem 0 0;
+  /* Colores propios: el <dialog> trae blanco y negro del navegador. */
+  background: var(--bg);
+  color: var(--text);
+}
+
+.sheet::backdrop {
+  background: rgb(0 0 0 / 0.5);
+}
+
+.content {
+  padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+}
+
+/* Sobre qué se actúa, discreto (como el título de las hojas de iOS). */
+.title {
+  margin: 0 0 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.actions li + li {
+  border-top: 1px solid var(--border);
+}
+
+/* Cada acción: fila entera tocable, de 48 px de alto. */
+.action {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 3rem;
+  padding: 0 0.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.icon {
+  display: grid;
+  color: var(--text-muted);
+}
+
+.danger,
+.danger .icon {
+  color: var(--danger);
+}
+
+.cancel {
+  composes: secondary from './buttons.module.css';
+  width: 100%;
+  margin-top: 0.5rem;
+}

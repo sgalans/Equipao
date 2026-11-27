@@ -6,7 +6,7 @@ import highlightStyles from '@/shared/ui/highlight.module.css'
 import page from '@/shared/ui/page.module.css'
 import { useTemporaryHighlight } from '@/shared/ui/useTemporaryHighlight'
 import { CreateLuggageForm } from './CreateLuggageForm'
-import { DuplicateLuggageButton } from './DuplicateLuggageButton'
+import { LuggageActions } from './LuggageActions'
 import { PackingProgress } from './PackingProgress'
 import { progressLabel } from './progressLabel'
 import styles from './LuggageListPage.module.css'
@@ -16,7 +16,7 @@ function firstLine(description: string): string {
   return description.split('\n')[0].trim()
 }
 
-/** Pantalla de inicio: crear, abrir y duplicar maletas. */
+/** Pantalla de inicio: crear y abrir maletas; ⋯ para duplicar, compartir o borrar. */
 export function LuggageListPage() {
   const { luggages } = useRepositories()
 
@@ -93,9 +93,12 @@ export function LuggageListPage() {
                   variant="compact"
                 />
               </Link>
-              <DuplicateLuggageButton
+              {/* ⋯: Duplicar, Compartir y Borrar (decisión del usuario). */}
+              <LuggageActions
                 luggage={luggage}
                 onDuplicated={(copy) => highlight(copy.id)}
+                // La lista se actualiza sola (useLiveQuery): nada que hacer.
+                onDeleted={() => {}}
               />
             </li>
           ))}

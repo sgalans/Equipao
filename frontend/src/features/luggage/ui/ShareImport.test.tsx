@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useNotifications } from '@/shared/ui/notifications/notificationStore'
+import { chooseLuggageAction } from '@/test/luggageActions'
 import { renderApp } from '@/test/render'
 import { createTestRepositories } from '@/test/repositories'
 
@@ -60,7 +61,7 @@ describe('Compartir una maleta', () => {
     })
     const { user } = await openMallorca()
 
-    await user.click(screen.getByRole('button', { name: 'Compartir maleta' }))
+    await chooseLuggageAction(user, 'Mallorca', 'Compartir')
 
     expect(share).toHaveBeenCalledWith({
       title: 'Mallorca',
@@ -72,7 +73,7 @@ describe('Compartir una maleta', () => {
     const { user } = await openMallorca()
     const writeText = vi.spyOn(navigator.clipboard, 'writeText')
 
-    await user.click(screen.getByRole('button', { name: 'Compartir maleta' }))
+    await chooseLuggageAction(user, 'Mallorca', 'Compartir')
 
     expect(writeText).toHaveBeenCalledWith(expectedText)
     expect(
@@ -87,7 +88,7 @@ describe('Compartir una maleta', () => {
     vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(
       new DOMException('no permitido', 'NotAllowedError'),
     )
-    await user.click(screen.getByRole('button', { name: 'Compartir maleta' }))
+    await chooseLuggageAction(user, 'Mallorca', 'Compartir')
     const dialog = await screen.findByRole('dialog', { name: 'Copia la lista' })
     return { user, dialog }
   }
