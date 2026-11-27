@@ -190,7 +190,7 @@ describe('Campo único "Buscar o crear"', () => {
   const field = () =>
     screen.getByRole('searchbox', { name: 'Buscar o crear artículos' })
   const createButton = () =>
-    screen.getByRole('button', { name: 'Crear artículo' })
+    screen.getByRole('button', { name: /como artículo$/ })
 
   it('escribir filtra sin distinguir tildes, y avisa si no hay resultados', async () => {
     const { user } = await openCatalog(async (repos) => {
@@ -207,12 +207,16 @@ describe('Campo único "Buscar o crear"', () => {
     expect(
       screen.getByText('Ningún artículo coincide con «zzz».'),
     ).toBeInTheDocument()
-    // Sin fila "Crear «X»" (decisión de producto): se crea con el "+".
-    // (Solo "Crear «X» como compartimento", que es otra cosa.)
-    expect(screen.queryByText(/^Crear «zzz»$/)).not.toBeInTheDocument()
+    // Con un nombre nuevo, las dos formas de crearlo, una al lado de otra.
+    expect(
+      screen.getByRole('button', { name: 'Crear «zzz» como artículo' }),
+    ).toHaveTextContent('Artículo')
+    expect(
+      screen.getByRole('button', { name: 'Crear «zzz» como compartimento' }),
+    ).toHaveTextContent('Compartimento')
   })
 
-  it('"+" crea el artículo, vacía el campo y mantiene el foco', async () => {
+  it('"+ Artículo" crea el artículo, vacía el campo y mantiene el foco', async () => {
     const { user, repositories } = await openCatalog()
 
     await user.type(field(), 'Toalla')
@@ -237,24 +241,46 @@ describe('Campo único "Buscar o crear"', () => {
     expect(field()).toHaveValue('Toalla')
   })
 
-  it('si el nombre ya existe, "+" lo señala y avisa en vez de duplicarlo', async () => {
-    const { user, repositories } = await openCatalog(async (repos) => {
+  it('si el nombre ya existe, no se puede crear (atenuados): la lista ya lo muestra', async () => {
+    const { user } = await openCatalog(async (repos) => {
       await repos.items.create({ name: 'Cámara' })
     })
 
     await user.type(field(), 'camara')
-    await user.click(createButton())
 
-    expect(
-      await screen.findByText('«Cámara» ya está en tu catálogo.'),
-    ).toBeInTheDocument()
-    expect(await repositories.items.list()).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'Artículo' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Compartimento' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /^Cámara,/ })).toBeInTheDocument()
   })
 
-  it('"+" está desactivado con el campo vacío', async () => {
+  it('con el campo vacío los botones de crear se ven, pero desactivados (la lista no salta al escribir)', async () => {
     await openCatalog()
 
-    expect(createButton()).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Artículo' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Compartimento' })).toBeDisabled()
+  })
+
+  it('la ayuda de qué es un compartimento sale solo si aún no tienes ninguno', async () => {
+    const { user } = await openCatalog()
+
+    await user.type(field(), 'Mochila')
+    expect(
+      screen.getByText(
+        'Compartimento: contenedor para meter artículos, como un neceser, una mochila o un maletín.',
+      ),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Crear «Mochila» como compartimento',
+      }),
+    )
+    await user.type(field(), 'Riñonera')
+    expect(
+      screen.queryByText(
+        'Compartimento: contenedor para meter artículos, como un neceser, una mochila o un maletín.',
+      ),
+    ).toBeNull()
   })
 })
 

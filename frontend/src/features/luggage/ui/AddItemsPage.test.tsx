@@ -41,7 +41,7 @@ const addPage = (id: string) => `/luggages/${id}/add-items`
 const field = () =>
   screen.getByRole('searchbox', { name: 'Buscar o crear artículos' })
 const createButton = () =>
-  screen.getByRole('button', { name: 'Crear artículo' })
+  screen.getByRole('button', { name: /como artículo$/ })
 
 describe('Llegar a "Añadir artículos"', () => {
   it('"+ Añadir artículos" de la maleta lleva aquí y "‹ Maleta" vuelve a ella', async () => {
@@ -176,14 +176,12 @@ describe('Buscar o crear', () => {
     expect(screen.getByRole('checkbox', { name: /^Cámara/ })).toBeEnabled()
   })
 
-  it('"+" con un nombre nuevo crea el artículo y lo AÑADE a la maleta; se queda aquí', async () => {
+  it('"+ Artículo" con un nombre nuevo crea el artículo y lo AÑADE a la maleta; se queda aquí', async () => {
     const { user, repositories, luggage, router } = await setup(addPage)
 
     await user.type(await screen.findByRole('searchbox'), 'Bañador')
     expect(
-      screen.getByText(
-        'Ningún artículo coincide con «Bañador». Toca + para crearlo.',
-      ),
+      screen.getByText('Ningún artículo coincide con «Bañador».'),
     ).toBeInTheDocument()
     await user.click(createButton())
 
@@ -224,30 +222,22 @@ describe('Buscar o crear', () => {
     expect(added.compartmentId).toBe(kitId)
   })
 
-  it('si ya existe en el catálogo, no lo duplica: lo marca', async () => {
-    const { user, repositories } = await setup(addPage)
-
-    await user.type(await screen.findByRole('searchbox'), 'toalla')
-    await user.click(createButton())
-
-    expect(screen.getByRole('checkbox', { name: /^Toalla/ })).toBeChecked()
-    expect(
-      screen.getByText('«Toalla» ya estaba en tu catálogo: marcado.'),
-    ).toBeInTheDocument()
-    expect(await repositories.items.list()).toHaveLength(3)
-  })
-
-  it('si ya está en la maleta, lo dice', async () => {
+  it('con un nombre que ya existe no se puede crear (atenuados): se elige en la lista', async () => {
     const { user } = await setup(addPage, async (repos, luggageId) => {
       await putInLuggage(repos, luggageId, 'Cepillo')
     })
 
-    await user.type(await screen.findByRole('searchbox'), 'cepillo')
-    await user.click(createButton())
+    await user.type(await screen.findByRole('searchbox'), 'toalla')
+    expect(screen.getByRole('button', { name: 'Artículo' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Compartimento' })).toBeDisabled()
+    expect(screen.getByRole('checkbox', { name: /^Toalla/ })).toBeEnabled()
 
+    // Si ya está en la maleta, la fila lo dice.
+    await user.clear(field())
+    await user.type(field(), 'cepillo')
     expect(
-      screen.getByText('«Cepillo» ya está en esta maleta.'),
-    ).toBeInTheDocument()
+      screen.getByRole('checkbox', { name: 'Cepillo, Ya en la maleta' }),
+    ).toBeDisabled()
   })
 
   it('Intro NUNCA crea: el campo solo busca', async () => {
@@ -392,6 +382,10 @@ describe('Compartimentos en "Añadir artículos"', () => {
       }),
     ).toBeDisabled()
     await user.type(field(), 'Riñonera')
+    // Solo "+ Artículo" (a todo el ancho): no se ofrece crear compartimentos.
+    expect(
+      screen.getByRole('button', { name: 'Crear «Riñonera» como artículo' }),
+    ).toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: /como compartimento/ }),
     ).not.toBeInTheDocument()

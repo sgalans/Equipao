@@ -5,11 +5,10 @@ import { isSameItemName } from '@/features/items/domain/itemName'
 import { normalizeForSearch } from '@/features/items/domain/search'
 import { CatalogRow } from '@/features/items/ui/CatalogRow'
 import { CatalogSections } from '@/features/items/ui/CatalogSections'
-import { CreateAsCompartment } from '@/features/items/ui/CreateAsCompartment'
+import { CreateChoice } from '@/features/items/ui/CreateChoice'
 import { useRepositories } from '@/shared/di/repositories'
 import { DuplicateError } from '@/shared/domain/errors'
 import buttons from '@/shared/ui/buttons.module.css'
-import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
 import {
   reportError,
   useNotifications,
@@ -36,7 +35,7 @@ export const COMPARTMENT_PARAM = 'compartment'
  * También es el único sitio para añadir COMPARTIMENTOS (decisión del
  * usuario: se quitó "Nuevo compartimento" de la maleta): los contenedores
  * del catálogo salen en su sección, arriba, y elegirlos los añade como
- * compartimentos; uno nuevo se crea con "Crear «X» como compartimento".
+ * compartimentos; uno nuevo se crea con "+ Compartimento" (CreateChoice).
  */
 export function AddItemsPage() {
   const { luggageId = '' } = useParams<{ luggageId: string }>()
@@ -122,49 +121,26 @@ export function AddItemsPage() {
     })
   }
 
-  /** Marca un artículo (sin desmarcarlo si ya lo estaba). */
-  function select(itemId: string) {
-    setSelected((current) => new Set(current).add(itemId))
-  }
-
   /**
-   * "+" (decisión de producto):
-   * - nombre nuevo → crea el artículo Y LO AÑADE a la maleta (o al
-   *   compartimento de destino) al momento; se queda en esta pantalla para
-   *   seguir añadiendo (la fila pasa a "Ya en la maleta");
-   * - ya existe en el catálogo → no se duplica: se marca;
-   * - ya está en la maleta → se avisa.
+   * "+ Artículo" (solo con un nombre NUEVO: con uno que ya existe, la lista
+   * filtrada ya lo muestra para elegirlo): crea el artículo Y LO AÑADE a la
+   * maleta (o al compartimento de destino) al momento, y se queda en esta
+   * pantalla para seguir añadiendo (la fila pasa a "Ya en la maleta").
    */
-  async function create() {
-    if (name === '') return
+  async function createItem() {
+    if (name === '' || exactMatch) return
     try {
-      if (exactMatch) {
-        if (data?.inLuggage.has(exactMatch.id)) {
-          setMessage(`«${exactMatch.name}» ya está en esta maleta.`)
-          return
-        }
-        if (exactMatch.isContainer && targetCompartment) {
-          setMessage(
-            `«${exactMatch.name}» es un compartimento: no puede ir dentro de otro.`,
-          )
-          return
-        }
-        select(exactMatch.id)
-        setMessage(`«${exactMatch.name}» ya estaba en tu catálogo: marcado.`)
-      } else {
-        // Caso de uso "busca o crea, y añade" (capa application).
-        await addItemByName(
-          repositories,
-          luggage.id,
-          name,
-          targetCompartment?.id ?? null,
-        )
-        setMessage(
-          `«${name}» creado y añadido a «${targetCompartment?.name ?? luggage.name}».`,
-        )
-      }
-      // Se vacía el campo (y con él el filtro): se ve la lista entera, con
-      // el artículo marcado.
+      // Caso de uso "busca o crea, y añade" (capa application).
+      await addItemByName(
+        repositories,
+        luggage.id,
+        name,
+        targetCompartment?.id ?? null,
+      )
+      setMessage(
+        `«${name}» creado y añadido a «${targetCompartment?.name ?? luggage.name}».`,
+      )
+      // Se vacía el campo (y con él el filtro): se ve la lista entera.
       setQuery('')
     } catch (error) {
       // Otra pestaña pudo crearlo justo antes: el repositorio lo impide.
@@ -175,9 +151,9 @@ export function AddItemsPage() {
     }
   }
 
-  /** "Crear «X» como compartimento": crea el contenedor y lo añade ya. */
+  /** "+ Compartimento": crea el contenedor y lo añade ya a la maleta. */
   async function createCompartment() {
-    if (name === '') return
+    if (name === '' || exactMatch) return
     try {
       await compartments.create({ luggageId: luggage.id, name })
       setMessage(`«${name}» creado y añadido como compartimento.`)
@@ -241,7 +217,7 @@ export function AddItemsPage() {
 
       <form
         className={styles.field}
-        // Intro no crea (como en el catálogo): solo el botón "+".
+        // Intro no crea (como en el catálogo): solo los botones de crear.
         onSubmit={(event) => event.preventDefault()}
       >
         <label htmlFor={searchId} className="visually-hidden">
@@ -262,42 +238,30 @@ export function AddItemsPage() {
           autoCorrect="off"
           maxLength={100}
         />
-        <button
-          type="button"
-          className={buttons.iconPrimary}
-          aria-label="Crear artículo"
-          title="Crear artículo"
-          disabled={name === ''}
-          // Sin esto, en iOS el toque quita el foco del campo y se cierra
-          // el teclado antes de crear.
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => void create()}
-        >
-          <PlusIcon />
-        </button>
       </form>
+      {/* Siempre visibles (atenuados sin un nombre nuevo): la lista no salta. */}
+      <CreateChoice
+        name={name}
+        canCreate={name !== '' && !exactMatch}
+        onCreateItem={() => void createItem()}
+        // Desde un compartimento, solo "Artículo": uno no va dentro de otro.
+        onCreateCompartment={
+          targetCompartment ? undefined : () => void createCompartment()
+        }
+        showHelp={!data.catalog.some((item) => item.isContainer)}
+      />
       {/* role="status": se anuncia sin interrumpir. Hueco reservado para que
           la lista no "salte" al aparecer el mensaje. */}
       <p role="status" className={styles.message}>
         {message}
       </p>
-      {/* Desde un compartimento no: uno no puede ir dentro de otro. */}
-      {name !== '' && !exactMatch && !targetCompartment && (
-        <CreateAsCompartment
-          name={name}
-          onCreate={() => void createCompartment()}
-        />
-      )}
 
       {data.catalog.length === 0 ? (
         <p className={styles.empty}>
-          Aún no tienes artículos. Escribe arriba y toca + para crear el
-          primero.
+          Aún no tienes artículos. Escribe arriba para crear el primero.
         </p>
       ) : visible.length === 0 ? (
-        <p className={styles.empty}>
-          Ningún artículo coincide con «{name}». Toca + para crearlo.
-        </p>
+        <p className={styles.empty}>Ningún artículo coincide con «{name}».</p>
       ) : (
         <CatalogSections
           items={visible}

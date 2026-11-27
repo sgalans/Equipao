@@ -4,18 +4,14 @@ import { AddItemsDialog } from '@/features/luggage/ui/AddItemsDialog'
 import { useRepositories } from '@/shared/di/repositories'
 import { DuplicateError } from '@/shared/domain/errors'
 import buttons from '@/shared/ui/buttons.module.css'
-import { PlusIcon } from '@/shared/ui/icons/PlusIcon'
 import page from '@/shared/ui/page.module.css'
 import { useTemporaryHighlight } from '@/shared/ui/useTemporaryHighlight'
 import { isSameItemName } from '../domain/itemName'
 import { normalizeForSearch } from '../domain/search'
 import { CatalogRow } from './CatalogRow'
 import { CatalogSections } from './CatalogSections'
-import { CreateAsCompartment } from './CreateAsCompartment'
+import { CreateChoice } from './CreateChoice'
 import styles from './ItemsCatalogPage.module.css'
-
-/** Evita que tocar un botón quite el foco al campo (el teclado de iOS no se cierra). */
-const keepInputFocus = (event: React.MouseEvent) => event.preventDefault()
 
 /**
  * Pantalla /items: todos los artículos, para crearlos, renombrarlos o
@@ -77,15 +73,10 @@ export function ItemsCatalogPage() {
   )
   const canCreate = name !== '' && !exactMatch
 
-  async function create(isContainer = false) {
-    if (!canCreate) {
-      // Ya existe: se señala en vez de crear un duplicado.
-      if (exactMatch) {
-        highlight(exactMatch.id)
-        setMessage(`«${exactMatch.name}» ya está en tu catálogo.`)
-      }
-      return
-    }
+  // Solo se llama desde CreateChoice, que solo aparece con un nombre NUEVO:
+  // con uno que ya existe, la lista filtrada ya lo muestra.
+  async function create(isContainer: boolean) {
+    if (!canCreate) return
     setError(null)
     try {
       const item = await items.create({ name, isContainer })
@@ -133,7 +124,7 @@ export function ItemsCatalogPage() {
 
       <form
         className={styles.field}
-        // Intro no crea (decisión de producto): solo el botón "+".
+        // Intro no crea (decisión de producto): solo los botones de crear.
         onSubmit={(event) => event.preventDefault()}
       >
         <label htmlFor={inputId} className="visually-hidden">
@@ -155,18 +146,15 @@ export function ItemsCatalogPage() {
           autoCorrect="off"
           maxLength={100}
         />
-        <button
-          type="button"
-          className={buttons.iconPrimary}
-          aria-label="Crear artículo"
-          title="Crear artículo"
-          disabled={name === ''}
-          onMouseDown={keepInputFocus}
-          onClick={() => void create()}
-        >
-          <PlusIcon />
-        </button>
       </form>
+      {/* Siempre visibles (atenuados sin un nombre nuevo): la lista no salta. */}
+      <CreateChoice
+        name={name}
+        canCreate={canCreate}
+        onCreateItem={() => void create(false)}
+        onCreateCompartment={() => void create(true)}
+        showHelp={!catalog.some((item) => item.isContainer)}
+      />
 
       {error && (
         <p role="alert" className={styles.error}>
@@ -178,9 +166,6 @@ export function ItemsCatalogPage() {
       <p role="status" className={styles.message}>
         {message}
       </p>
-      {canCreate && !isSelecting && (
-        <CreateAsCompartment name={name} onCreate={() => void create(true)} />
-      )}
 
       {catalog.length === 0 && name === '' ? (
         <p className={styles.empty}>
