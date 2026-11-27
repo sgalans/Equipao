@@ -168,6 +168,7 @@ export function LuggageDetailPage() {
       <LuggageDescription
         // key: si cambia de maleta, el editor empieza de cero.
         key={luggage.id}
+        luggageId={luggage.id}
         value={luggage.description}
         onSave={async (description) => {
           await luggages.update(luggage.id, { description })

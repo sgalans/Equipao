@@ -18,6 +18,7 @@ import {
 } from '@/shared/ui/notifications/notificationStore'
 import type { Luggage } from '../domain/luggage'
 import { formatLuggageText, toLuggageText } from '../domain/luggageText'
+import { useExpandedDescriptions } from './expandedDescriptionsStore'
 import { usePackingOrder } from './packingOrderStore'
 
 interface LuggageActionsProps {
@@ -48,6 +49,7 @@ export function LuggageActions({
   const { luggages, quantities, compartments } = useRepositories()
   const show = useNotifications((state) => state.show)
   const showAllPacked = usePackingOrder((state) => state.show)
+  const forgetDescription = useExpandedDescriptions((state) => state.forget)
   const [isOpen, setIsOpen] = useState(false)
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
   const [isConfirmingReset, setIsConfirmingReset] = useState(false)
@@ -179,6 +181,7 @@ export function LuggageActions({
           // Lo oculto con el ojo de una maleta borrada no sirve de nada:
           // fuera de localStorage, para no acumular basura.
           showAllPacked(luggage.id)
+          forgetDescription(luggage.id)
           setIsConfirmingDelete(false)
           onDeleted()
         }}

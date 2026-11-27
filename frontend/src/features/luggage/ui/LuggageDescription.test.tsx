@@ -25,7 +25,7 @@ describe('Descripción de la maleta (detalle)', () => {
 
     await user.click(screen.getByRole('button', { name: 'Añadir descripción' }))
     expect(textarea()).toHaveFocus()
-    expect(textarea()).toHaveAttribute('maxlength', '500')
+    expect(textarea()).toHaveAttribute('maxlength', '1000')
     // Intro hace salto de línea (no guarda): es un campo de varias líneas.
     await user.keyboard('Japón{Enter}Hace frío')
     await user.tab() // salir del campo = guardar
@@ -84,5 +84,46 @@ describe('Descripción en la tarjeta del listado', () => {
     })
     expect(card).toHaveTextContent('Japón, 2 semanas')
     expect(card).not.toHaveTextContent('Llevar adaptador')
+  })
+
+  describe('larga: plegada por defecto, con "Ver más" que se recuerda', () => {
+    const long = ['Uno', 'Dos', 'Tres', 'Cuatro', 'Cinco'].join('\n')
+
+    it('se ve plegada y "Ver más" la abre; "Ver menos" la vuelve a plegar', async () => {
+      const { user } = await openLuggage(long)
+      const toggle = () =>
+        screen.getByRole('button', { name: /^Ver (más|menos)$/ })
+
+      // Plegada: no quita sitio a la lista hasta que se abre.
+      expect(toggle()).toHaveTextContent('Ver más')
+      expect(toggle()).toHaveAttribute('aria-expanded', 'false')
+
+      await user.click(toggle())
+      expect(toggle()).toHaveTextContent('Ver menos')
+      expect(toggle()).toHaveAttribute('aria-expanded', 'true')
+
+      await user.click(toggle())
+      expect(toggle()).toHaveTextContent('Ver más')
+    })
+
+    it('abrirla se recuerda al salir y volver a la maleta', async () => {
+      const { user, router, luggage } = await openLuggage(long)
+
+      await user.click(screen.getByRole('button', { name: 'Ver más' }))
+      await router.navigate('/')
+      await router.navigate(`/luggages/${luggage.id}`)
+
+      expect(
+        await screen.findByRole('button', { name: 'Ver menos' }),
+      ).toBeInTheDocument()
+    })
+
+    it('una descripción corta no lleva "Ver más"', async () => {
+      await openLuggage('Playa en julio')
+
+      expect(
+        screen.queryByRole('button', { name: /^Ver (más|menos)$/ }),
+      ).not.toBeInTheDocument()
+    })
   })
 })

@@ -11,7 +11,7 @@ async function openCatalog(arrange?: (repos: Repos) => Promise<void>) {
   const repositories = createTestRepositories()
   await arrange?.(repositories)
   const rendered = renderApp('/items', repositories)
-  await screen.findByRole('heading', { name: 'Artículos', level: 1 })
+  await screen.findByRole('heading', { name: 'Catálogo', level: 1 })
   return { ...rendered, repositories, user: userEvent.setup() }
 }
 
@@ -28,17 +28,17 @@ async function useInLuggage(repos: Repos, itemId: string, luggageName: string) {
 }
 
 describe('Acceso al catálogo', () => {
-  it('"Artículos" en la cabecera del inicio lleva al catálogo, y se vuelve con "‹ Mis maletas"', async () => {
+  it('"Catálogo" en la cabecera del inicio lleva al catálogo, y se vuelve con "‹ Mis maletas"', async () => {
     const user = userEvent.setup()
     const { router } = renderApp('/')
 
-    await user.click(screen.getByRole('link', { name: 'Artículos' }))
+    await user.click(screen.getByRole('link', { name: 'Catálogo' }))
 
     // Primero la pantalla y DESPUÉS la URL: el catálogo se carga bajo
     // demanda (code splitting) y React Router no cambia de pantalla ni de URL
     // hasta tenerlo descargado (así nunca hay una pantalla en blanco).
     expect(
-      await screen.findByRole('heading', { name: 'Artículos', level: 1 }),
+      await screen.findByRole('heading', { name: 'Catálogo', level: 1 }),
     ).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/items')
 

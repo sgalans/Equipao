@@ -103,7 +103,8 @@ export function ItemsCatalogPage() {
   return (
     <section>
       <header className={page.header}>
-        <h1 className={page.title}>Artículos</h1>
+        {/* "Catálogo" (decisión del usuario), como el botón que lleva aquí. */}
+        <h1 className={page.title}>Catálogo</h1>
         {catalog.length > 0 && (
           <button
             type="button"

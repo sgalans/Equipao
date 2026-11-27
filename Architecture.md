@@ -1,4 +1,4 @@
-Luggage(id: uuid, name, description)              -- description: '' = sin descripción (máx. 500)
+Luggage(id: uuid, name, description)              -- description: '' = sin descripción (máx. 1000, DESCRIPTION_MAX_LENGTH)
     createdAt, updatedAt
 
 Item(id: uuid, name, isContainer)                  -- isContainer: Neceser, Mochila… (se marca; no cualquier artículo)

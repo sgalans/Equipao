@@ -1,11 +1,23 @@
 import { z } from 'zod'
 import { entityBaseShape, NameSchema } from '@/shared/domain/schemas'
 
+/**
+ * Máximo de la descripción. Una sola constante para el esquema y los campos
+ * de texto (maxLength): si estuviera repetida, el campo podría dejar escribir
+ * más de lo que luego se puede guardar. 1000 (antes 500, decisión del
+ * usuario: para las instrucciones de "Maleta básica"); subirlo no necesita
+ * migración (lo que ya hay sigue siendo válido).
+ */
+export const DESCRIPTION_MAX_LENGTH = 1000
+
 /** Descripción opcional: notas de la maleta, con saltos de línea. */
 export const DescriptionSchema = z
   .string()
   .trim()
-  .max(500, 'La descripción no puede superar los 500 caracteres')
+  .max(
+    DESCRIPTION_MAX_LENGTH,
+    `La descripción no puede superar los ${DESCRIPTION_MAX_LENGTH} caracteres`,
+  )
 
 /** Maleta: la entidad principal de la app. */
 const luggageFields = {

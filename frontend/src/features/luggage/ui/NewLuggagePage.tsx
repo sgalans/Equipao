@@ -5,6 +5,7 @@ import { useRepositories } from '@/shared/di/repositories'
 import buttons from '@/shared/ui/buttons.module.css'
 import page from '@/shared/ui/page.module.css'
 import { SelectField } from '@/shared/ui/SelectField'
+import { DESCRIPTION_MAX_LENGTH } from '../domain/luggage'
 import styles from './NewLuggagePage.module.css'
 
 /** Valor de "Empezar con" para una maleta vacía (los <option> son strings). */
@@ -48,7 +49,7 @@ export function NewLuggagePage() {
     try {
       const changes = { name, description: description.trim() }
       // La descripción es la que se escribe aquí (vacía = ninguna): la de la
-      // plantilla ("Plantilla base: duplícala…") no tiene sentido en un viaje.
+      // plantilla ("Plantilla base: crea una…") no tiene sentido en un viaje.
       const luggage =
         template === EMPTY
           ? await luggages.create(changes)
@@ -94,7 +95,7 @@ export function NewLuggagePage() {
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             placeholder="Notas: destino, clima, recordatorios…"
-            maxLength={500}
+            maxLength={DESCRIPTION_MAX_LENGTH}
             rows={3}
           />
         </div>
