@@ -1,6 +1,7 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import buttons from './buttons.module.css'
 import styles from './InlineEditInput.module.css'
+import { useAutoGrow } from './useAutoGrow'
 
 interface InlineEditInputProps {
   initialValue?: string
@@ -46,20 +47,8 @@ export function InlineEditInput({
   // terminar dos veces (p. ej. cancelar con Escape y que el blur guarde).
   // jsdom no reproduce ese blur: lo cubrirían los tests E2E.
   const isFinishedRef = useRef(false)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-
-  // Varias líneas: el campo CRECE con el texto (decisión del usuario: con
-  // una descripción larga, editar en una ventanita de 3 líneas era muy
-  // incómodo). Se ajusta la altura a la del contenido en cada cambio, antes
-  // de pintar (useLayoutEffect: sin un parpadeo con la altura vieja). La
-  // propiedad CSS `field-sizing: content` lo haría sola, pero Safari aún no
-  // la admite. jsdom no mide alturas: esto se comprueba en el iPhone.
-  useLayoutEffect(() => {
-    const textarea = textareaRef.current
-    if (!textarea) return
-    textarea.style.height = 'auto'
-    textarea.style.height = `${textarea.scrollHeight}px`
-  }, [draft])
+  // Varias líneas: el campo crece con el texto (ver useAutoGrow).
+  const textareaRef = useAutoGrow(draft)
 
   function finish(value: string | null) {
     if (isFinishedRef.current) return

@@ -27,7 +27,9 @@
   font: inherit;
   font-size: max(1rem, 16px);
   font-weight: 400;
-  resize: vertical;
+  /* Crece solo con el texto (useAutoGrow): ni asa ni scroll interno. */
+  resize: none;
+  overflow: hidden;
 }
 
 .field input {

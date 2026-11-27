@@ -5,6 +5,7 @@ import { useRepositories } from '@/shared/di/repositories'
 import buttons from '@/shared/ui/buttons.module.css'
 import page from '@/shared/ui/page.module.css'
 import { SelectField } from '@/shared/ui/SelectField'
+import { useAutoGrow } from '@/shared/ui/useAutoGrow'
 import { DESCRIPTION_MAX_LENGTH } from '../domain/luggage'
 import styles from './NewLuggagePage.module.css'
 
@@ -33,6 +34,8 @@ export function NewLuggagePage() {
   const templateId = useId()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  // Crece con el texto, como al editar la descripción en la maleta.
+  const descriptionRef = useAutoGrow(description)
   const [template, setTemplate] = useState(EMPTY)
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -91,6 +94,7 @@ export function NewLuggagePage() {
             Descripción <span className={styles.optional}>(opcional)</span>
           </label>
           <textarea
+            ref={descriptionRef}
             id={descriptionId}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
