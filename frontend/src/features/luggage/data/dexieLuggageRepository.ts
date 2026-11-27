@@ -4,7 +4,11 @@ import { EntityNotFoundError } from '@/shared/domain/errors'
 import { LuggageSchema, NewLuggageSchema } from '../domain/luggage'
 import type { LuggageRepository } from '../domain/luggageRepository'
 import { copyName } from '../domain/copyName'
-import { isFullyPacked, packingProgress } from '../domain/packing'
+import {
+  hasAnythingPacked,
+  isFullyPacked,
+  packingProgress,
+} from '../domain/packing'
 import { containerItemIds } from './containers'
 
 /**
@@ -61,13 +65,15 @@ export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
       const compartmentsByLuggage = groupBy(compartments, (c) => c.luggageId)
 
       // La regla de progreso es la MISMA que en el detalle (packing.ts).
-      return luggages.map((luggage) => ({
-        ...luggage,
-        ...packingProgress(
-          quantitiesByLuggage.get(luggage.id) ?? [],
-          compartmentsByLuggage.get(luggage.id) ?? [],
-        ),
-      }))
+      return luggages.map((luggage) => {
+        const entries = quantitiesByLuggage.get(luggage.id) ?? []
+        const compartmentList = compartmentsByLuggage.get(luggage.id) ?? []
+        return {
+          ...luggage,
+          ...packingProgress(entries, compartmentList),
+          hasPacked: hasAnythingPacked(entries, compartmentList),
+        }
+      })
     },
 
     getById(id) {
@@ -81,7 +87,7 @@ export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
       return luggage
     },
 
-    duplicate(id) {
+    duplicate(id, overrides = {}) {
       // Una maleta y sus líneas (compartimentos incluidos: son líneas
       // contenedor) forman un AGREGADO (DDD) con la maleta como raíz: se
       // copian juntas o no se copia nada.
@@ -94,9 +100,10 @@ export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
 
           const copy = LuggageSchema.parse({
             ...newEntityBase(),
-            name: copyName(source.name),
-            // La descripción es parte de la "plantilla": se copia.
-            description: source.description,
+            name: overrides.name ?? copyName(source.name),
+            // La descripción es parte de la "plantilla": se copia (salvo que
+            // se indique otra, p. ej. desde "Nueva maleta").
+            description: overrides.description ?? source.description,
           })
 
           // Cada línea se copia ENTERA (`position` incluida: mismo orden
@@ -145,6 +152,30 @@ export function createDexieLuggageRepository(db: AppDb): LuggageRepository {
         await db.luggages.put(updated)
         return updated
       })
+    },
+
+    resetPacked(id) {
+      return db.transaction(
+        'rw',
+        [db.luggages, db.itemQuantities],
+        async () => {
+          if (!(await db.luggages.get(id))) {
+            throw new EntityNotFoundError('Luggage', id)
+          }
+          // Todas las líneas de la maleta, también las de los compartimentos
+          // (su "listo" es su línea guardada). Solo se toca lo que cambia:
+          // así updatedAt sigue diciendo la verdad.
+          const now = nowIso()
+          await db.itemQuantities
+            .where('luggageId')
+            .equals(id)
+            .modify((line) => {
+              if (line.nAlreadyPacked === 0) return
+              line.nAlreadyPacked = 0
+              line.updatedAt = now
+            })
+        },
+      )
     },
 
     remove(id) {

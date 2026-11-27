@@ -10,7 +10,32 @@
 /** "Maleta básica": plantilla general para duplicar en cada viaje. */
 export const BASIC_LUGGAGE = {
   name: 'Maleta básica',
-  description: 'Plantilla base: duplícala (⧉) para cada viaje.',
+  // Instrucciones de uso dentro de la propia maleta (decisión del usuario):
+  // ayuda en contexto, sin pantallas de bienvenida. La PRIMERA línea es la
+  // única que se ve en la tarjeta del listado: invita a abrirla. Solo
+  // trucos que no se ven a simple vista. Máx. 1000 caracteres (hay un test).
+  // "Nueva maleta" → "Empezar con" no copia la descripción (la de la copia
+  // es la que se escribe), así los trucos no acaban en cada viaje.
+  description: [
+    'Instrucciones básicas de uso, ábreme :)',
+    '',
+    'Esta maleta sirve de plantilla, ajústala a tu gusto: añadiendo, quitando o renombrando artículos y compartimentos.',
+    '',
+    'Crea tu primera maleta: «Mis maletas» → «Nueva maleta», y en «Empezar con» elige esta.',
+    '',
+    'Trucos:',
+    '• Toca la barra de progreso para ver todo lo que está listo.',
+    '• El ojo oculta los artículos y compartimentos listos sin mover nada.',
+    '• Toca un artículo para cambiar las unidades, renombrarlo o quitarlo.',
+    '• Arrastra usando ≡ para ordenar (o ↑ ↓ al tocar un artículo).',
+    '• ⋯ → Compartir: manda la lista por WhatsApp.',
+    '• ⋯ → Reiniciar maleta: desmarca todo para reutilizarla.',
+    '• Los compartimentos (neceser, mochila…) guardan artículos y se pliegan solos al estar todo listo.',
+    '• Consulta todos tus artículos y compartimentos en el catálogo: «Mis maletas» → «Catálogo».',
+    '',
+    'Espero que esta aplicación te sea útil.',
+    '¡Feliz viaje!',
+  ].join('\n'),
   loose: [
     'DNI / Pasaporte',
     'Cartera',

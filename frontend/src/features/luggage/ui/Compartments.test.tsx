@@ -43,7 +43,7 @@ describe('Crear compartimentos', () => {
       screen.queryByRole('button', { name: 'Nuevo compartimento' }),
     ).not.toBeInTheDocument()
     expect(
-      screen.getByRole('link', { name: 'Añadir artículos' }),
+      screen.getByRole('link', { name: 'Añadir a la maleta' }),
     ).toBeInTheDocument()
   })
 })

@@ -76,6 +76,19 @@ export function packingProgress(
 }
 
 /**
+ * ¿Hay ALGO listo en la maleta (un artículo o un compartimento)? Decide si
+ * tiene sentido "Reiniciar maleta". No vale `progress.done > 0`: la barra
+ * cuenta bloques, y un compartimento sin marcar puede tener dentro
+ * artículos guardados.
+ */
+export function hasAnythingPacked(
+  entries: Counts[],
+  compartments: { isReady: boolean }[],
+): boolean {
+  return entries.some(isFullyPacked) || compartments.some((c) => c.isReady)
+}
+
+/**
  * ¿Está toda la maleta hecha? Es el `everythingPacked` del modelo, que por
  * diseño NO se guarda en la base de datos: se deriva (single source of truth).
  * Una maleta vacía no cuenta como hecha: no hay nada que celebrar.

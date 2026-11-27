@@ -1,6 +1,7 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
+import { chooseLuggageAction } from '@/test/luggageActions'
 import { renderApp } from '@/test/render'
 import { createTestRepositories } from '@/test/repositories'
 
@@ -132,7 +133,7 @@ describe('Asa para arrastrar', () => {
       screen.getByRole('button', { name: 'Ordenar B' }),
     ).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Seleccionar' }))
+    await chooseLuggageAction(user, 'Grande', 'Seleccionar artículos')
     expect(
       screen.queryByRole('button', { name: /^Ordenar/ }),
     ).not.toBeInTheDocument()
@@ -179,7 +180,7 @@ describe('Ordenar compartimentos', () => {
       screen.getByRole('button', { name: 'Ordenar Neceser' }),
     ).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Seleccionar' }))
+    await chooseLuggageAction(user, 'Grande', 'Seleccionar artículos')
     expect(
       screen.queryByRole('button', { name: 'Ordenar Neceser' }),
     ).not.toBeInTheDocument()

@@ -109,3 +109,39 @@ describe('ItemQuantityRepository.addMany', () => {
     ).rejects.toBeInstanceOf(ConsistencyError)
   })
 })
+
+describe('ItemQuantityRepository.addManyIntoNewCompartment', () => {
+  it('añade el contenedor como compartimento y mete dentro lo demás, en una operación', async () => {
+    const { items, quantities, compartments, luggage, paste, towel } =
+      await setup()
+    const bag = await items.create({ name: 'Mochila', isContainer: true })
+
+    await quantities.addManyIntoNewCompartment(
+      luggage.id,
+      [bag.id, paste.id, towel.id],
+      bag.id,
+    )
+
+    const [compartment] = await compartments.listByLuggage(luggage.id)
+    expect(compartment?.name).toBe('Mochila')
+    const lines = await quantities.listByLuggage(luggage.id)
+    const inside = lines.filter((l) => l.compartmentId === compartment?.id)
+    expect(inside.map((l) => l.itemId).sort()).toEqual(
+      [paste.id, towel.id].sort(),
+    )
+  })
+
+  it('si el destino no es un contenedor de la lista, ConsistencyError y no añade nada', async () => {
+    const { quantities, luggage, paste, towel } = await setup()
+
+    await expect(
+      quantities.addManyIntoNewCompartment(
+        luggage.id,
+        [paste.id, towel.id],
+        towel.id,
+      ),
+    ).rejects.toThrow(ConsistencyError)
+    // Solo sigue el Cepillo del setup: todo o nada.
+    expect(await quantities.listByLuggage(luggage.id)).toHaveLength(1)
+  })
+})

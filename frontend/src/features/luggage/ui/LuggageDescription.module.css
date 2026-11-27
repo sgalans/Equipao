@@ -5,8 +5,13 @@
   margin: -0.5rem 0 1rem;
 }
 
-.text {
+/* Texto y su "Ver más / Ver menos", juntos a la izquierda del lápiz. */
+.body {
   flex: 1;
+  min-width: 0;
+}
+
+.text {
   margin: 0.625rem 0 0;
   color: var(--text-muted);
   /* pre-line: respeta los saltos de línea que escribió el usuario. */
@@ -23,7 +28,8 @@
 .textarea {
   display: block;
   width: 100%;
-  margin: -0.5rem 0 1rem;
+  /* Debajo van "Cancelar · Guardar" (con su propio aire, ver .multiline). */
+  margin: -0.5rem 0 0;
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
@@ -31,5 +37,31 @@
   color: var(--text);
   font: inherit;
   font-size: max(1rem, 16px);
-  resize: vertical;
+  /* Crece solo con el texto (InlineEditInput): ni asa de redimensionar ni
+     scroll dentro del campo; se desplaza la página. */
+  resize: none;
+  overflow: hidden;
+}
+
+/* Plegada: solo las primeras 3 líneas (COLLAPSED_LINES), con "…".
+   line-clamp con el -webkit- delante es lo que entiende Safari. */
+.collapsed {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+/* "Ver más / Ver menos": enlace discreto, con 44 px de zona táctil. */
+.toggle {
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
 }

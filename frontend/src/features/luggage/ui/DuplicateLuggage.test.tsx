@@ -1,11 +1,12 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
+import { chooseLuggageAction } from '@/test/luggageActions'
 import { renderApp } from '@/test/render'
 import { createTestRepositories } from '@/test/repositories'
 
 describe('Duplicar maleta desde el listado', () => {
-  it('cada maleta tiene su botón; la copia aparece la primera y empieza sin guardar', async () => {
+  it('⋯ → Duplicar: la copia aparece la primera y empieza sin guardar', async () => {
     const user = userEvent.setup()
     const repositories = createTestRepositories()
     const source = await repositories.luggages.create({ name: 'Mochila' })
@@ -19,7 +20,7 @@ describe('Duplicar maleta desde el listado', () => {
     const { router } = renderApp('/', repositories)
     await screen.findByRole('link', { name: 'Mochila, ¡Maleta lista!' })
 
-    await user.click(screen.getByRole('button', { name: 'Duplicar Mochila' }))
+    await chooseLuggageAction(user, 'Mochila', 'Duplicar')
 
     // La copia sale la primera (más reciente) y con su lista sin guardar.
     const copyLink = await screen.findByRole('link', {
@@ -35,16 +36,14 @@ describe('Duplicar maleta desde el listado', () => {
     ).toBeInTheDocument()
   })
 
-  it('el botón de cada fila duplica SU maleta', async () => {
+  it('el ⋯ de cada fila duplica SU maleta', async () => {
     const user = userEvent.setup()
     const repositories = createTestRepositories()
     await repositories.luggages.create({ name: 'Neceser' })
     await repositories.luggages.create({ name: 'Maleta finde' })
     renderApp('/', repositories)
 
-    await user.click(
-      await screen.findByRole('button', { name: 'Duplicar Neceser' }),
-    )
+    await chooseLuggageAction(user, 'Neceser', 'Duplicar')
 
     expect(
       await screen.findByRole('link', { name: 'Neceser (copia), Vacía' }),
@@ -52,5 +51,23 @@ describe('Duplicar maleta desde el listado', () => {
     expect(
       screen.queryByRole('link', { name: /^Maleta finde \(copia\)/ }),
     ).not.toBeInTheDocument()
+  })
+
+  it('desde dentro de la maleta, Duplicar abre la copia y lo dice', async () => {
+    const user = userEvent.setup()
+    const repositories = createTestRepositories()
+    const source = await repositories.luggages.create({ name: 'Mochila' })
+    const { router } = renderApp(`/luggages/${source.id}`, repositories)
+    await screen.findByRole('heading', { name: 'Mochila', level: 1 })
+
+    await chooseLuggageAction(user, 'Mochila', 'Duplicar')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Mochila (copia)', level: 1 }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('Copia creada: «Mochila (copia)».'),
+    ).toBeInTheDocument()
+    expect(router.state.location.pathname).not.toBe(`/luggages/${source.id}`)
   })
 })

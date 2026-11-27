@@ -1,27 +1,4 @@
-/*
- * Hoja inferior (como las de iOS): pegada abajo, a todo el ancho y con las
- * esquinas de arriba redondeadas. Se abre ENCIMA de la página, así que la
- * maleta de debajo no se mueve.
- */
-.sheet {
-  /* El <dialog> modal se centra por defecto: lo bajamos al borde inferior. */
-  margin: auto 0 0;
-  width: 100%;
-  max-width: 100%;
-  max-height: 80dvh;
-  overflow-y: auto;
-  padding: 0 1rem calc(1rem + env(safe-area-inset-bottom));
-  border: 0;
-  border-top: 1px solid var(--border);
-  border-radius: 1rem 1rem 0 0;
-  /* Colores propios: el <dialog> trae blanco y negro del navegador. */
-  background: var(--bg);
-  color: var(--text);
-}
-
-.sheet::backdrop {
-  background: rgb(0 0 0 / 0.5);
-}
+/* La hoja en sí (fondo, esquinas, cierre) es la común: sheet.module.css. */
 
 /* Título y "Cerrar" siempre visibles aunque la lista sea larga. */
 .header {

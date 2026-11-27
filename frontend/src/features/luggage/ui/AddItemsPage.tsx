@@ -14,13 +14,19 @@ import {
   useNotifications,
 } from '@/shared/ui/notifications/notificationStore'
 import page from '@/shared/ui/page.module.css'
+import { SelectField } from '@/shared/ui/SelectField'
 import { addItemByName } from '../application/addItemByName'
 import { addedSummary } from './addedSummary'
-import { AddItemsDialog } from './AddItemsDialog'
 import styles from './AddItemsPage.module.css'
+import { containersNote } from './containersNote'
 
 /** Parámetro de la URL con el compartimento de destino (desde su "+"). */
 export const COMPARTMENT_PARAM = 'compartment'
+
+/** Valores especiales de "Dónde" (los <option> solo admiten strings). */
+const LOOSE = ''
+/** "Mochila (compartimento nuevo)": un contenedor elegido en esta pantalla. */
+const NEW_PREFIX = 'new:'
 
 /**
  * Pantalla /luggages/:luggageId/add-items: la ÚNICA forma de añadir
@@ -29,8 +35,12 @@ export const COMPARTMENT_PARAM = 'compartment'
  * y crear los que no existan. Pantalla completa (no una hoja): en iOS el
  * teclado taparía casi entera una hoja inferior con buscador.
  *
- * ?compartment=<id> (desde el "+" de un compartimento): se añade ahí, sin
- * preguntar el destino.
+ * "Dónde" (decisión del usuario), en la barra de abajo junto al botón de
+ * añadir: un desplegable con "Suelto en la maleta" por defecto, los
+ * compartimentos de la maleta y los que se están eligiendo aquí ("Mochila
+ * (compartimento nuevo)"). Sin ventana emergente de confirmación.
+ * ?compartment=<id> (desde el "Añadir a X" de un compartimento): "Dónde"
+ * empieza en ese compartimento (y se puede cambiar).
  *
  * También es el único sitio para añadir COMPARTIMENTOS (decisión del
  * usuario: se quitó "Nuevo compartimento" de la maleta): los contenedores
@@ -49,8 +59,12 @@ export function AddItemsPage() {
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
   const [message, setMessage] = useState<string | null>(null)
-  const [isChoosingDestination, setIsChoosingDestination] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
+  // "Dónde" elegido a mano; null = el de por defecto (ver `destination`).
+  const [chosenDestination, setChosenDestination] = useState<string | null>(
+    null,
+  )
+  const destinationId = useId()
 
   // Todo en un solo useLiveQuery: llega junto, sin estados intermedios
   // incoherentes ("tearing"). undefined → cargando · luggage null → no existe.
@@ -112,6 +126,62 @@ export function AddItemsPage() {
   const backToLuggage = () =>
     navigate(`/luggages/${luggage.id}`, { replace: true })
 
+  const catalogById = new Map(data.catalog.map((item) => [item.id, item]))
+  const selectedContainers = [...selected]
+    .map((id) => catalogById.get(id))
+    .filter((item) => item?.isContainer === true)
+
+  // "Dónde": suelto, los compartimentos de la maleta y los contenedores
+  // elegidos aquí que aún no están en ella (tu idea: elegir "Mochila" y
+  // meter cosas dentro sin salir de la pantalla).
+  const destinationOptions = [
+    { value: LOOSE, label: 'Suelto en la maleta', name: luggage.name },
+    ...data.compartmentList.map((c) => ({
+      value: c.id,
+      label: c.name,
+      name: c.name,
+    })),
+    ...selectedContainers.flatMap((item) =>
+      item && !data.inLuggage.has(item.id)
+        ? [
+            {
+              value: `${NEW_PREFIX}${item.id}`,
+              // "(compartimento nuevo)": vale para cualquier nombre, sin
+              // líos de género ("Neceser (nuevo)", "Mochila (nueva)").
+              label: `${item.name} (compartimento nuevo)`,
+              name: item.name,
+            },
+          ]
+        : [],
+    ),
+  ]
+  // Valor efectivo, DERIVADO en el render (sin efectos que sincronicen
+  // estado): lo elegido si sigue siendo una opción (p. ej. si se desmarca la
+  // Mochila, su opción desaparece), si no, el de por defecto.
+  const defaultDestination = targetCompartment?.id ?? LOOSE
+  const destination = destinationOptions.some(
+    (o) => o.value === chosenDestination,
+  )
+    ? (chosenDestination as string)
+    : defaultDestination
+  const destinationOption = destinationOptions.find(
+    (o) => o.value === destination,
+  )
+  const destinationName = destinationOption?.name ?? luggage.name
+  const newContainerId = destination.startsWith(NEW_PREFIX)
+    ? destination.slice(NEW_PREFIX.length)
+    : null
+  // Un compartimento nunca va dentro de otro: si hay contenedores elegidos y
+  // el destino es un compartimento, ellos van a la maleta. Se avisa (si no,
+  // sorprende).
+  // (Los que "fallan": todos los elegidos salvo el propio destino nuevo.)
+  const containersGoingLoose =
+    destination === LOOSE
+      ? []
+      : selectedContainers.flatMap((item) =>
+          item && item.id !== newContainerId ? [item.name] : [],
+        )
+
   function toggleSelected(itemId: string) {
     setSelected((current) => {
       const next = new Set(current)
@@ -130,16 +200,23 @@ export function AddItemsPage() {
   async function createItem() {
     if (name === '' || exactMatch) return
     try {
-      // Caso de uso "busca o crea, y añade" (capa application).
-      await addItemByName(
-        repositories,
-        luggage.id,
-        name,
-        targetCompartment?.id ?? null,
-      )
-      setMessage(
-        `«${name}» creado y añadido a «${targetCompartment?.name ?? luggage.name}».`,
-      )
+      if (newContainerId) {
+        // El destino aún no existe (se crea al pulsar "Añadir"): se crea el
+        // artículo y se MARCA, para que entre con lo demás.
+        const item = await items.create({ name })
+        setSelected((current) => new Set(current).add(item.id))
+        setMessage(`«${name}» creado y marcado.`)
+      } else {
+        // Caso de uso "busca o crea, y añade" (capa application), al
+        // destino de "Dónde".
+        await addItemByName(
+          repositories,
+          luggage.id,
+          name,
+          destination === LOOSE ? null : destination,
+        )
+        setMessage(`«${name}» creado y añadido a «${destinationName}».`)
+      }
       // Se vacía el campo (y con él el filtro): se ve la lista entera.
       setQuery('')
     } catch (error) {
@@ -166,37 +243,26 @@ export function AddItemsPage() {
     }
   }
 
-  // Elegidos que son artículos normales (los contenedores no van "dentro"
-  // de nada: addMany los deja siempre como compartimentos de la maleta).
-  const catalogById = new Map(data.catalog.map((item) => [item.id, item]))
-  const hasRegularSelected = [...selected].some(
-    (id) => catalogById.get(id)?.isContainer === false,
-  )
-
   async function add() {
-    // Sin destino fijo y con compartimentos, se pregunta "¿dónde?". Sin
-    // compartimentos sería un paso inútil: van sueltos.
-    // Solo compartimentos elegidos: tampoco hay nada que preguntar.
-    if (
-      !targetCompartment &&
-      hasRegularSelected &&
-      data?.compartmentList.length
-    ) {
-      setIsChoosingDestination(true)
-      return
-    }
     setIsAdding(true)
     try {
-      const result = await quantities.addMany(
-        luggage.id,
-        [...selected],
-        targetCompartment?.id ?? null,
-      )
+      const ids = [...selected]
+      const result = newContainerId
+        ? await quantities.addManyIntoNewCompartment(
+            luggage.id,
+            ids,
+            newContainerId,
+          )
+        : await quantities.addMany(
+            luggage.id,
+            ids,
+            destination === LOOSE ? null : destination,
+          )
       show(
         addedSummary(
           result.added.length,
           result.skippedItemIds.length,
-          targetCompartment?.name ?? luggage.name,
+          destinationName,
         ),
       )
       await backToLuggage()
@@ -210,9 +276,8 @@ export function AddItemsPage() {
   return (
     <section>
       <header className={page.header}>
-        <h1 className={page.title}>
-          Añadir a «{targetCompartment?.name ?? luggage.name}»
-        </h1>
+        {/* Siempre la maleta: el destino exacto es "Dónde" (cambiable). */}
+        <h1 className={page.title}>Añadir a «{luggage.name}»</h1>
       </header>
 
       <form
@@ -244,10 +309,7 @@ export function AddItemsPage() {
         name={name}
         canCreate={name !== '' && !exactMatch}
         onCreateItem={() => void createItem()}
-        // Desde un compartimento, solo "Artículo": uno no va dentro de otro.
-        onCreateCompartment={
-          targetCompartment ? undefined : () => void createCompartment()
-        }
+        onCreateCompartment={() => void createCompartment()}
         showHelp={!data.catalog.some((item) => item.isContainer)}
       />
       {/* role="status": se anuncia sin interrumpir. Hueco reservado para que
@@ -272,25 +334,42 @@ export function AddItemsPage() {
             <CatalogRow
               key={item.id}
               item={item}
-              isExpanded={false}
-              onToggleExpanded={() => {}}
               selection={{
                 isSelected: selected.has(item.id),
                 onToggle: () => toggleSelected(item.id),
                 disabledReason: data.inLuggage.has(item.id)
                   ? 'Ya en la maleta'
-                  : // Desde el "Añadir" de un compartimento: otro
-                    // compartimento no puede ir dentro.
-                    item.isContainer && targetCompartment
-                    ? 'Es un compartimento'
-                    : undefined,
+                  : undefined,
               }}
             />
           )}
         />
       )}
 
+      {/* Barra fija abajo, al alcance del pulgar: "Dónde" y "Añadir", lo
+          último que se decide. */}
       <div className={styles.bar}>
+        <div className={styles.destination}>
+          <label htmlFor={destinationId}>Dónde</label>
+          {/* Desplegable compartido (SelectField): <select> nativo con
+              aspecto de campo y flecha ▾, que se vea que es un desplegable. */}
+          <SelectField
+            id={destinationId}
+            value={destination}
+            onChange={setChosenDestination}
+          >
+            {destinationOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </SelectField>
+        </div>
+        {containersGoingLoose.length > 0 && (
+          <p className={styles.note}>
+            {containersNote(containersGoingLoose, destinationName)}
+          </p>
+        )}
         <button
           type="button"
           className={buttons.primary}
@@ -298,21 +377,12 @@ export function AddItemsPage() {
           onClick={() => void add()}
         >
           {selected.size === 0
-            ? 'Selecciona artículos'
-            : `Añadir ${selected.size} a la maleta`}
+            ? 'Elige qué añadir'
+            : destination === LOOSE
+              ? `Añadir ${selected.size} a la maleta`
+              : `Añadir ${selected.size} a ${destinationName}`}
         </button>
       </div>
-
-      <AddItemsDialog
-        open={isChoosingDestination}
-        itemIds={[...selected]}
-        fixedLuggageId={luggage.id}
-        onCancel={() => setIsChoosingDestination(false)}
-        onAdded={() => {
-          setIsChoosingDestination(false)
-          void backToLuggage()
-        }}
-      />
     </section>
   )
 }

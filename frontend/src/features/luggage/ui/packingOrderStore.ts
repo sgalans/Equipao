@@ -80,19 +80,26 @@ export function isHiddenCompartment(
   )
 }
 
+/** Cuánto de lo hecho está oculto: decide cómo se ve el ojo. */
+export type HiddenState = 'none' | 'some' | 'all'
+
 /**
- * ¿Está oculto todo lo hecho? Decide el estado del ojo: tachado si sí. Sin
- * nada hecho no hay nada que ocultar (el botón no se muestra).
+ * Estado del ojo (decisión del usuario, tres estados):
+ * - 'none': nada oculto → ojo abierto, gris;
+ * - 'some': hay cosas ocultas, pero lo marcado DESPUÉS de tocar el ojo se
+ *   ve (la foto no lo incluía) → tachado, gris;
+ * - 'all': todo lo hecho está oculto → tachado, azul.
+ * Sin nada hecho no hay nada que ocultar (el botón no se muestra).
  */
-export function isAllDoneHidden(
+export function hiddenState(
   entries: LuggageEntry[],
   compartments: Compartment[],
   hidden: HiddenSnapshot | undefined,
-): boolean {
-  return (
-    hidden !== undefined &&
-    [...doneIds(entries, compartments)].every((id) => hidden.has(id))
-  )
+): HiddenState {
+  const done = [...doneIds(entries, compartments)]
+  const hiddenCount = done.filter((id) => hidden?.has(id)).length
+  if (hiddenCount === 0) return 'none'
+  return hiddenCount === done.length ? 'all' : 'some'
 }
 
 interface PackingOrderState {

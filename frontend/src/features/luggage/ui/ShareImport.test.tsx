@@ -1,7 +1,8 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useNotifications } from '@/shared/ui/notifications/notificationStore'
+import { chooseLuggageAction } from '@/test/luggageActions'
 import { renderApp } from '@/test/render'
 import { createTestRepositories } from '@/test/repositories'
 
@@ -60,21 +61,28 @@ describe('Compartir una maleta', () => {
     })
     const { user } = await openMallorca()
 
-    await user.click(screen.getByRole('button', { name: 'Compartir maleta' }))
+    await chooseLuggageAction(user, 'Mallorca', 'Compartir')
 
-    expect(share).toHaveBeenCalledWith({
-      title: 'Mallorca',
-      text: expectedText,
-    })
+    // waitFor: el texto se prepara al abrir el ⋯ (useLiveQuery, asíncrono).
+    // Si el test toca "Compartir" antes de que esté listo, la app lo calcula
+    // en ese momento y comparte un instante después (red de seguridad):
+    // sin esperar, el test fallaba a veces (flaky).
+    await waitFor(() =>
+      expect(share).toHaveBeenCalledWith({
+        title: 'Mallorca',
+        text: expectedText,
+      }),
+    )
   })
 
   it('sin hoja nativa, copia la lista y lo dice', async () => {
     const { user } = await openMallorca()
     const writeText = vi.spyOn(navigator.clipboard, 'writeText')
 
-    await user.click(screen.getByRole('button', { name: 'Compartir maleta' }))
+    await chooseLuggageAction(user, 'Mallorca', 'Compartir')
 
-    expect(writeText).toHaveBeenCalledWith(expectedText)
+    // waitFor: ver el test anterior (el texto se prepara de forma asíncrona).
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(expectedText))
     expect(
       await screen.findByText('Lista copiada. Pégala donde quieras.'),
     ).toBeInTheDocument()
@@ -87,7 +95,7 @@ describe('Compartir una maleta', () => {
     vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(
       new DOMException('no permitido', 'NotAllowedError'),
     )
-    await user.click(screen.getByRole('button', { name: 'Compartir maleta' }))
+    await chooseLuggageAction(user, 'Mallorca', 'Compartir')
     const dialog = await screen.findByRole('dialog', { name: 'Copia la lista' })
     return { user, dialog }
   }
@@ -148,12 +156,12 @@ describe('Compartir una maleta', () => {
 })
 
 describe('Importar una maleta', () => {
-  it('desde "Mis maletas" → pegar → vista previa → crea la maleta y la abre', async () => {
+  it('desde "Nueva maleta" → pegar → vista previa → crea la maleta y la abre', async () => {
     const repositories = createTestRepositories()
     const user = userEvent.setup()
-    const { router } = renderApp('/', repositories)
+    const { router } = renderApp('/luggages/new', repositories)
 
-    await user.click(await screen.findByRole('link', { name: 'Importar' }))
+    await user.click(await screen.findByRole('link', { name: 'Impórtala' }))
     const field = await screen.findByRole('textbox', {
       name: 'Pega aquí la lista',
     })

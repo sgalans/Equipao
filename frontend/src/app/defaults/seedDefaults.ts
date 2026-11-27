@@ -18,12 +18,14 @@ export const DEFAULTS_SEEDED_KEY = 'defaultsSeeded'
  *
  * Vive en `app/` (arranque de la app) y recibe la db y los repositorios por
  * parámetro (inyección de dependencias): así se prueba con una db aislada.
- * Devuelve si ha creado algo (útil para los tests).
+ * Devuelve el id de la "Maleta básica" que acaba de crear, o null si no ha
+ * creado nada: así el arranque puede mostrar sus instrucciones abiertas
+ * (estado de UI) sin que esta función sepa nada de la interfaz.
  */
 export async function seedDefaults(
   db: AppDb,
   repositories: Repositories,
-): Promise<boolean> {
+): Promise<string | null> {
   const { items, luggages, compartments, quantities } = repositories
 
   // Las llamadas a los repositorios abren sus propias transacciones; dentro
@@ -33,7 +35,7 @@ export async function seedDefaults(
     'rw',
     [db.meta, db.items, db.luggages, db.itemQuantities],
     async () => {
-      if (await db.meta.get(DEFAULTS_SEEDED_KEY)) return false
+      if (await db.meta.get(DEFAULTS_SEEDED_KEY)) return null
 
       // Catálogo: reutiliza lo que ya exista con ese nombre.
       const idByName = new Map<string, string>()
@@ -76,7 +78,7 @@ export async function seedDefaults(
         key: DEFAULTS_SEEDED_KEY,
         value: new Date().toISOString(),
       })
-      return true
+      return luggage.id
     },
   )
 }

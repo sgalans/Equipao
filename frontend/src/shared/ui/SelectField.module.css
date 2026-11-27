@@ -1,0 +1,35 @@
+/* El <select> con su flecha ▾ encima, a la derecha. */
+.wrap {
+  position: relative;
+  display: block;
+  flex: 1;
+  min-width: 0;
+}
+
+.select {
+  /* Sin el aspecto propio del navegador: el mismo en todos, con nuestra ▾. */
+  appearance: none;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 2.25rem 0 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  /* 16 px: si no, iOS hace zoom al tocarlo. */
+  font-size: max(1rem, 16px);
+  font-weight: 400;
+  text-overflow: ellipsis;
+}
+
+.chevron {
+  position: absolute;
+  top: 50%;
+  right: 0.625rem;
+  display: grid;
+  color: var(--text-muted);
+  transform: translateY(-50%);
+  /* Que el toque llegue al <select> de debajo. */
+  pointer-events: none;
+}

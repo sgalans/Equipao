@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 import { useNotifications } from '@/shared/ui/notifications/notificationStore'
+import { chooseLuggageAction } from '@/test/luggageActions'
 import { renderApp } from '@/test/render'
 import { createTestRepositories } from '@/test/repositories'
 
@@ -30,7 +31,7 @@ async function setup({ select = true } = {}) {
   await screen.findByRole('heading', { name: 'Mochila', level: 1 })
   const user = userEvent.setup()
   if (select) {
-    await user.click(screen.getByRole('button', { name: 'Seleccionar' }))
+    await chooseLuggageAction(user, 'Mochila', 'Seleccionar artículos')
   }
   return { repositories, luggage, kit, user }
 }
@@ -44,7 +45,7 @@ describe('Seleccionar dentro de una maleta', () => {
     // Las filas son casillas de selección (no empaquetan).
     expect(screen.getByRole('checkbox', { name: 'Cepillo' })).not.toBeChecked()
     expect(
-      screen.queryByRole('link', { name: 'Añadir artículos' }),
+      screen.queryByRole('link', { name: 'Añadir a la maleta' }),
     ).not.toBeInTheDocument()
     expect(
       screen.queryByRole('checkbox', { name: 'Neceser listo' }),
@@ -52,8 +53,9 @@ describe('Seleccionar dentro de una maleta', () => {
     expect(
       screen.queryByRole('button', { name: 'Añadir a Neceser' }),
     ).not.toBeInTheDocument()
+    // Ni el ⋯ de la maleta: en su sitio, "Cancelar".
     expect(
-      screen.queryByRole('button', { name: 'Borrar maleta' }),
+      screen.queryByRole('button', { name: 'Acciones de Mochila' }),
     ).not.toBeInTheDocument()
     // Sin nada marcado, las acciones están desactivadas.
     expect(screen.getByRole('button', { name: 'Mover…' })).toBeDisabled()
@@ -87,7 +89,9 @@ describe('Seleccionar dentro de una maleta', () => {
       await screen.findByText('Movidos 2 artículos a «Neceser».'),
     ).toBeInTheDocument()
     // Sale del modo selección y ahora están dentro del neceser.
-    expect(screen.getByRole('button', { name: 'Seleccionar' })).toBeVisible()
+    expect(
+      screen.getByRole('button', { name: 'Acciones de Mochila' }),
+    ).toBeVisible()
     // findBy: el aviso sale al terminar de guardar, y la lista se repinta un
     // instante después (useLiveQuery). Hay que esperar a la LISTA.
     expect(
@@ -178,19 +182,25 @@ describe('Seleccionar dentro de una maleta', () => {
     await user.click(screen.getByRole('button', { name: 'Cancelar' }))
 
     expect(
-      screen.getByRole('link', { name: 'Añadir artículos' }),
+      screen.getByRole('link', { name: 'Añadir a la maleta' }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Seleccionar' })).toBeVisible()
+    expect(
+      screen.getByRole('button', { name: 'Acciones de Mochila' }),
+    ).toBeVisible()
   })
 
-  it('con la maleta vacía no aparece "Seleccionar"', async () => {
+  it('con la maleta vacía, el ⋯ no ofrece "Seleccionar artículos"', async () => {
+    const user = userEvent.setup()
     const repositories = createTestRepositories()
     const empty = await repositories.luggages.create({ name: 'Vacía' })
     renderApp(`/luggages/${empty.id}`, repositories)
     await screen.findByRole('heading', { name: 'Vacía', level: 1 })
 
+    await user.click(screen.getByRole('button', { name: 'Acciones de Vacía' }))
+
+    const sheet = screen.getByRole('dialog', { name: 'Vacía' })
     expect(
-      screen.queryByRole('button', { name: 'Seleccionar' }),
+      within(sheet).queryByRole('button', { name: 'Seleccionar artículos' }),
     ).not.toBeInTheDocument()
   })
 })

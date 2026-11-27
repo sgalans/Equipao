@@ -4,6 +4,7 @@ import { AddItemsDialog } from '@/features/luggage/ui/AddItemsDialog'
 import { useRepositories } from '@/shared/di/repositories'
 import { DuplicateError } from '@/shared/domain/errors'
 import buttons from '@/shared/ui/buttons.module.css'
+import { SelectItemsIcon } from '@/shared/ui/icons/SelectItemsIcon'
 import page from '@/shared/ui/page.module.css'
 import { useTemporaryHighlight } from '@/shared/ui/useTemporaryHighlight'
 import { isSameItemName } from '../domain/itemName'
@@ -26,8 +27,6 @@ export function ItemsCatalogPage() {
   const [query, setQuery] = useState('')
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  // Acordeón: una sola fila desplegada a la vez (igual que en la maleta).
-  const [expandedId, setExpandedId] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const inputId = useId()
   // Artículo recién creado (o el que ya existía): se resalta un momento.
@@ -104,19 +103,21 @@ export function ItemsCatalogPage() {
   return (
     <section>
       <header className={page.header}>
-        <h1 className={page.title}>Artículos</h1>
+        {/* "Catálogo" (decisión del usuario), como el botón que lleva aquí. */}
+        <h1 className={page.title}>Catálogo</h1>
         {catalog.length > 0 && (
           <button
             type="button"
-            className={buttons.headerAction}
+            className={`${buttons.headerAction} ${styles.selectButton}`}
             onClick={() => {
               if (isSelecting) exitSelection()
-              else {
-                setIsSelecting(true)
-                setExpandedId(null)
-              }
+              else setIsSelecting(true)
             }}
           >
+            {/* El mismo icono que "Seleccionar artículos" en el ⋯ de la
+                maleta (decisión del usuario): una sola imagen para la misma
+                acción. "Cancelar", sin icono. */}
+            {!isSelecting && <SelectItemsIcon />}
             {isSelecting ? 'Cancelar' : 'Seleccionar'}
           </button>
         )}
@@ -183,13 +184,7 @@ export function ItemsCatalogPage() {
             <CatalogRow
               key={item.id}
               item={item}
-              isExpanded={expandedId === item.id}
               isHighlighted={highlightedId === item.id}
-              onToggleExpanded={() =>
-                setExpandedId((current) =>
-                  current === item.id ? null : item.id,
-                )
-              }
               selection={
                 isSelecting
                   ? {
