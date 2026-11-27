@@ -16,6 +16,10 @@ export const BASIC_LUGGAGE = {
   // trucos que no se ven a simple vista. Máx. 1000 caracteres (hay un test).
   // "Nueva maleta" → "Empezar con" no copia la descripción (la de la copia
   // es la que se escribe), así los trucos no acaban en cada viaje.
+  // OJO: cambiar este texto solo afecta a instalaciones NUEVAS. A quien ya
+  // tiene la app le llegaron con la migración v8 (BASIC_DESCRIPTION_V8 en
+  // db.ts, copia congelada); para hacerle llegar un texto nuevo haría falta
+  // otra migración del mismo estilo.
   description: [
     'Instrucciones básicas de uso, ábreme :)',
     '',
