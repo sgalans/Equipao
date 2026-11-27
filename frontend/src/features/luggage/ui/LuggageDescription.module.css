@@ -28,7 +28,8 @@
 .textarea {
   display: block;
   width: 100%;
-  margin: -0.5rem 0 1rem;
+  /* Debajo van "Cancelar · Guardar" (con su propio aire, ver .multiline). */
+  margin: -0.5rem 0 0;
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
@@ -36,7 +37,10 @@
   color: var(--text);
   font: inherit;
   font-size: max(1rem, 16px);
-  resize: vertical;
+  /* Crece solo con el texto (InlineEditInput): ni asa de redimensionar ni
+     scroll dentro del campo; se desplaza la página. */
+  resize: none;
+  overflow: hidden;
 }
 
 /* Plegada: solo las primeras 3 líneas (COLLAPSED_LINES), con "…".

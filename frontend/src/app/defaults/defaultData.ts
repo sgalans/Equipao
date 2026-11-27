@@ -19,9 +19,9 @@ export const BASIC_LUGGAGE = {
   description: [
     'Instrucciones básicas de uso, ábreme :)',
     '',
-    'Crea tu primera maleta: en "Mis maletas" pulsa «Nueva maleta» y empieza con esta que ya tiene elementos básicos.',
-    '',
     'Esta maleta sirve de plantilla, ajustala a tu gusto: añadiendo, quitando o renombrando artículos y compartimentos',
+    '',
+    'Crea tu primera maleta: Mis maletas → «Nueva maleta» y empieza con esta maleta básica.',
     '',
     'Trucos:',
     '• Toca la barra de progreso para ver todo lo que está listo.',
@@ -31,6 +31,9 @@ export const BASIC_LUGGAGE = {
     '• ⋯ → Compartir: manda la lista por WhatsApp.',
     '• Los compartimentos (neceser, mochila…) guardan artículos y se pliegan solos al estar todo listo.',
     '• Consulta todos tus artículos y compartimentos en el catálogo: Mis maletas → Catálogo.',
+    '',
+    'Espero que esta aplicación te sea útil.',
+    '¡Feliz viaje!',
   ].join('\n'),
   loose: [
     'DNI / Pasaporte',

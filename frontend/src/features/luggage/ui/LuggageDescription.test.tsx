@@ -52,6 +52,34 @@ describe('Descripción de la maleta (detalle)', () => {
     })
   })
 
+  it('"Guardar" (encima del campo) guarda', async () => {
+    const { user, repositories, luggage } = await openLuggage()
+
+    await user.click(screen.getByRole('button', { name: 'Añadir descripción' }))
+    await user.keyboard('Playa en julio')
+    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    expect(await screen.findByText('Playa en julio')).toBeInTheDocument()
+    expect(await repositories.luggages.getById(luggage.id)).toMatchObject({
+      description: 'Playa en julio',
+    })
+  })
+
+  it('"Cancelar" no guarda lo escrito (en iOS no hay Escape)', async () => {
+    const { user, repositories, luggage } = await openLuggage('Original')
+
+    await user.click(screen.getByRole('button', { name: 'Editar descripción' }))
+    await user.keyboard(' y un borrador')
+    // Tocar el botón no quita el foco al campo: si lo quitara, el blur
+    // guardaría el borrador ANTES de cancelar.
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+
+    expect(screen.getByText('Original')).toBeInTheDocument()
+    expect(await repositories.luggages.getById(luggage.id)).toMatchObject({
+      description: 'Original',
+    })
+  })
+
   it('con descripción: el lápiz permite editarla, y vaciarla la borra', async () => {
     const { user, repositories, luggage } = await openLuggage('Plantilla')
     expect(screen.getByText('Plantilla')).toBeInTheDocument()
